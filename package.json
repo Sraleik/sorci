@@ -1,6 +1,6 @@
 {
   "name": "sorci",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Library to be able to do event sourcing without worrying about the aggregate.",
   "main": "src/index.ts",
   "author": "Sraleik",
@@ -24,12 +24,12 @@
     "node": ">=18.0.0"
   },
   "type": "module",
-  "module": "./dist/my-lib.js",
+  "module": "./dist/sorci.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/my-lib.js",
-      "require": "./dist/my-lib.umd.cjs"
+      "import": "./dist/sorci.js",
+      "require": "./dist/sorci.umd.cjs"
     }
   },
   "files": [
