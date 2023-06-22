@@ -1,0 +1,51 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export type EventId = string;
+
+export type Query =
+  | {
+      identifiers: Array<Record<string, any>>;
+      types?: Array<string>;
+    }
+  | {
+      identifiers?: Array<Record<string, any>>;
+      types: Array<string>;
+    };
+
+export type ToPersistEvent = {
+  id: EventId;
+  type: string;
+  data: Record<string, any>;
+  identifier: Record<string, any>;
+  timestamp?: Date; //TODO this should be a string
+  version?: number;
+};
+
+export type PersistedEvent = Omit<ToPersistEvent, 'timestamp' | 'version'> & {
+  timestamp: Date; //TODO this should be a string
+  version: number;
+};
+
+export type AppendEventPayload = {
+  sourcingEvent: ToPersistEvent;
+  query?: Query;
+  version?: number;
+};
+
+// This interface is agnostic of the domain, so the typing is generic on purpose
+export interface Sorci {
+  // Tooling
+  truncate(): Promise<void>;
+  insertEvents(events: Array<ToPersistEvent>): Promise<Array<EventId>>; // Simple insert no check of any kind
+  setupTestStream(streamName?: string): Promise<void>;
+  cleanCurrentStream(): Promise<void>;
+  clearAllTestStream(payload?: { excludeCurrentStream: boolean }): Promise<void>;
+
+  // Commands
+  appendEvent(payload: AppendEventPayload): Promise<EventId>; // Proper append with check on version and query
+
+  // Query
+  // appendEvents(payload: AppendEventPayload[]): Promise<EntityId[]>;
+  getEventById(id: EventId): Promise<PersistedEvent | undefined>;
+  getEventsByQuery(query: Query): Promise<PersistedEvent[]>;
+}
