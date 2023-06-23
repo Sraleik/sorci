@@ -7,9 +7,7 @@
 		Easy way to do full event sourcing without an event-store
   </p>
   <br/>
-<div>
-
-# Sorci.js
+</div>
 
 Libraray to do event sourcing while keeping the focus on event and not on aggregate
 
@@ -83,11 +81,17 @@ await sorci.appendEvent({
 ```
 ## Features
 
-Describe the core features of the project/library.
+The library create 2 tables:
 
-Feature 1
-Feature 2
-Feature 3
+* 1 writable
+* 1 read-only
+
+The writable table act as an append log. The read-only is a synchronize copy of the writable table.
+
+### Why to table ? 
+
+It's a technical constraint. To make sure an event can be persisted the library completely lock the writable table.
+Wich mean it's also unreadable during write. The read-only table allow read while event are beeing persisted.
 
 ## API
 
