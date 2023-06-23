@@ -82,7 +82,7 @@ The library create 2 tables:
 
 The writable table act as an append log. The read-only is a synchronize copy of the writable table.
 
-### Why to table ? 
+### Why two tables ? 
 
 It's a technical constraint. To make sure an event can be persisted the library completely lock the writable table.
 Wich mean it's also unreadable during write. The read-only table allow read while event are beeing persisted.
