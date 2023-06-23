@@ -13,11 +13,9 @@ Libraray to do event sourcing while keeping the focus on event and not on aggreg
 - [Usage](#usage)
 - [Features](#features)
 - [API](#api)
-- [Examples](#examples)
 - [Development](#development)
 - [Testing](#testing)
-- [Contributing](#contributing)
-- [License](#license)
+- [Benchmark](#benchmark)
 
 ## Installation
 
@@ -32,8 +30,7 @@ npm install sorci --save
 ```bash
 yarn add sorci
 ```
-
-## Usage
+## Usage
 
 The idea was to be able to do Full Event Sourcing without the need of an event store.
 So for now there is only one implementation of Sorci => SorciPostgres.
@@ -75,6 +72,7 @@ await sorci.appendEvent({
   },
 });
 ```
+
 ## Features
 
 The library create 2 tables:
