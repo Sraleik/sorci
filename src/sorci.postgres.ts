@@ -1,5 +1,4 @@
 import postgres from "postgres";
-
 import {
   EventId,
   Sorci,

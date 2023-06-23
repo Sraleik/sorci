@@ -1,6 +1,6 @@
 <div align="center">
   <br/>
-  <img src="./public/sorci.png" width="300" />
+  <img src="./image/sorci.png" width="300" />
   <br/>
   <br/>
   <p>
