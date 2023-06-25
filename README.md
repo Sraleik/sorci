@@ -37,6 +37,7 @@ yarn add sorci
 The idea was to be able to do Full Event Sourcing without the need of an event store.
 So for now there is only one implementation of Sorci => SorciPostgres.
 Maybe other implementation will be done later.
+This library has never been used in production yet. Use at your own risk :)
 
 ```typescript
 import { SorciPostgres } from "sorci";
@@ -117,3 +118,10 @@ Display perfomance on :
 ```bash
 yarn run vitest bench
 ```
+
+## TODO
+
+- [ ] Fix eslint
+- [ ] Add option to serialize data into binary
+- [ ] Change unit test object to TodoList domain
+- [ ] Make the constructor parameter a single explicit payload

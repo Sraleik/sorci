@@ -1,10 +1,5 @@
 import postgres from "postgres";
-import {
-  EventId,
-  Sorci,
-  Query,
-  ToPersistEvent,
-} from "./sorci.interface";
+import { EventId, Sorci, Query, ToPersistEvent } from "./sorci.interface";
 import { createId } from "./common/utils";
 
 export class SorciPostgres implements Sorci {
@@ -204,7 +199,7 @@ export class SorciPostgres implements Sorci {
       const realTableName = table_name.split("_");
       realTableName.pop();
       return realTableName.join("_");
-    });
+    }) as Array<string>;
 
     const streamNamesSet = new Set(streamNames);
     const uniqStreamName = [...streamNamesSet];
@@ -352,7 +347,7 @@ export class SorciPostgres implements Sorci {
           SELECT version as current_aggregate_version
           FROM ${this.streamNameWritableIdentifier}
           ${this.getWhereStatement(sql, payload.query)}
-          ORDER BY version DESC
+          ORDER BY ctid DESC 
           LIMIT 1
         `;
 
@@ -363,8 +358,9 @@ export class SorciPostgres implements Sorci {
         throw new Error("Aggregate not found");
       }
 
-      const [{ current_aggregate_version: currentAggregateVersion }] =
-        currentAggregateVersionRawRes;
+      const currentAggregateVersion =
+        currentAggregateVersionRawRes[currentAggregateVersionRawRes.length - 1]
+          .current_aggregate_version;
 
       if (parseInt(currentAggregateVersion, 10) === payload.version) {
         let [{ last_version: lastVersion }] = await sql`
@@ -375,7 +371,6 @@ export class SorciPostgres implements Sorci {
         `;
         lastVersion = parseInt(lastVersion, 10);
 
-        //@ts-expect-error identifier is a problem again
         const res = await sql`
           INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier, version)
           VALUES (${payload.sourcingEvent.id}, ${payload.sourcingEvent.type}, ${payload.sourcingEvent.data}, ${payload.sourcingEvent.identifier}, ${lastVersion} + 1)
@@ -403,7 +398,6 @@ export class SorciPostgres implements Sorci {
           LOCK TABLE ${this.streamNameWritableIdentifier} IN EXCLUSIVE MODE;
         `;
 
-      //@ts-expect-error identifier is a problem again
       const res = await sql`
           INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier)
           VALUES (${sourcingEvent.id}, ${sourcingEvent.type}, ${sourcingEvent.data}, ${sourcingEvent.identifier})
