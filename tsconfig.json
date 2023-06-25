@@ -12,6 +12,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "types": [
+      "jest",
+      "vitest/globals"
+    ],
 
     /* Linting */
     "strict": true,

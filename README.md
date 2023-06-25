@@ -5,7 +5,9 @@
   <br/>
 </div>
 
-Libraray to do event sourcing while keeping the focus on event and not on aggregate
+Library to do event sourcing while keeping the focus on events and not on aggregates.
+
+Inspired by this talk: https://www.youtube.com/watch?v=0iP65Durhbs
 
 ## Table of Contents
 
@@ -55,7 +57,7 @@ const sorci = new SorciPostgres(
   streamName
 );
 
-// This will everything needed to persist the events properly
+// This will create everything needed to persist the events properly
 await sorci.createStream();
 
 
@@ -89,13 +91,7 @@ Wich mean it's also unreadable during write. The read-only table allow read whil
 
 ## API
 
-Detailed information about the API, preferably broken into sections for each module, class, method, etc. Include example usage for each as necessary.
-
-Examples
-More detailed examples on using this library in real world scenarios.
-
-Development
-Details about the setup for development purposes and how other developers can contribute to the project.
+TODO
 
 ## Testing
 
@@ -109,7 +105,7 @@ yarn run test:unit
 
 TODO:
 
-- [] Fix the benchmark
+-  [ ] Fix the benchmark
 
 Display perfomance on : 
 
