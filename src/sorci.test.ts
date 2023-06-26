@@ -53,7 +53,6 @@ describe("Concurrency", async () => {
         type: "job-created",
         data: { jobId, title: "ChatGTP prompt ingeneer" },
         identifier: { jobId },
-        version: 1,
       },
       {
         id: "3d8ad1bd9b46",
@@ -65,14 +64,12 @@ describe("Concurrency", async () => {
           batchNumber: 1,
         },
         identifier: { jobId },
-        version: 2,
       },
       {
         id: "51c4e23a5b0e",
         type: "job-created",
         data: { jobId: job2Id, title: "Software Engineer (Typescript)" },
         identifier: { jobId: job2Id },
-        version: 3,
       },
       {
         id: "036ab50c1ef2",
@@ -88,7 +85,6 @@ describe("Concurrency", async () => {
           sourcingRequestId: "9571fb884a36",
           submissionId: "43810907fa7f",
         },
-        version: 4,
       },
       {
         id: "e1a1b2c10e28",
@@ -104,7 +100,6 @@ describe("Concurrency", async () => {
           sourcingRequestId: "9571fb884a36",
           submissionId: "2994e243b73b",
         },
-        version: 5,
       },
     ];
     await sorci.insertEvents(streamData);

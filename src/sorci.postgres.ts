@@ -289,7 +289,7 @@ export class SorciPostgres implements Sorci {
     const rows = await this.sql`
       SELECT * FROM ${this.streamNameReadOnlyIdentifier}
       ${whereStatement}
-      ORDER BY version ASC;
+      ORDER BY ctid ASC;
     `;
 
     if (!rows?.length) return [];
@@ -363,25 +363,11 @@ export class SorciPostgres implements Sorci {
           .current_aggregate_version;
 
       if (parseInt(currentAggregateVersion, 10) === payload.version) {
-        let [{ last_version: lastVersion }] = await sql`
-          SELECT COALESCE(
-            (SELECT version FROM ${this.streamNameWritableIdentifier} ORDER BY version DESC LIMIT 1),
-            0
-          ) as last_version
-        `;
-        lastVersion = parseInt(lastVersion, 10);
-
         const res = await sql`
-          INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier, version)
-          VALUES (${payload.sourcingEvent.id}, ${payload.sourcingEvent.type}, ${payload.sourcingEvent.data}, ${payload.sourcingEvent.identifier}, ${lastVersion} + 1)
+          INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier)
+          VALUES (${payload.sourcingEvent.id}, ${payload.sourcingEvent.type}, ${payload.sourcingEvent.data}, ${payload.sourcingEvent.identifier})
           RETURNING *
         `;
-
-        await sql.unsafe(
-          `ALTER SEQUENCE ${
-            this.streamNameWritable + "_version_seq"
-          } RESTART WITH ${lastVersion + 2}`
-        );
 
         return res[0].id as string;
       } else {

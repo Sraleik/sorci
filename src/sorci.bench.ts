@@ -7,10 +7,10 @@ import { SorciPostgres } from "./sorci.postgres";
 const bench = new Bench({ time: 5000 });
 
 const pgInstance = await new PostgreSqlContainer("postgres:15.3-alpine")
-  .withExposedPorts({
-    container: 5432,
-    host: 42420,
-  })
+  // .withExposedPorts({
+  //   container: 5432,
+  //   host: 42420,
+  // })
   .start();
 
 const host = pgInstance.getHost();
@@ -68,10 +68,14 @@ const createFullList = (listId: string = createId()) => {
   return [listCreated, ...tenTasks];
 };
 
+const FULL_LIST_MULTIPLICATOR = 1
+const FULL_LIST_ON_INSERT_COUNT = 1;
+const FULL_LIST_EVENT_COUNT = createFullList().length 
+
 const prepareBigStream = async () => {
   let stream: Array<any> = [];
-  for (let i = 0; i < 50; i++) {
-    for (let i = 0; i < 1_000; i++) {
+  for (let i = 0; i < FULL_LIST_MULTIPLICATOR; i++) {
+    for (let i = 0; i < FULL_LIST_ON_INSERT_COUNT; i++) {
       stream.push(...createFullList());
     }
 
@@ -120,7 +124,47 @@ bench
     }
   )
   .add(
-    "Append complex, with query",
+    "Append with query: types",
+    async () => {
+      await sorci.appendEvent({
+        sourcingEvent: eventToPersist,
+        query: {
+          types: ["LIST_CREATED"],
+        },
+        version: 550002,
+      });
+    },
+    {
+      beforeAll: async () => {
+        console.log("Running - Append complex, with query : types ");
+      },
+      beforeEach: () => {
+        eventToPersist = makeEvent();
+      },
+    }
+  )
+  .add(
+    "Append with query: identifiers",
+    async () => {
+      await sorci.appendEvent({
+        sourcingEvent: eventToPersist,
+        query: {
+          identifiers: [{ listId: "b40c6a575e8b" }],
+        },
+        version: 11,
+      });
+    },
+    {
+      beforeAll: async () => {
+        console.log("Running - Append complex, with query : identifiers");
+      },
+      beforeEach: () => {
+        eventToPersist = makeEvent();
+      },
+    }
+  )
+  .add(
+    "Append complex, with query: types & identifiers",
     async () => {
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
@@ -133,7 +177,7 @@ bench
     },
     {
       beforeAll: async () => {
-        console.log("Running - Append complex, with query");
+        console.log("Running - Append with query: types & identifiers");
       },
       beforeEach: () => {
         eventToPersist = makeEvent();
@@ -141,7 +185,33 @@ bench
     }
   )
   .add(
-    "Get by Query",
+    "Get by Query, types",
+    async () => {
+      await sorci.getEventsByQuery({
+        types: ["LIST_CREATED"],
+      });
+    },
+    {
+      beforeAll: async () => {
+        console.log("Running - Get by Query, types");
+      },
+    }
+  )
+  .add(
+    "Get by Query, identifiers",
+    async () => {
+      await sorci.getEventsByQuery({
+        identifiers: [{ listId: "b40c6a575e8b" }],
+      });
+    },
+    {
+      beforeAll: async () => {
+        console.log("Running - Get by Query, identifiers");
+      },
+    }
+  )
+  .add(
+    "Get by Query, types & idenditifiers",
     async () => {
       await sorci.getEventsByQuery({
         types: ["LIST_CREATED", "TASK_ADDED_TO_LIST"],
@@ -150,7 +220,7 @@ bench
     },
     {
       beforeAll: async () => {
-        console.log("Running - Get by Query");
+        console.log("Running - Get by Query, types & idenditifiers");
       },
     }
   )
@@ -168,6 +238,8 @@ bench
 
 await bench.run();
 
+console.log("\n")
+console.log(`Bench results on: ${FULL_LIST_EVENT_COUNT * FULL_LIST_ON_INSERT_COUNT * FULL_LIST_MULTIPLICATOR + FULL_LIST_EVENT_COUNT + 1} events`)
 console.table(bench.table());
 
 await pgInstance.stop();
