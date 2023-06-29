@@ -268,9 +268,6 @@ describe("Concurrency", async () => {
     expect(event2?.id).toEqual(jobClosed2.id);
   });
 
-  // The 50 range is necessary to ensure it doesn't fail
-  // With a SHARE MODE LOCK on the table it works with a ROW EXCLUSIVE LOCK it doesn't
-  // TODO: rewrite so the each is unecessary
   test("Try to close a job twice at the same time, one should fail", async () => {
     const jobClosed = {
       id: createId(),
@@ -332,7 +329,6 @@ describe("Given an empty stream", async () => {
         type: "job-created",
         data: { jobId: "123456789abc", title: "ChatGTP prompt master" },
         identifier: { jobId: "123456789abc" },
-        version: 1,
       };
 
       const jobCreated2 = {
@@ -340,7 +336,6 @@ describe("Given an empty stream", async () => {
         type: "job-created",
         data: { jobId: "cba123456789", title: "ChatGTP prompt creator" },
         identifier: { jobId: "cba123456789" },
-        version: 2,
       };
 
       await sorci.insertEvents([jobCreated, jobCreated2]);
@@ -376,7 +371,6 @@ describe("Given an empty stream", async () => {
       expect(event?.data).toEqual(jobCreated.data);
       expect(event?.identifier).toEqual(jobCreated.identifier);
       expect(event?.timestamp).toBeTruthy();
-      expect(event?.version).toBeTruthy();
     });
   });
 });
@@ -477,7 +471,6 @@ describe("Given a populated stream", async () => {
       expect(event?.data).toEqual(jobCreated.data);
       expect(event?.identifier).toEqual(jobCreated.identifier);
       expect(event?.timestamp).toBeTruthy();
-      expect(event?.version).toBeTruthy();
     });
   });
 
@@ -511,7 +504,6 @@ describe("Given a populated stream", async () => {
       expect(event?.data).toEqual(jobClosed.data);
       expect(event?.identifier).toEqual(jobClosed.identifier);
       expect(event?.timestamp).toBeTruthy();
-      expect(event?.version).toEqual(7);
     });
   });
 
@@ -533,7 +525,7 @@ describe("Given a populated stream", async () => {
         eventIdentifier: event1Id 
       });
 
-      await expect(promise).rejects.toThrow(/Version mismatch/);
+      await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
       const event = await sorci.getEventById(jobClosed.id);
       expect(event).toBeFalsy();
     });
@@ -556,7 +548,7 @@ describe("Given a populated stream", async () => {
         eventIdentifier: "3d8ad1bd9b46",
       });
 
-      await expect(promise).rejects.toThrow(/Version mismatch/);
+      await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
       const event = await sorci.getEventById(jobClosed.id);
       expect(event).toBeFalsy();
     });
@@ -587,7 +579,6 @@ describe("Given a populated stream", async () => {
       expect(event?.data).toEqual(jobClosed.data);
       expect(event?.identifier).toEqual(jobClosed.identifier);
       expect(event?.timestamp).toBeTruthy();
-      expect(event?.version).toBeTruthy();
     });
   });
 
@@ -616,7 +607,6 @@ describe("Given a populated stream", async () => {
       expect(event?.data).toEqual(jobClosed.data);
       expect(event?.identifier).toEqual(jobClosed.identifier);
       expect(event?.timestamp).toBeTruthy();
-      expect(event?.version).toBeTruthy();
     });
   });
 

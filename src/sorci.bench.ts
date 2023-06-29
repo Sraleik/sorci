@@ -68,8 +68,8 @@ const createFullList = (listId: string = createId()) => {
   return [listCreated, ...tenTasks];
 };
 
-const FULL_LIST_MULTIPLICATOR = 1
-const FULL_LIST_ON_INSERT_COUNT = 1;
+const FULL_LIST_MULTIPLICATOR = 50;
+const FULL_LIST_ON_INSERT_COUNT = 1000;
 const FULL_LIST_EVENT_COUNT = createFullList().length 
 
 const prepareBigStream = async () => {
@@ -87,9 +87,18 @@ const prepareBigStream = async () => {
 await sorci.setupTestStream();
 console.log("stream setup", sorci.streamName);
 console.log("Start loading data");
-await sorci.insertEvents(createFullList("b40c6a575e8b"));
+
+const fullList1 = createFullList("b40c6a575e8b")
+const eventIdentifierList1 = fullList1[fullList1.length -1].id
+await sorci.insertEvents(fullList1);
 await sorci.insertEvents([{...makeEvent(), id: "5314ce4504ad"}]);
+
 await prepareBigStream();
+
+const fullList2 = createFullList("74ae718e96")
+const eventIdentifierList2 = fullList2[0].id
+await sorci.insertEvents(fullList2);
+
 console.log("Data loaded");
 
 let eventToPersist = makeEvent();
@@ -131,7 +140,7 @@ bench
         query: {
           types: ["LIST_CREATED"],
         },
-        version: 550002,
+        eventIdentifier: eventIdentifierList2 ,
       });
     },
     {
@@ -151,7 +160,7 @@ bench
         query: {
           identifiers: [{ listId: "b40c6a575e8b" }],
         },
-        version: 11,
+        eventIdentifier: eventIdentifierList1 
       });
     },
     {
@@ -172,7 +181,7 @@ bench
           types: ["LIST_CREATED", "TASK_ADDED_TO_LIST"],
           identifiers: [{ listId: "b40c6a575e8b" }],
         },
-        version: 11,
+        eventIdentifier: eventIdentifierList1  //TODO: this should be another list
       });
     },
     {

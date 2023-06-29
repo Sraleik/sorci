@@ -98,8 +98,7 @@ export class SorciPostgres implements Sorci {
           type text NOT NULL,
           data JSONB NOT NULL,
           identifier JSONB NOT NULL,
-          created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-          version BIGSERIAL NOT NULL UNIQUE 
+          created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
         );
       `;
 
@@ -120,8 +119,8 @@ export class SorciPostgres implements Sorci {
       CREATE OR REPLACE FUNCTION ${this.syncronizationFunctionNameIdentifier}()
       RETURNS TRIGGER AS $$
       BEGIN
-        INSERT INTO ${this.streamNameReadOnlyIdentifier} (id, type, data, identifier, version)
-        VALUES (NEW.id, NEW.type, NEW.data, NEW.identifier, NEW.version);
+        INSERT INTO ${this.streamNameReadOnlyIdentifier} (id, type, data, identifier)
+        VALUES (NEW.id, NEW.type, NEW.data, NEW.identifier);
         RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
@@ -220,20 +219,6 @@ export class SorciPostgres implements Sorci {
       await sql`
         TRUNCATE TABLE ${this.streamNameReadOnlyIdentifier}
       `;
-
-      const sequenceIdentifierWritable = sql(
-        this.streamNameWritable + "_version_seq"
-      );
-      await sql`
-        ALTER SEQUENCE IF EXISTS ${sequenceIdentifierWritable} RESTART WITH 1
-      `;
-
-      const sequenceIdentifierRead = this.sql(
-        this.streamNameReadOnly + "_version_seq"
-      );
-      await sql`
-        ALTER SEQUENCE IF EXISTS ${sequenceIdentifierRead} RESTART WITH 1
-      `;
     });
   }
 
@@ -279,7 +264,6 @@ export class SorciPostgres implements Sorci {
       data: rawEvent.data,
       identifier: rawEvent.identifier,
       timestamp: rawEvent.created_at,
-      version: parseInt(rawEvent.version, 10),
     };
   }
 
@@ -293,6 +277,8 @@ export class SorciPostgres implements Sorci {
     `;
 
     if (!rows?.length) return [];
+
+    //TODO: check if map is really needed
     return rows.map((rawEvent: any) => {
       return {
         id: rawEvent.id,
@@ -300,7 +286,6 @@ export class SorciPostgres implements Sorci {
         data: rawEvent.data,
         identifier: rawEvent.identifier,
         timestamp: rawEvent.created_at,
-        version: rawEvent.version,
       };
     });
   }
@@ -344,7 +329,7 @@ export class SorciPostgres implements Sorci {
       `;
 
       // TODO: rename in a way that remove the "aggregate" word
-      const currentAggregateVersionRawRes = await sql`
+      const lastEventIdentifierRaw = await sql`
           SELECT id as last_event_identifier
           FROM ${this.streamNameWritableIdentifier}
           ${this.getWhereStatement(sql, payload.query)}
@@ -353,14 +338,14 @@ export class SorciPostgres implements Sorci {
         `;
 
       if (
-        !currentAggregateVersionRawRes.length ||
-        !currentAggregateVersionRawRes[0].last_event_identifier
+        !lastEventIdentifierRaw.length ||
+        !lastEventIdentifierRaw[0].last_event_identifier
       ) {
         throw new Error("Aggregate not found");
       }
 
       const lastEventIdentifier =
-        currentAggregateVersionRawRes[currentAggregateVersionRawRes.length - 1]
+        lastEventIdentifierRaw[lastEventIdentifierRaw.length - 1]
           .last_event_identifier;
 
       if (lastEventIdentifier  === payload.eventIdentifier) {
@@ -372,8 +357,7 @@ export class SorciPostgres implements Sorci {
 
         return res[0].id as string;
       } else {
-        //TODO add version given and version found
-        throw new Error(`Version mismatch, given: ${payload.eventIdentifier}, found: ${lastEventIdentifier}`);
+        throw new Error(`Event Identifier mismatch, given: ${payload.eventIdentifier}, found: ${lastEventIdentifier}`);
       }
     });
     return eventPersistedId;

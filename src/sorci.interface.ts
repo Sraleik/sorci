@@ -18,12 +18,10 @@ export type ToPersistEvent = {
   data: Record<string, any>;
   identifier: Record<string, any>;
   timestamp?: Date; //TODO this should be a string
-  version?: number;
 };
 
-export type PersistedEvent = Omit<ToPersistEvent, 'timestamp' | 'version'> & {
+export type PersistedEvent = Omit<ToPersistEvent, 'timestamp'> & {
   timestamp: Date; //TODO this should be a string
-  version: number;
 };
 
 export type AppendEventPayload = {
@@ -42,7 +40,7 @@ export interface Sorci {
   clearAllTestStream(payload?: { excludeCurrentStream: boolean }): Promise<void>;
 
   // Commands
-  appendEvent(payload: AppendEventPayload): Promise<EventId>; // Proper append with check on version and query
+  appendEvent(payload: AppendEventPayload): Promise<EventId>; // Proper append with check on eventIdentifier and query
 
   // Query
   // appendEvents(payload: AppendEventPayload[]): Promise<EntityId[]>;
