@@ -313,7 +313,7 @@ export class SorciPostgres implements Sorci {
       | {
           sourcingEvent: ToPersistEvent;
           query: Query;
-          version: number;
+          eventIdentifier: string;
         }
   ) {
     //@ts-expect-error typing issue
@@ -326,7 +326,7 @@ export class SorciPostgres implements Sorci {
       payload as {
         sourcingEvent: ToPersistEvent;
         query: Query;
-        version: number;
+        eventIdentifier: string;
       }
     );
 
@@ -336,15 +336,16 @@ export class SorciPostgres implements Sorci {
   private async appendEventWithQuery(payload: {
     sourcingEvent: ToPersistEvent;
     query: Query;
-    version: number;
+    eventIdentifier: string;
   }) {
     const eventPersistedId = await this.sql.begin(async (sql) => {
       await sql`
         LOCK TABLE ${this.streamNameWritableIdentifier} IN EXCLUSIVE MODE;
       `;
 
+      // TODO: rename in a way that remove the "aggregate" word
       const currentAggregateVersionRawRes = await sql`
-          SELECT version as current_aggregate_version
+          SELECT id as last_event_identifier
           FROM ${this.streamNameWritableIdentifier}
           ${this.getWhereStatement(sql, payload.query)}
           ORDER BY ctid DESC 
@@ -353,16 +354,16 @@ export class SorciPostgres implements Sorci {
 
       if (
         !currentAggregateVersionRawRes.length ||
-        !currentAggregateVersionRawRes[0].current_aggregate_version
+        !currentAggregateVersionRawRes[0].last_event_identifier
       ) {
         throw new Error("Aggregate not found");
       }
 
-      const currentAggregateVersion =
+      const lastEventIdentifier =
         currentAggregateVersionRawRes[currentAggregateVersionRawRes.length - 1]
-          .current_aggregate_version;
+          .last_event_identifier;
 
-      if (parseInt(currentAggregateVersion, 10) === payload.version) {
+      if (lastEventIdentifier  === payload.eventIdentifier) {
         const res = await sql`
           INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier)
           VALUES (${payload.sourcingEvent.id}, ${payload.sourcingEvent.type}, ${payload.sourcingEvent.data}, ${payload.sourcingEvent.identifier})
@@ -372,7 +373,7 @@ export class SorciPostgres implements Sorci {
         return res[0].id as string;
       } else {
         //TODO add version given and version found
-        throw new Error(`Version mismatch, given: ${payload.version}, found: ${currentAggregateVersion}`);
+        throw new Error(`Version mismatch, given: ${payload.eventIdentifier}, found: ${lastEventIdentifier}`);
       }
     });
     return eventPersistedId;

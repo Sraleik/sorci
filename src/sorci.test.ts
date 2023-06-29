@@ -128,7 +128,7 @@ describe("Concurrency", async () => {
         types: ["job-created", "sourcing-request-opened", "job-closed"],
         identifiers: [{ jobId: "123456789abc" }],
       },
-      version: 2,
+      eventIdentifier: "3d8ad1bd9b46",
     });
 
     await sorci.appendEvent({
@@ -164,7 +164,7 @@ describe("Concurrency", async () => {
             types: ["job-created", "submission-ai-reviewed"],
             identifiers: [{ jobId }],
           },
-          version: 5,
+          eventIdentifier: "e1a1b2c10e28",
         })
         .then(() => {
           return "success";
@@ -247,7 +247,7 @@ describe("Concurrency", async () => {
         types: ["job-created", "sourcing-request-opened", "job-closed"],
         identifiers: [{ jobId: "123456789abc" }],
       },
-      version: 2,
+      eventIdentifier: "3d8ad1bd9b46",
     });
 
     const appendPromise2 = sorci.appendEvent({
@@ -256,7 +256,7 @@ describe("Concurrency", async () => {
         types: ["submission-ai-reviewed"],
         identifiers: [{ jobId: "123456789abc" }],
       },
-      version: 5,
+      eventIdentifier: "e1a1b2c10e28",
     });
 
     await Promise.all([appendPromise1, appendPromise2]);
@@ -293,7 +293,7 @@ describe("Concurrency", async () => {
           types: ["job-created", "sourcing-request-opened", "job-closed"],
           identifiers: [{ jobId: "123456789abc" }],
         },
-        version: 2,
+        eventIdentifier: "3d8ad1bd9b46",
       })
       .then(() => "success")
       .catch(() => "error");
@@ -305,7 +305,7 @@ describe("Concurrency", async () => {
           types: ["job-created", "sourcing-request-opened", "job-closed"],
           identifiers: [{ jobId: "123456789abc" }],
         },
-        version: 2,
+        eventIdentifier: "3d8ad1bd9b46",
       })
       .then(() => "success")
       .catch(() => "error");
@@ -499,7 +499,7 @@ describe("Given a populated stream", async () => {
           types: ["job-created", "sourcing-request-opened"],
           identifiers: [{ jobId: "123456789abc" }],
         },
-        version: 2,
+        eventIdentifier: "3d8ad1bd9b46",
       });
     });
     test("Then the event is persisted in the stream", async () => {
@@ -530,7 +530,7 @@ describe("Given a populated stream", async () => {
           types: ["job-created", "sourcing-request-opened"],
           identifiers: [{ jobId }],
         },
-        version: 1,
+        eventIdentifier: event1Id 
       });
 
       await expect(promise).rejects.toThrow(/Version mismatch/);
@@ -553,7 +553,7 @@ describe("Given a populated stream", async () => {
         query: {
           identifiers: [{ jobId: "9c4106e631be" }],
         },
-        version: 2,
+        eventIdentifier: "3d8ad1bd9b46",
       });
 
       await expect(promise).rejects.toThrow(/Version mismatch/);
@@ -576,7 +576,7 @@ describe("Given a populated stream", async () => {
         query: {
           types: ["job-created", "sourcing-request-opened"],
         },
-        version: 3,
+        eventIdentifier: "51c4e23a5b0e",
       });
 
       const event = await sorci.getEventById(eventId);
@@ -605,7 +605,7 @@ describe("Given a populated stream", async () => {
         query: {
           identifiers: [{ jobId: "123456789abc" }],
         },
-        version: 6,
+        eventIdentifier: "7e7935dbdd74",
       });
 
       const event = await sorci.getEventById(eventId);

@@ -29,7 +29,7 @@ export type PersistedEvent = Omit<ToPersistEvent, 'timestamp' | 'version'> & {
 export type AppendEventPayload = {
   sourcingEvent: ToPersistEvent;
   query?: Query;
-  version?: number;
+  eventIdentifier?: string;
 };
 
 // This interface is agnostic of the domain, so the typing is generic on purpose
