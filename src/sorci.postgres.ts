@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { EventId, Sorci, Query, ToPersistEvent } from "./sorci.interface";
-import { createId } from "./common/utils";
+import { createId, shortId } from "./common/utils";
 
 export class SorciPostgres implements Sorci {
   private _sql;
@@ -144,7 +144,7 @@ export class SorciPostgres implements Sorci {
   }
 
   async setupTestStream(streamName?: string) {
-    this._streamName = streamName || `test_${createId()}`;
+    this._streamName = streamName || `test_${shortId()}`;
 
     await this.createStream();
   }

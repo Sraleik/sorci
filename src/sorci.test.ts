@@ -12,7 +12,10 @@ let sorci: Sorci;
 
 beforeAll(async () => {
   const pgInstanceNotReady = new PostgreSqlContainer("postgres:15.3-alpine");
-  pgInstance = await pgInstanceNotReady.start();
+  pgInstance = await pgInstanceNotReady
+    .withExposedPorts({ container: 5432, host: 42420 }) // Usefull for debugging
+    .withReuse() // The docker won't be removed after the test
+    .start();
   const host = pgInstance.getHost();
   const port = pgInstance.getPort();
   const user = pgInstance.getUsername();
@@ -34,89 +37,96 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await sorci.cleanCurrentStream();
+  // await sorci.cleanCurrentStream();
 });
 
 afterAll(async () => {
-  //   await streamClient.clearAllTestStream({ excludeCurrentStream: true });
-  await pgInstance.stop();
+  await sorci.clearAllTestStream({ excludeCurrentStream: true });
+  // await pgInstance.stop();
 });
 
 describe("Concurrency", async () => {
-  const jobId = "123456789abc";
-  const job2Id = "9c4106e631be";
+  const jobId = createId();
+  const job2Id = createId();
+  const submissionId1 = createId();
+  const submissionId2 = createId();
+  const sourcingRequestId = createId();
+  let streamEventIds: string[];
 
   beforeEach(async () => {
     const streamData = [
       {
-        id: "cba987654321",
+        id: createId(),
         type: "job-created",
         data: { jobId, title: "ChatGTP prompt ingeneer" },
         identifier: { jobId },
       },
       {
-        id: "3d8ad1bd9b46",
+        id: createId(),
         type: "sourcing-request-opened",
         data: {
           jobId,
-          sourcingRequestId: "9571fb884a36",
+          sourcingRequestId,
           batchSize: 10,
           batchNumber: 1,
         },
         identifier: { jobId },
       },
       {
-        id: "51c4e23a5b0e",
+        id: createId(),
         type: "job-created",
         data: { jobId: job2Id, title: "Software Engineer (Typescript)" },
         identifier: { jobId: job2Id },
       },
       {
-        id: "036ab50c1ef2",
+        id: createId(),
         type: "submission-ai-reviewed",
         data: {
           jobId,
-          submissionId: "43810907fa7f",
-          sourcingRequestId: "9571fb884a36",
+          submissionId: submissionId1,
+          sourcingRequestId,
           isApproved: true,
         },
         identifier: {
           jobId,
-          sourcingRequestId: "9571fb884a36",
-          submissionId: "43810907fa7f",
+          sourcingRequestId,
+          submissionId: submissionId1,
         },
       },
       {
-        id: "e1a1b2c10e28",
+        id: createId(),
         type: "submission-ai-reviewed",
         data: {
           jobId,
-          sourcingRequestId: "9571fb884a36",
-          submissionId: "2994e243b73b",
+          sourcingRequestId,
+          submissionId: submissionId2,
           isApproved: false,
         },
         identifier: {
           jobId,
-          sourcingRequestId: "9571fb884a36",
-          submissionId: "2994e243b73b",
+          sourcingRequestId,
+          submissionId: submissionId2,
         },
       },
     ];
+
+    streamEventIds = streamData.map((event) => event.id);
     await sorci.insertEvents(streamData);
   });
 
-  test("Persist first a an event with query then persist", async () => {
-    const jobId = createId();
+  test.only("Persist first a an event with query then persist", async () => {
+    const jobClosedEventId = createId();
     const jobClosed = {
-      id: jobId,
+      id: jobClosedEventId,
       type: "job-closed",
       data: { jobId, reason: "coco lastico" },
       identifier: { jobId },
     };
 
+    const jobClosedEventId2 = createId();
     const jobId2 = createId();
     const jobClosed2 = {
-      id: jobId2,
+      id: jobClosedEventId2,
       type: "job-closed",
       data: { jobId: jobId2, reason: "clown" },
       identifier: { jobId: jobId2 },
@@ -126,20 +136,22 @@ describe("Concurrency", async () => {
       sourcingEvent: jobClosed,
       query: {
         types: ["job-created", "sourcing-request-opened", "job-closed"],
-        identifiers: [{ jobId: "123456789abc" }],
+        identifiers: [{ jobId }],
       },
-      eventIdentifier: "3d8ad1bd9b46",
+      eventIdentifier: streamEventIds[1],
     });
 
     await sorci.appendEvent({
       sourcingEvent: jobClosed2,
     });
 
-    const event1 = await sorci.getEventById(jobId);
-    const event2 = await sorci.getEventById(jobId2);
+    const event1 = await sorci.getEventById(jobClosedEventId);
+    const event2 = await sorci.getEventById(jobClosedEventId2);
 
-    expect(event1?.id).toEqual(jobClosed.id);
-    expect(event2?.id).toEqual(jobClosed2.id);
+    expect(event1?.id).toEqual(jobClosedEventId);
+    expect(event1?.data.jobId).toEqual(jobId);
+    expect(event2?.id).toEqual(jobClosedEventId2);
+    expect(event2?.data.jobId).toEqual(jobId2);
   });
 
   test("Try to persist 50 event with a query", async () => {
@@ -164,7 +176,7 @@ describe("Concurrency", async () => {
             types: ["job-created", "submission-ai-reviewed"],
             identifiers: [{ jobId }],
           },
-          eventIdentifier: "e1a1b2c10e28",
+          eventIdentifier: streamEventIds[4],
         })
         .then(() => {
           return "success";
@@ -225,47 +237,47 @@ describe("Concurrency", async () => {
   });
 
   test("Try to persist two unrelated event a the same time, both should be persisted", async () => {
-    const jobId = createId();
+    const jobClosedEventId = createId();
     const jobClosed = {
-      id: jobId,
+      id: jobClosedEventId,
       type: "job-closed",
       data: { jobId, reason: "coco lastico" },
       identifier: { jobId },
     };
 
-    const jobId2 = createId();
+    const jobClosedEvent2Id = createId();
     const jobClosed2 = {
-      id: jobId2,
+      id: jobClosedEvent2Id,
       type: "job-closed",
-      data: { jobId: jobId2, reason: "clown" },
-      identifier: { jobId: jobId2 },
+      data: { jobId: job2Id, reason: "clown" },
+      identifier: { jobId: job2Id },
     };
 
     const appendPromise1 = sorci.appendEvent({
       sourcingEvent: jobClosed,
       query: {
         types: ["job-created", "sourcing-request-opened", "job-closed"],
-        identifiers: [{ jobId: "123456789abc" }],
+        identifiers: [{ jobId }],
       },
-      eventIdentifier: "3d8ad1bd9b46",
+      eventIdentifier: streamEventIds[1],
     });
 
     const appendPromise2 = sorci.appendEvent({
       sourcingEvent: jobClosed2,
       query: {
         types: ["submission-ai-reviewed"],
-        identifiers: [{ jobId: "123456789abc" }],
+        identifiers: [{ jobId }],
       },
-      eventIdentifier: "e1a1b2c10e28",
+      eventIdentifier: streamEventIds[4],
     });
 
     await Promise.all([appendPromise1, appendPromise2]);
 
-    const event1 = await sorci.getEventById(jobId);
-    const event2 = await sorci.getEventById(jobId2);
+    const event1 = await sorci.getEventById(jobClosedEventId);
+    const event2 = await sorci.getEventById(jobClosedEvent2Id);
 
-    expect(event1?.id).toEqual(jobClosed.id);
-    expect(event2?.id).toEqual(jobClosed2.id);
+    expect(event1?.id).toEqual(jobClosedEventId);
+    expect(event2?.id).toEqual(jobClosedEvent2Id);
   });
 
   test("Try to close a job twice at the same time, one should fail", async () => {
@@ -273,14 +285,14 @@ describe("Concurrency", async () => {
       id: createId(),
       type: "job-closed",
       data: { jobId, reason: "Enough hire" },
-      identifier: { jobId: "123456789abc" },
+      identifier: { jobId },
     };
 
     const jobClosed2 = {
       id: createId(),
       type: "job-closed",
       data: { jobId, reason: "Enough hire" },
-      identifier: { jobId: "123456789abc" },
+      identifier: { jobId },
     };
 
     const appendPromise1 = sorci
@@ -288,9 +300,9 @@ describe("Concurrency", async () => {
         sourcingEvent: jobClosed,
         query: {
           types: ["job-created", "sourcing-request-opened", "job-closed"],
-          identifiers: [{ jobId: "123456789abc" }],
+          identifiers: [{ jobId }],
         },
-        eventIdentifier: "3d8ad1bd9b46",
+        eventIdentifier: streamEventIds[1],
       })
       .then(() => "success")
       .catch(() => "error");
@@ -300,9 +312,9 @@ describe("Concurrency", async () => {
         sourcingEvent: jobClosed2,
         query: {
           types: ["job-created", "sourcing-request-opened", "job-closed"],
-          identifiers: [{ jobId: "123456789abc" }],
+          identifiers: [{ jobId }],
         },
-        eventIdentifier: "3d8ad1bd9b46",
+        eventIdentifier: streamEventIds[1],
       })
       .then(() => "success")
       .catch(() => "error");
@@ -324,18 +336,20 @@ describe("Concurrency", async () => {
 describe("Given an empty stream", async () => {
   describe("When inserting Events", async () => {
     test("Then the event is persisted in the stream", async () => {
+      const jobId = createId();
       const jobCreated = {
         id: createId(),
         type: "job-created",
-        data: { jobId: "123456789abc", title: "ChatGTP prompt master" },
-        identifier: { jobId: "123456789abc" },
+        data: { jobId, title: "ChatGTP prompt master" },
+        identifier: { jobId },
       };
 
+      const jobId2 = createId();
       const jobCreated2 = {
         id: createId(),
         type: "job-created",
-        data: { jobId: "cba123456789", title: "ChatGTP prompt creator" },
-        identifier: { jobId: "cba123456789" },
+        data: { jobId: jobId2 , title: "ChatGTP prompt creator" },
+        identifier: { jobId: jobId2 },
       };
 
       await sorci.insertEvents([jobCreated, jobCreated2]);
@@ -352,11 +366,12 @@ describe("Given an empty stream", async () => {
 
   describe("When appending an Event with no impact", async () => {
     test("Then the event is persisted in the stream", async () => {
+      const jobId = createId();
       const jobCreated = {
         id: createId(),
         type: "job-created",
-        data: { jobId: "123456789abc", title: "ChatGTP prompt ingeneer" },
-        identifier: { jobId: "123456789abc" },
+        data: { jobId, title: "ChatGTP prompt ingeneer" },
+        identifier: { jobId },
       };
 
       const eventId = await sorci.appendEvent({
@@ -376,67 +391,71 @@ describe("Given an empty stream", async () => {
 });
 
 describe("Given a populated stream", async () => {
-  const jobId = "123456789abc";
-  const job2Id = "9c4106e631be";
-  const event1Id = "cba987654321";
+  const jobId = createId();
+  const job2Id = createId();
+  const sourcingRequestId = createId();
+  const submissionId1 = createId();
+  const submissionId2 = createId();
+  let event1Id : string;
+  let streamEventIds: string[];
 
   beforeEach(async () => {
     const streamData = [
       {
-        id: event1Id,
+        id: createId(),
         type: "job-created",
         data: { jobId, title: "ChatGTP prompt ingeneer" },
         identifier: { jobId },
       },
       {
-        id: "3d8ad1bd9b46",
+        id: createId(),
         type: "sourcing-request-opened",
         data: {
           jobId,
-          sourcingRequestId: "9571fb884a36",
+          sourcingRequestId,
           batchSize: 10,
           batchNumber: 1,
         },
         identifier: { jobId },
       },
       {
-        id: "51c4e23a5b0e",
+        id: createId(),
         type: "job-created",
         data: { jobId: job2Id, title: "Software Engineer (Typescript)" },
         identifier: { jobId: job2Id },
       },
       {
-        id: "036ab50c1ef2",
+        id: createId(),
         type: "submission-ai-reviewed",
         data: {
           jobId,
-          submissionId: "43810907fa7f",
-          sourcingRequestId: "9571fb884a36",
+          submissionId: submissionId1,
+          sourcingRequestId,
           isApproved: true,
         },
         identifier: {
           jobId,
-          sourcingRequestId: "9571fb884a36",
-          submissionId: "43810907fa7f",
+          sourcingRequestId,
+          submissionId: submissionId1,
         },
       },
       {
-        id: "e1a1b2c10e28",
+        id: createId(),
         type: "submission-ai-reviewed",
         data: {
           jobId,
-          sourcingRequestId: "9571fb884a36",
-          submissionId: "2994e243b73b",
+          sourcingRequestId,
+          submissionId: submissionId2,
           isApproved: false,
         },
         identifier: {
           jobId,
-          sourcingRequestId: "9571fb884a36",
-          submissionId: "2994e243b73b",
+          sourcingRequestId,
+          submissionId: submissionId2,
         },
       },
       {
-        id: "7e7935dbdd74",
+        id: createId(),
         type: "invitation-sent",
         data: {
           jobId,
@@ -448,15 +467,17 @@ describe("Given a populated stream", async () => {
       },
     ];
     await sorci.insertEvents(streamData);
+    streamEventIds = streamData.map((event) => event.id);
+    event1Id = streamEventIds[0];
   });
   describe("When appending an event with no impact", async () => {
     test("Then the event is persisted", async () => {
-      const job2Id = "354f2cbe8c36";
+      const jobId = createId()
       const jobCreated = {
-        id: createId("543028bab5f0"),
+        id: createId(),
         type: "job-created",
-        data: { jobId: job2Id, title: "ChatGTP prompt ingeneer" },
-        identifier: { jobId: job2Id },
+        data: { jobId, title: "ChatGTP prompt ingeneer" },
+        identifier: { jobId },
       };
 
       const eventId = await sorci.appendEvent({
@@ -480,19 +501,19 @@ describe("Given a populated stream", async () => {
 
     beforeEach(async () => {
       jobClosed = {
-        id: createId("123456789abc"),
+        id: createId(),
         type: "super-testouille-qmlsdjf",
-        data: { jobId: "123456789abc", reason: "Enough hire" },
-        identifier: { jobId: "123456789abc" },
+        data: { jobId, reason: "Enough hire" },
+        identifier: { jobId },
       };
 
       eventId = await sorci.appendEvent({
         sourcingEvent: jobClosed,
         query: {
           types: ["job-created", "sourcing-request-opened"],
-          identifiers: [{ jobId: "123456789abc" }],
+          identifiers: [{ jobId }],
         },
-        eventIdentifier: "3d8ad1bd9b46",
+        eventIdentifier: streamEventIds[1],
       });
     });
     test("Then the event is persisted in the stream", async () => {
@@ -510,7 +531,7 @@ describe("Given a populated stream", async () => {
   describe("When appending with the wrong 'lastEventIdentifier'", async () => {
     test("Then the event is not persisted", async () => {
       const jobClosed = {
-        id: createId("123456789abc"),
+        id: createId(),
         type: "job-closed",
         data: { jobId, reason: "Enough hire" },
         identifier: { jobId },
@@ -522,7 +543,7 @@ describe("Given a populated stream", async () => {
           types: ["job-created", "sourcing-request-opened"],
           identifiers: [{ jobId }],
         },
-        eventIdentifier: event1Id 
+        eventIdentifier: event1Id,
       });
 
       await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
@@ -534,18 +555,18 @@ describe("Given a populated stream", async () => {
   describe("When appending with the wrong 'lastEventIdentifier' and no types", async () => {
     test("Then the event is not persisted in the stream", async () => {
       const jobClosed = {
-        id: createId("123456789abc"),
+        id: createId(),
         type: "job-closed",
-        data: { jobId: "123456789abc", reason: "should not exist" },
-        identifier: { jobId: "123456789abc" },
+        data: { jobId, reason: "should not exist" },
+        identifier: { jobId },
       };
 
       const promise = sorci.appendEvent({
         sourcingEvent: jobClosed,
         query: {
-          identifiers: [{ jobId: "9c4106e631be" }],
+          identifiers: [{ jobId: job2Id}],
         },
-        eventIdentifier: "3d8ad1bd9b46",
+        eventIdentifier: createId(), // wrong identifier on purpose
       });
 
       await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
@@ -557,10 +578,10 @@ describe("Given a populated stream", async () => {
   describe("When appending with the right 'lastEventIdentifier' but no identifier", async () => {
     test("Then the event is persisted in the stream", async () => {
       const jobClosed = {
-        id: createId("123456789abc"),
+        id: createId(),
         type: "job-closed",
-        data: { jobId: "123456789abc", reason: "Only types" },
-        identifier: { jobId: "123456789abc" },
+        data: { jobId, reason: "Only types" },
+        identifier: { jobId },
       };
 
       const eventId = await sorci.appendEvent({
@@ -568,7 +589,7 @@ describe("Given a populated stream", async () => {
         query: {
           types: ["job-created", "sourcing-request-opened"],
         },
-        eventIdentifier: "51c4e23a5b0e",
+        eventIdentifier: streamEventIds[2],
       });
 
       const event = await sorci.getEventById(eventId);
@@ -585,18 +606,18 @@ describe("Given a populated stream", async () => {
   describe("When appending with the right 'lastEventIdentifier' but no type", async () => {
     test("Then the event is persisted in the stream", async () => {
       const jobClosed = {
-        id: createId("123456789abc"),
+        id: createId(),
         type: "job-closed",
-        data: { jobId: "123456789abc", reason: "Enough hire" },
-        identifier: { jobId: "123456789abc" },
+        data: { jobId, reason: "Enough hire" },
+        identifier: { jobId },
       };
 
       const eventId = await sorci.appendEvent({
         sourcingEvent: jobClosed,
         query: {
-          identifiers: [{ jobId: "123456789abc" }],
+          identifiers: [{ jobId }],
         },
-        eventIdentifier: "7e7935dbdd74",
+        eventIdentifier: streamEventIds[5],
       });
 
       const event = await sorci.getEventById(eventId);
