@@ -7,10 +7,11 @@ import { SorciPostgres } from "./sorci.postgres";
 const bench = new Bench({ time: 5000 });
 
 const pgInstance = await new PostgreSqlContainer("postgres:15.3-alpine")
-  // .withExposedPorts({
-  //   container: 5432,
-  //   host: 42420,
-  // })
+  .withExposedPorts({
+    container: 5432,
+    host: 42420,
+  })
+  .withReuse()
   .start();
 
 const host = pgInstance.getHost();
@@ -88,10 +89,12 @@ await sorci.setupTestStream();
 console.log("stream setup", sorci.streamName);
 console.log("Start loading data");
 
-const fullList1 = createFullList("b40c6a575e8b")
+const listId = "345796fd-c56c-4a9b-8dd5-22763b7d4997"
+const fullList1 = createFullList(listId)
+// const fullList1 = createFullList("b40c6a575e8b")
 const eventIdentifierList1 = fullList1[fullList1.length -1].id
 await sorci.insertEvents(fullList1);
-await sorci.insertEvents([{...makeEvent(), id: "5314ce4504ad"}]);
+await sorci.insertEvents([{...makeEvent(), id: "10520cad-b0d6-4415-bbfe-1d086bdbafc1"}]);
 
 await prepareBigStream();
 
@@ -158,7 +161,7 @@ bench
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         query: {
-          identifiers: [{ listId: "b40c6a575e8b" }],
+          identifiers: [{ listId }],
         },
         eventIdentifier: eventIdentifierList1 
       });
@@ -179,7 +182,7 @@ bench
         sourcingEvent: eventToPersist,
         query: {
           types: ["LIST_CREATED", "TASK_ADDED_TO_LIST"],
-          identifiers: [{ listId: "b40c6a575e8b" }],
+          identifiers: [{ listId }],
         },
         eventIdentifier: eventIdentifierList1  //TODO: this should be another list
       });
@@ -210,7 +213,7 @@ bench
     "Get by Query, identifiers",
     async () => {
       await sorci.getEventsByQuery({
-        identifiers: [{ listId: "b40c6a575e8b" }],
+        identifiers: [{ listId }],
       });
     },
     {
@@ -224,7 +227,7 @@ bench
     async () => {
       await sorci.getEventsByQuery({
         types: ["LIST_CREATED", "TASK_ADDED_TO_LIST"],
-        identifiers: [{ listId: "b40c6a575e8b" }],
+        identifiers: [{ listId }],
       });
     },
     {
@@ -236,7 +239,7 @@ bench
   .add(
     "Get by EventId",
     async () => {
-      await sorci.getEventById('5314ce4504ad');
+      await sorci.getEventById('10520cad-b0d6-4415-bbfe-1d086bdbafc1');
     },
     {
       beforeAll: async () => {
