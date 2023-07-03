@@ -13,8 +13,8 @@ let sorci: Sorci;
 beforeAll(async () => {
   const pgInstanceNotReady = new PostgreSqlContainer("postgres:15.3-alpine");
   pgInstance = await pgInstanceNotReady
-    .withExposedPorts({ container: 5432, host: 42420 }) // Usefull for debugging
-    .withReuse() // The docker won't be removed after the test
+    // .withExposedPorts({ container: 5432, host: 42420 }) // Usefull for debugging
+    // .withReuse() // The docker won't be removed after the test
     .start();
   const host = pgInstance.getHost();
   const port = pgInstance.getPort();
@@ -37,12 +37,12 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  // await sorci.cleanCurrentStream();
+  await sorci.cleanCurrentStream();
 });
 
 afterAll(async () => {
-  await sorci.clearAllTestStream({ excludeCurrentStream: true });
-  // await pgInstance.stop();
+  // await sorci.clearAllTestStream({ excludeCurrentStream: true });
+  await pgInstance.stop();
 });
 
 describe("Concurrency", async () => {
