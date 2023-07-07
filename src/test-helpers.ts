@@ -4,13 +4,13 @@ import { SorciEvent } from "./sorci-event";
 
 // In my test (unit & benchmark) I will use a Course / Student Domain
 
-export const createCourseCreated = () => {
+export const createCourseCreated = (payload?: { capacity: number }) => {
   return SorciEvent.create({
     type: "course-created",
     data: {
       courseId: createId(),
       name: faker.lorem.sentence(),
-      capacity: faker.number.int({ min: 10, max: 25 }),
+      capacity: payload?.capacity || faker.number.int({ min: 10, max: 25 }),
     },
   });
 };
@@ -74,7 +74,7 @@ export const createStudentCreated = () => {
       name: faker.person.firstName(),
     },
   });
-}
+};
 
 export const createStudentSubscribedToCourse = ({
   courseId,
