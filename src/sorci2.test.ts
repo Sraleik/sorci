@@ -4,7 +4,7 @@ import {
   StartedPostgreSqlContainer,
 } from "testcontainers";
 import { createId } from "./common/utils";
-import { Sorci, ToPersistEvent } from "./sorci.interface";
+import { Sorci } from "./sorci.interface";
 import { SorciPostgres } from "./sorci.postgres";
 import {
   createCourseCreated,
@@ -59,10 +59,8 @@ describe("Given an empty stream", async () => {
         oldCapacity: courseCreated.data.capacity,
       });
 
-      const [courseCreatedId, courseCapacityChangedId] = await sorci.insertEvents([
-        courseCreated,
-        courseCapacityChanged,
-      ]);
+      const [courseCreatedId, courseCapacityChangedId] =
+        await sorci.insertEvents([courseCreated, courseCapacityChanged]);
 
       expect(courseCreatedId).toEqual(courseCreated.id);
       expect(courseCapacityChangedId).toEqual(courseCapacityChanged.id);
@@ -96,252 +94,181 @@ describe("Given an empty stream", async () => {
 });
 
 describe("Given a populated stream", async () => {
-  const jobId = createId();
-  const job2Id = createId();
-  const sourcingRequestId = createId();
-  const submissionId1 = createId();
-  const submissionId2 = createId();
-  let event1Id: string;
-  let streamEventIds: string[];
+  const course1Created = createCourseCreated();
+  const course1CapacityChanged = createCourseCapacityChanged({
+    courseId: course1Created.data.courseId,
+    oldCapacity: course1Created.data.capacity,
+  });
+  const course1Renamed = createCourseRenamed({
+    courseId: course1Created.data.courseId,
+    oldName: course1Created.data.name,
+  });
+  const course2Created = createCourseCreated();
+  const course2CapacityChanged = createCourseCapacityChanged({
+    courseId: course2Created.data.courseId,
+    oldCapacity: course2Created.data.capacity,
+  });
+
+  const streamData = [
+    course1Created,
+    course1CapacityChanged,
+    course2Created,
+    course1Renamed,
+    course2CapacityChanged,
+  ];
+
+  const course1Id = course1Created.data.courseId;
 
   beforeEach(async () => {
-    const streamData = [
-      {
-        id: createId(),
-        type: "job-created",
-        data: { jobId, title: "ChatGTP prompt ingeneer" },
-        identifier: { jobId },
-      },
-      {
-        id: createId(),
-        type: "sourcing-request-opened",
-        data: {
-          jobId,
-          sourcingRequestId,
-          batchSize: 10,
-          batchNumber: 1,
-        },
-        identifier: { jobId },
-      },
-      {
-        id: createId(),
-        type: "job-created",
-        data: { jobId: job2Id, title: "Software Engineer (Typescript)" },
-        identifier: { jobId: job2Id },
-      },
-      {
-        id: createId(),
-        type: "submission-ai-reviewed",
-        data: {
-          jobId,
-          submissionId: submissionId1,
-          sourcingRequestId,
-          isApproved: true,
-        },
-        identifier: {
-          jobId,
-          sourcingRequestId,
-          submissionId: submissionId1,
-        },
-      },
-      {
-        id: createId(),
-        type: "submission-ai-reviewed",
-        data: {
-          jobId,
-          sourcingRequestId,
-          submissionId: submissionId2,
-          isApproved: false,
-        },
-        identifier: {
-          jobId,
-          sourcingRequestId,
-          submissionId: submissionId2,
-        },
-      },
-      {
-        id: createId(),
-        type: "invitation-sent",
-        data: {
-          jobId,
-          to: "johnwick@doglover.com",
-        },
-        identifier: {
-          jobId,
-        },
-      },
-    ];
     await sorci.insertEvents(streamData);
-    streamEventIds = streamData.map((event) => event.id);
-    event1Id = streamEventIds[0];
   });
+
   describe("When appending an event with no impact", async () => {
     test("Then the event is persisted", async () => {
-      const jobId = createId();
-      const jobCreated = {
-        id: createId(),
-        type: "job-created",
-        data: { jobId, title: "ChatGTP prompt ingeneer" },
-        identifier: { jobId },
-      };
+      const course3Created = createCourseCreated();
 
       const eventId = await sorci.appendEvent({
-        sourcingEvent: jobCreated,
+        sourcingEvent: course3Created,
       });
+      expect(eventId).toEqual(course3Created.id);
 
       const event = await sorci.getEventById(eventId);
-
-      expect(eventId).toEqual(jobCreated.id);
-      expect(event?.id).toEqual(jobCreated.id);
-      expect(event?.type).toEqual(jobCreated.type);
-      expect(event?.data).toEqual(jobCreated.data);
-      expect(event?.identifier).toEqual(jobCreated.identifier);
-      expect(event?.timestamp).toBeTruthy();
+      expect(event?.id).toEqual(course3Created.id);
+      expect(event?.type).toEqual(course3Created.type);
+      expect(event?.data).toEqual(course3Created.data);
+      expect(event?.identifier).toEqual(course3Created.identifier);
+      expect(event?.timestamp).toBeInstanceOf(Date);
     });
   });
 
   describe("When appending with the right 'lastEventIdentifier'", async () => {
-    let jobClosed: ToPersistEvent;
-    let eventId: string;
-
-    beforeEach(async () => {
-      jobClosed = {
-        id: createId(),
-        type: "super-testouille-qmlsdjf",
-        data: { jobId, reason: "Enough hire" },
-        identifier: { jobId },
-      };
-
-      eventId = await sorci.appendEvent({
-        sourcingEvent: jobClosed,
-        query: {
-          types: ["job-created", "sourcing-request-opened"],
-          identifiers: [{ jobId }],
-        },
-        eventIdentifier: streamEventIds[1],
-      });
-    });
     test("Then the event is persisted in the stream", async () => {
-      const event = await sorci.getEventById(eventId);
+      const course1CapacityChangedAgain = createCourseCapacityChanged({
+        courseId: course1Id,
+        oldCapacity: course1CapacityChanged.data.newCapacity,
+      });
 
-      expect(eventId).toEqual(jobClosed.id);
-      expect(event?.id).toEqual(jobClosed.id);
-      expect(event?.type).toEqual(jobClosed.type);
-      expect(event?.data).toEqual(jobClosed.data);
-      expect(event?.identifier).toEqual(jobClosed.identifier);
-      expect(event?.timestamp).toBeTruthy();
+      const eventId = await sorci.appendEvent({
+        sourcingEvent: course1CapacityChangedAgain,
+        query: {
+          types: ["course-created", "course-capacity-changed"],
+          identifiers: [{ courseId: course1Id }],
+        },
+        eventIdentifier: course1CapacityChanged.id,
+      });
+
+      const event = await sorci.getEventById(course1CapacityChangedAgain.id);
+
+      expect(eventId).toEqual(course1CapacityChangedAgain.id);
+      expect(event?.id).toEqual(course1CapacityChangedAgain.id);
+      expect(event?.type).toEqual(course1CapacityChangedAgain.type);
+      expect(event?.data).toEqual(course1CapacityChangedAgain.data);
+      expect(event?.identifier).toEqual(course1CapacityChangedAgain.identifier);
+      expect(event?.timestamp).toBeInstanceOf(Date);
     });
   });
 
   describe("When appending with the wrong 'lastEventIdentifier'", async () => {
     test("Then the event is not persisted", async () => {
-      const jobClosed = {
-        id: createId(),
-        type: "job-closed",
-        data: { jobId, reason: "Enough hire" },
-        identifier: { jobId },
-      };
+      const course1CapacityChangedAgain = createCourseCapacityChanged({
+        courseId: course1Id,
+        oldCapacity: course1CapacityChanged.data.newCapacity,
+      });
 
       const promise = sorci.appendEvent({
-        sourcingEvent: jobClosed,
+        sourcingEvent: course1CapacityChangedAgain,
         query: {
-          types: ["job-created", "sourcing-request-opened"],
-          identifiers: [{ jobId }],
+          types: ["course-created", "course-capacity-changed"],
+          identifiers: [{ courseId: course1Id }],
         },
-        eventIdentifier: event1Id,
+        eventIdentifier: createId(), // Wrong identifier on purpose
       });
 
       await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
-      const event = await sorci.getEventById(jobClosed.id);
+      const event = await sorci.getEventById(course1CapacityChangedAgain.id);
       expect(event).toBeFalsy();
     });
   });
 
   describe("When appending with the wrong 'lastEventIdentifier' and no types", async () => {
     test("Then the event is not persisted in the stream", async () => {
-      const jobClosed = {
-        id: createId(),
-        type: "job-closed",
-        data: { jobId, reason: "should not exist" },
-        identifier: { jobId },
-      };
+      const course1CapacityChangedAgain = createCourseCapacityChanged({
+        courseId: course1Id,
+        oldCapacity: course1CapacityChanged.data.newCapacity,
+      });
 
       const promise = sorci.appendEvent({
-        sourcingEvent: jobClosed,
+        sourcingEvent: course1CapacityChangedAgain,
         query: {
-          identifiers: [{ jobId: job2Id }],
+          identifiers: [{ courseId: course1Id }],
         },
-        eventIdentifier: createId(), // wrong identifier on purpose
+        eventIdentifier: createId(), // Wrong identifier on purpose
       });
 
       await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
-      const event = await sorci.getEventById(jobClosed.id);
+      const event = await sorci.getEventById(course1CapacityChangedAgain.id);
       expect(event).toBeFalsy();
     });
   });
 
   describe("When appending with the right 'lastEventIdentifier' but no identifier", async () => {
     test("Then the event is persisted in the stream", async () => {
-      const jobClosed = {
-        id: createId(),
-        type: "job-closed",
-        data: { jobId, reason: "Only types" },
-        identifier: { jobId },
-      };
+      const course1CapacityChangedAgain = createCourseCapacityChanged({
+        courseId: course1Id,
+        oldCapacity: course1CapacityChanged.data.newCapacity,
+      });
 
       const eventId = await sorci.appendEvent({
-        sourcingEvent: jobClosed,
+        sourcingEvent: course1CapacityChangedAgain ,
         query: {
-          types: ["job-created", "sourcing-request-opened"],
+          types: ["course-created", "course-capacity-changed"],
         },
-        eventIdentifier: streamEventIds[2],
+        eventIdentifier: course2CapacityChanged.id,
       });
 
       const event = await sorci.getEventById(eventId);
 
-      expect(eventId).toEqual(jobClosed.id);
-      expect(event?.id).toEqual(jobClosed.id);
-      expect(event?.type).toEqual(jobClosed.type);
-      expect(event?.data).toEqual(jobClosed.data);
-      expect(event?.identifier).toEqual(jobClosed.identifier);
-      expect(event?.timestamp).toBeTruthy();
+      expect(eventId).toEqual(course1CapacityChangedAgain .id);
+      expect(event?.id).toEqual(course1CapacityChangedAgain .id);
+      expect(event?.type).toEqual(course1CapacityChangedAgain .type);
+      expect(event?.data).toEqual(course1CapacityChangedAgain .data);
+      expect(event?.identifier).toEqual(course1CapacityChangedAgain .identifier);
+      expect(event?.timestamp).toBeInstanceOf(Date);
     });
   });
 
   describe("When appending with the right 'lastEventIdentifier' but no type", async () => {
     test("Then the event is persisted in the stream", async () => {
-      const jobClosed = {
-        id: createId(),
-        type: "job-closed",
-        data: { jobId, reason: "Enough hire" },
-        identifier: { jobId },
-      };
+      const course1CapacityChangedAgain = createCourseCapacityChanged({
+        courseId: course1Id,
+        oldCapacity: course1CapacityChanged.data.newCapacity,
+      });
 
       const eventId = await sorci.appendEvent({
-        sourcingEvent: jobClosed,
+        sourcingEvent: course1CapacityChangedAgain ,
         query: {
-          identifiers: [{ jobId }],
+          identifiers: [{ courseId: course1Id }],
         },
-        eventIdentifier: streamEventIds[5],
+        eventIdentifier: course1Renamed.id,
       });
 
       const event = await sorci.getEventById(eventId);
 
-      expect(eventId).toEqual(jobClosed.id);
-      expect(event?.id).toEqual(jobClosed.id);
-      expect(event?.type).toEqual(jobClosed.type);
-      expect(event?.data).toEqual(jobClosed.data);
-      expect(event?.identifier).toEqual(jobClosed.identifier);
-      expect(event?.timestamp).toBeTruthy();
+      expect(eventId).toEqual(course1CapacityChangedAgain .id);
+      expect(event?.id).toEqual(course1CapacityChangedAgain .id);
+      expect(event?.type).toEqual(course1CapacityChangedAgain .type);
+      expect(event?.data).toEqual(course1CapacityChangedAgain .data);
+      expect(event?.identifier).toEqual(course1CapacityChangedAgain .identifier);
+      expect(event?.timestamp).toBeInstanceOf(Date);
     });
   });
 
   describe("When querying an event", async () => {
     test("Then the events is returned", async () => {
-      const event = await sorci.getEventById(event1Id);
+      const event = await sorci.getEventById(course2Created.id);
 
       expect(event).toBeTruthy();
-      expect(event?.id).toEqual(event1Id);
+      expect(event?.id).toEqual(course2Created.id);
     });
   });
 
@@ -349,14 +276,14 @@ describe("Given a populated stream", async () => {
     test("Then the events are returned", async () => {
       const events = await sorci.getEventsByQuery({
         types: [
-          "job-created",
-          "sourcing-request-opened",
-          "submission-ai-reviewed",
+          "course-created",
+          "course-capacity-changed",
+          "course-renamed",
         ],
-        identifiers: [{ jobId }],
+        identifiers: [{ courseId: course1Id}],
       });
 
-      expect(events).toHaveLength(4);
+      expect(events).toHaveLength(3);
     });
   });
 });

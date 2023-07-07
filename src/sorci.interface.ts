@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { SorciEvent } from "./sorci-event";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export type EventId = string;
 
 export type Query =
@@ -13,22 +14,27 @@ export type Query =
     };
 
 export type ToPersistEvent = {
-  id: EventId;
+  id?: EventId;
   type: string;
   data: Record<string, any>;
   identifier: Record<string, any>;
-  timestamp?: Date; //TODO this should be a string
+  timestamp?: Date;
 };
 
-export type PersistedEvent = Omit<ToPersistEvent, 'timestamp'> & {
-  timestamp: Date; //TODO this should be a string
+export type PersistedEvent = Omit<ToPersistEvent, "timestamp" | "id"> & {
+  id: EventId;
+  timestamp: Date;
 };
 
-export type AppendEventPayload = {
-  sourcingEvent: ToPersistEvent;
-  query?: Query;
-  eventIdentifier?: string;
-};
+export type AppendEventPayload =
+  | {
+      sourcingEvent: ToPersistEvent;
+    }
+  | {
+      sourcingEvent: ToPersistEvent;
+      query: Query;
+      eventIdentifier: string;
+    };
 
 // This interface is agnostic of the domain, so the typing is generic on purpose
 export interface Sorci {
@@ -37,7 +43,9 @@ export interface Sorci {
   insertEvents(events: Array<ToPersistEvent>): Promise<Array<EventId>>; // Simple insert no check of any kind
   setupTestStream(streamName?: string): Promise<void>;
   cleanCurrentStream(): Promise<void>;
-  clearAllTestStream(payload?: { excludeCurrentStream: boolean }): Promise<void>;
+  clearAllTestStream(payload?: {
+    excludeCurrentStream: boolean;
+  }): Promise<void>;
 
   // Commands
   appendEvent(payload: AppendEventPayload): Promise<EventId>; // Proper append with check on eventIdentifier and query

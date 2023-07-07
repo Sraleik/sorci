@@ -91,14 +91,13 @@ console.log("Start loading data");
 
 const listId = "345796fd-c56c-4a9b-8dd5-22763b7d4997"
 const fullList1 = createFullList(listId)
-// const fullList1 = createFullList("b40c6a575e8b")
 const eventIdentifierList1 = fullList1[fullList1.length -1].id
 await sorci.insertEvents(fullList1);
 await sorci.insertEvents([{...makeEvent(), id: "10520cad-b0d6-4415-bbfe-1d086bdbafc1"}]);
 
 await prepareBigStream();
 
-const fullList2 = createFullList("74ae718e96")
+const fullList2 = createFullList("f863ae13-0a8d-4e61-b3a4-1d8f40f340d1")
 const eventIdentifierList2 = fullList2[0].id
 await sorci.insertEvents(fullList2);
 

@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { EventId, Sorci, Query, ToPersistEvent } from "./sorci.interface";
-import { createId, shortId } from "./common/utils";
+import { shortId } from "./common/utils";
 
 export class SorciPostgres implements Sorci {
   private _sql;
@@ -92,13 +92,21 @@ export class SorciPostgres implements Sorci {
   async createBasicTable(tableName: string) {
     await this.sql.begin(async (sql) => {
       const currentTableIdentifier = sql(tableName);
+
+      const isUuidExtensionLoaded = !!(
+        await sql`SELECT * FROM pg_extension WHERE extname = 'uuid-ossp'`
+      ).length;
+      if (!isUuidExtensionLoaded) {
+        await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+      }
+
       await sql`
         CREATE TABLE IF NOT EXISTS ${currentTableIdentifier} (
-          id text PRIMARY KEY,
+          id text PRIMARY KEY DEFAULT uuid_generate_v4(),
           type text NOT NULL,
           data JSONB NOT NULL,
           identifier JSONB NOT NULL,
-          created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+          timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
         );
       `;
 
@@ -223,11 +231,12 @@ export class SorciPostgres implements Sorci {
   }
 
   async insertEvents(events: Array<ToPersistEvent>) {
-    await this.sql`INSERT INTO ${this.streamNameWritableIdentifier} ${this.sql(
-      events
-    )}`;
+    const res = (await this.sql`
+      INSERT INTO ${this.streamNameWritableIdentifier} ${this.sql(events)}
+      RETURNING id
+    `) as Array<{ id: string }>;
 
-    return events.map((event) => event.id);
+    return res.map((resItem) => resItem.id);
   }
 
   private getWhereStatement(sql: postgres.Sql, query: Query) {
@@ -263,7 +272,7 @@ export class SorciPostgres implements Sorci {
       type: rawEvent.type,
       data: rawEvent.data,
       identifier: rawEvent.identifier,
-      timestamp: rawEvent.created_at,
+      timestamp: rawEvent.timestamp,
     };
   }
 
@@ -285,7 +294,7 @@ export class SorciPostgres implements Sorci {
         type: rawEvent.type,
         data: rawEvent.data,
         identifier: rawEvent.identifier,
-        timestamp: rawEvent.created_at,
+        timestamp: rawEvent.timestamp,
       };
     });
   }
@@ -348,7 +357,7 @@ export class SorciPostgres implements Sorci {
         lastEventIdentifierRaw[lastEventIdentifierRaw.length - 1]
           .last_event_identifier;
 
-      if (lastEventIdentifier  === payload.eventIdentifier) {
+      if (lastEventIdentifier === payload.eventIdentifier) {
         const res = await sql`
           INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier)
           VALUES (${payload.sourcingEvent.id}, ${payload.sourcingEvent.type}, ${payload.sourcingEvent.data}, ${payload.sourcingEvent.identifier})
@@ -357,7 +366,9 @@ export class SorciPostgres implements Sorci {
 
         return res[0].id as string;
       } else {
-        throw new Error(`Event Identifier mismatch, given: ${payload.eventIdentifier}, found: ${lastEventIdentifier}`);
+        throw new Error(
+          `Event Identifier mismatch, given: ${payload.eventIdentifier}, found: ${lastEventIdentifier}`
+        );
       }
     });
     return eventPersistedId;
