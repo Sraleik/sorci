@@ -1,8 +1,7 @@
 import { Bench } from "tinybench";
 import { PostgreSqlContainer } from "testcontainers";
-import { faker } from "@faker-js/faker";
-import { createId } from "./common/utils";
 import { SorciPostgres } from "./sorci.postgres";
+import { createCourseCreated, createCourseFullLife } from "./test-helpers";
 
 const bench = new Bench({ time: 5000 });
 
@@ -29,55 +28,15 @@ const sorci = new SorciPostgres(
   "useless_stream_name"
 );
 
-const makeEvent = () => {
-  const listId = createId();
-  const taskId = createId();
-
-  return {
-    id: createId(),
-    type: "TASK_ADDED_TO_LIST",
-    data: { listId, taskId, title: faker.lorem.sentence() },
-    identifier: { listId, taskId },
-  };
-};
-
-const createList = (listId: string = createId()) => {
-  return {
-    id: createId(),
-    type: "LIST_CREATED",
-    data: { listId, title: faker.lorem.sentence() },
-    identifier: { listId },
-  };
-};
-
-const createTask = (listId: string) => {
-  const taskId = createId();
-
-  return {
-    id: createId(),
-    type: "TASK_ADDED_TO_LIST",
-    data: { listId, taskId, title: faker.lorem.sentence() },
-    identifier: { listId, taskId },
-  };
-};
-
-const createFullList = (listId: string = createId()) => {
-  const listCreated = createList(listId);
-
-  const tenTasks = Array.from({ length: 10 }).map(() => createTask(listId));
-
-  return [listCreated, ...tenTasks];
-};
-
 const FULL_LIST_MULTIPLICATOR = 50;
 const FULL_LIST_ON_INSERT_COUNT = 1000;
-const FULL_LIST_EVENT_COUNT = createFullList().length 
+const FULL_LIST_EVENT_COUNT = createCourseFullLife().length;
 
 const prepareBigStream = async () => {
   let stream: Array<any> = [];
   for (let i = 0; i < FULL_LIST_MULTIPLICATOR; i++) {
     for (let i = 0; i < FULL_LIST_ON_INSERT_COUNT; i++) {
-      stream.push(...createFullList());
+      stream.push(...createCourseFullLife());
     }
 
     await sorci.insertEvents(stream);
@@ -89,21 +48,24 @@ await sorci.setupTestStream();
 console.log("stream setup", sorci.streamName);
 console.log("Start loading data");
 
-const listId = "345796fd-c56c-4a9b-8dd5-22763b7d4997"
-const fullList1 = createFullList(listId)
-const eventIdentifierList1 = fullList1[fullList1.length -1].id
-await sorci.insertEvents(fullList1);
-await sorci.insertEvents([{...makeEvent(), id: "10520cad-b0d6-4415-bbfe-1d086bdbafc1"}]);
+const course1Id = "345796fd-c56c-4a9b-8dd5-22763b7d4997";
+const fullCourse1 = createCourseFullLife({ courseId: course1Id });
+const eventIdentifierList1 = fullCourse1[fullCourse1.length - 1].id;
+await sorci.insertEvents(fullCourse1);
+const courseCreated = createCourseCreated();
+await sorci.insertEvents([courseCreated]);
 
 await prepareBigStream();
 
-const fullList2 = createFullList("f863ae13-0a8d-4e61-b3a4-1d8f40f340d1")
-const eventIdentifierList2 = fullList2[0].id
-await sorci.insertEvents(fullList2);
+const fullCourse2 = createCourseFullLife({
+  courseId: "f863ae13-0a8d-4e61-b3a4-1d8f40f340d1",
+});
+const eventIdentifierList2 = fullCourse2[0].id;
+await sorci.insertEvents(fullCourse2);
 
 console.log("Data loaded");
 
-let eventToPersist = makeEvent();
+let eventToPersist = createCourseCreated();
 
 bench
   .add(
@@ -116,7 +78,7 @@ bench
         console.log("Running - Simple insert");
       },
       beforeEach: () => {
-        eventToPersist = makeEvent();
+        eventToPersist = createCourseCreated();
       },
     }
   )
@@ -130,7 +92,7 @@ bench
         console.log("Running - Append with no conflict, no query");
       },
       beforeEach: () => {
-        eventToPersist = makeEvent();
+        eventToPersist = createCourseCreated();
       },
     }
   )
@@ -140,9 +102,9 @@ bench
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         query: {
-          types: ["LIST_CREATED"],
+          types: ["course-created"],
         },
-        eventIdentifier: eventIdentifierList2 ,
+        eventIdentifier: eventIdentifierList2,
       });
     },
     {
@@ -150,7 +112,7 @@ bench
         console.log("Running - Append complex, with query : types ");
       },
       beforeEach: () => {
-        eventToPersist = makeEvent();
+        eventToPersist = createCourseCreated();
       },
     }
   )
@@ -160,9 +122,9 @@ bench
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         query: {
-          identifiers: [{ listId }],
+          identifiers: [{ courseId: course1Id }],
         },
-        eventIdentifier: eventIdentifierList1 
+        eventIdentifier: eventIdentifierList1,
       });
     },
     {
@@ -170,7 +132,7 @@ bench
         console.log("Running - Append complex, with query : identifiers");
       },
       beforeEach: () => {
-        eventToPersist = makeEvent();
+        eventToPersist = createCourseCreated();
       },
     }
   )
@@ -180,10 +142,10 @@ bench
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         query: {
-          types: ["LIST_CREATED", "TASK_ADDED_TO_LIST"],
-          identifiers: [{ listId }],
+          types: ["course-created", "student-subscribed-to-course"],
+          identifiers: [{ courseId: course1Id }],
         },
-        eventIdentifier: eventIdentifierList1  //TODO: this should be another list
+        eventIdentifier: eventIdentifierList1, 
       });
     },
     {
@@ -191,7 +153,7 @@ bench
         console.log("Running - Append with query: types & identifiers");
       },
       beforeEach: () => {
-        eventToPersist = makeEvent();
+        eventToPersist = createCourseCreated();
       },
     }
   )
@@ -199,7 +161,7 @@ bench
     "Get by Query, types",
     async () => {
       await sorci.getEventsByQuery({
-        types: ["LIST_CREATED"],
+        types: ["student-created"],
       });
     },
     {
@@ -212,7 +174,7 @@ bench
     "Get by Query, identifiers",
     async () => {
       await sorci.getEventsByQuery({
-        identifiers: [{ listId }],
+        identifiers: [{ courseId: course1Id }],
       });
     },
     {
@@ -222,23 +184,23 @@ bench
     }
   )
   .add(
-    "Get by Query, types & idenditifiers",
+    "Get by Query, types & identifiers",
     async () => {
       await sorci.getEventsByQuery({
-        types: ["LIST_CREATED", "TASK_ADDED_TO_LIST"],
-        identifiers: [{ listId }],
+        types: ["course-created", "course-renamed"],
+        identifiers: [{ courseId: course1Id }],
       });
     },
     {
       beforeAll: async () => {
-        console.log("Running - Get by Query, types & idenditifiers");
+        console.log("Running - Get by Query, types & identifiers");
       },
     }
   )
   .add(
     "Get by EventId",
     async () => {
-      await sorci.getEventById('10520cad-b0d6-4415-bbfe-1d086bdbafc1');
+      await sorci.getEventById(courseCreated.id);
     },
     {
       beforeAll: async () => {
@@ -249,8 +211,16 @@ bench
 
 await bench.run();
 
-console.log("\n")
-console.log(`Bench results on: ${FULL_LIST_EVENT_COUNT * FULL_LIST_ON_INSERT_COUNT * FULL_LIST_MULTIPLICATOR + FULL_LIST_EVENT_COUNT + 1} events`)
+console.log("\n");
+console.log(
+  `Bench results on: ${
+    FULL_LIST_EVENT_COUNT *
+      FULL_LIST_ON_INSERT_COUNT *
+      FULL_LIST_MULTIPLICATOR +
+    FULL_LIST_EVENT_COUNT +
+    1
+  } events`
+);
 console.table(bench.table());
 
 await pgInstance.stop();
