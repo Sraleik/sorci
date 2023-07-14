@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "test:unit": "vitest --config ./vitest.config.ts --single-thread",
     "bench": "tsx ./src/sorci.bench.ts",
-    "bench:watch": "tsx watch ./src/sorci.bench.ts"
+    "bench:watch": "tsx watch ./src/sorci.bench.ts",
+    "references": "typedoc --out references --theme default --name 'Sorci.js'  ./src/sorci.interface.ts"
   },
   "repository": {
     "type": "git",
@@ -54,6 +55,7 @@
     "testcontainers": "^9.9.1",
     "tinybench": "^2.5.0",
     "tsx": "^3.12.7",
+    "typedoc": "^0.24.8",
     "typescript": "^5.1.3",
     "vite": "^4.3.9",
     "vite-plugin-dts": "^2.3.0",
