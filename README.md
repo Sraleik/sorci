@@ -92,7 +92,7 @@ Wich mean it's also unreadable during write. The read-only table allow read whil
 
 ## API
 
-Full References - [here](./docs/references.md)
+Full References - [here](https://sraleik.github.io/sorci/)
 
 ## Testing
 
@@ -113,16 +113,18 @@ Those benchmark are done on a dell xps pro.
 
 ![plot](./image/benchmark-on-500k-events.png)
 
-### **Simple Insert: ~300 ops/s**
+### **Simple Insert :**
+<small>~300 ops/s</small>
 
 This is for reference. To know the baseline of Insert.
 
-### **Simple Append: ~300 ops/s**
+### **Simple Append :**
+<small>~300 ops/s</small>
 
 This is when we want to persist an event that we know don't impact decision.
 The library will be very close to baseline. It's almost a simple insert.
 
-### **Append with query: types**
+### **Append with query - types :**
 
 Here we have a big variation, in the first exemple there is only 2 event of the selected type `course-created`, so getting the lastVersion is fast
 
@@ -130,35 +132,37 @@ In the second exemple we have 55 000 event of types `course-created` it take a b
 
 This should not be a big issue because filtering only by types should not happen very often. The option remain available if necessary
 
-### **Append with query: identifiers : ~230 ops/s**
+### **Append with query - identifiers :**
+<small>~230 ops/s</small>
 
 Here volume should not impact the persistence. Identifier has a gin index. Wich make retrieving event by id fast. 
 
 This is great because it will be one of the most use way of persisting event.
 
-### **Append with query: types & identifiers**
+### **Append with query - types & identifiers :**
 
 Here volume is impacting the results. But performance are for most cases acceptable. On a benchmark with 1M events the library still score a 50 ops/s
 
-### **Get by Query: type**
+### **Get by Query - type :**
 
 Here volume is important, in the second exemple we are retrieving 55 000 events whereas in the first we retrieve 2.
 
-### **Get by Query: identifier**
+### **Get by Query - identifier :**
 
 Here volume is important, 
 In those exemple we retrieve the same amount of event but going through the btree index is a bit slower since there is more data. 
 
 Perfomance should be good for most cases
 
-### **Get by Query: types & identifier**
+### **Get by Query - types & identifier :**
 
 Here volume is important, 
 In those exemple we retrieve the same amount of event but going through the btree & gin index is a bit slower since there is more data. 
 
 Perfomance should be good for most cases
 
-### **Get by EventId: ~ 20 000 ops/s**
+### **Get by EventId :**
+<small>~20 000 ops/s</small>
 
 This is for reference. To know the baseline Query.
 
@@ -176,9 +180,12 @@ It will take around 30s ~ to load the half a million event into the table.
 
 ## TODO
 
+- [X] Auto generate the API reference 
+- [X] Display the API with github page 
 - [ ] Fix eslint
 - [ ] Add option to serialize data into binary
 - [ ] Make the constructor parameter a single explicit payload
 - [ ] Add a appendEvents 
 - [ ] Make the github CI run the unit test 
+- [ ] Make the github CI run the benchmark 
 - [ ] Make the github CI generate a new version when merged on trunk 
