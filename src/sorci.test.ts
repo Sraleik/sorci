@@ -34,7 +34,7 @@ beforeAll(async () => {
     databaseName,
     "useless_stream_name"
   );
-});
+}, 30000);
 
 beforeEach(async () => {
   await sorci.setupTestStream();
