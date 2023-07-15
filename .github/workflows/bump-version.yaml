@@ -22,6 +22,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
+          token: ${{ secrets.PAT }}
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -40,7 +41,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git commit -am "Bump version to $NEW_VERSION"
+          git commit -am "Bump version to $NEW_VERSION" --quiet
           git push
         env:
           NEW_VERSION: ${{ env.NEW_VERSION }}
