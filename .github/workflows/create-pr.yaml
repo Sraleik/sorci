@@ -23,5 +23,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
           base: 'main' # Base branch for PR
-          title: 'New changes from ${{ github.ref }}'
+          title: 'New PR do not forget to change the title'
           draft: true 
