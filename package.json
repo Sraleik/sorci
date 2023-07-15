@@ -7,7 +7,6 @@
   "scripts": {
     "build": "tsc && vite build",
     "build:docs": "typedoc --out docs --theme default --name 'Sorci.js' ./src && cp -r ./image ./docs/image",
-    "publish": "npm publish",
     "test:unit": "vitest --config ./vitest.config.ts --single-thread",
     "bench": "tsx ./src/sorci.bench.ts",
     "bench:watch": "tsx watch ./src/sorci.bench.ts"

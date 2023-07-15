@@ -3,7 +3,7 @@ name: Build Api Docs
 on:
   push:
     branches:
-      - main
+      - "**"
 
 jobs:
   build-api-docs:
@@ -24,6 +24,7 @@ jobs:
         run: yarn run build:docs
 
       - name: Commit and push references folder
+        if: github.ref == 'refs/heads/main'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
