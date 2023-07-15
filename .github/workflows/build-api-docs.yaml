@@ -1,32 +1,32 @@
-name: Build Api Docs 
+name: Build Api Docs
 
 on:
   push:
     branches:
-      - main 
+      - main
 
 jobs:
   build-api-docs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Use Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Install dependencies
-      run: yarn install
+      - name: Install dependencies
+        run: yarn install
 
-    - name: Build References 
-      run: yarn run build:docs 
+      - name: Build References
+        run: yarn run build:docs
 
-    - name: Commit and push references folder 
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add -A
-        git diff --quiet && git diff --staged --quiet || git commit -m "Update references folder"
-        git push
+      - name: Commit and push references folder
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update references folder"
+          git push
