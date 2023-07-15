@@ -6,7 +6,7 @@ on:
       - main 
 
 jobs:
-  build:
+  build-api-docs:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +21,7 @@ jobs:
       run: yarn install
 
     - name: Build References 
-      run: yarn run references 
+      run: yarn run build:docs 
 
     - name: Commit and push references folder 
       run: |

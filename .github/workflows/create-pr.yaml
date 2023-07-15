@@ -6,9 +6,14 @@ on:
       - 'main' # Exclude main branch
 
 jobs:
-  createPR:
+  pr-creation:
     runs-on: ubuntu-latest
     steps:
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 18
+
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -18,5 +23,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
           base: 'main' # Base branch for PR
-          title: 'New changes from ${ { github.ref }}'
+          title: 'New changes from ${{ github.ref }}'
           draft: true 
