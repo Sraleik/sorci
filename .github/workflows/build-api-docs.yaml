@@ -1,4 +1,4 @@
-name: Build References 
+name: Build Api Docs 
 
 on:
   push:
@@ -14,6 +14,7 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 18
+        token: ${{ secrets.PAT }}
 
     - uses: actions/checkout@v3
 
