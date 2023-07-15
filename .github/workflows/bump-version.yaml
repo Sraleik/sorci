@@ -1,0 +1,47 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        type: choice
+        required: true
+        default: patch 
+        description: Type of version bump 
+        options:
+        - patch 
+        - minor 
+        - major 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Bump version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          VERSION_PARTS=(${VERSION//./ })
+          PATCH=${VERSION_PARTS[2]}
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$NEW_PATCH"
+          jq '.version = $newVersion' --arg newVersion "$NEW_VERSION" package.json > package.json.tmp
+          mv package.json.tmp package.json
+          
+      - name: Commit and push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -am "Bump version to $NEW_VERSION"
+          git push
+        env:
+          NEW_VERSION: ${{ env.NEW_VERSION }}
+          # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
