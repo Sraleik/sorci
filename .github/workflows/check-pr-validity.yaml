@@ -1,9 +1,9 @@
-name: Check PR validity
+name: Check Branch validity
 
 on:
   push:
     branches:
-      - "does-not-exist"
+      - "**"
 
 jobs:
   unit-test:

@@ -3,7 +3,7 @@ name: Run Benchmark
 on:
   push:
     branches:
-      - "**"
+      - "does-not-exist"
 
 jobs:
   benchmark:
