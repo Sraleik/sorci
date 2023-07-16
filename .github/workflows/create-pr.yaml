@@ -3,7 +3,7 @@ name: Create Pull Request
 on:
   push:
     branches-ignore:
-      - 'main' # Exclude main branch
+      - "main" # Exclude main branch
 
 jobs:
   pr-creation:
@@ -22,6 +22,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
-          base: 'main' # Base branch for PR
-          title: 'New PR do not forget to change the title'
-          draft: true 
+          base: "main" # Base branch for PR
+          title: "New PR do not forget to change the title"
+          draft: true

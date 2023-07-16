@@ -186,6 +186,7 @@ It will take around 30s ~ to load the half a million event into the table.
 - [ ] Add option to serialize data into binary
 - [ ] Make the constructor parameter a single explicit payload
 - [ ] Add a appendEvents 
-- [ ] Make the github CI run the unit test 
-- [ ] Make the github CI run the benchmark 
-- [ ] Make the github CI generate a new version when merged on trunk 
+- [X] Make the github CI run the unit test 
+- [X] Make the github CI run the benchmark 
+- [ ] Make a github workflow to create a new release 
+- [ ] Version the Api Doc with multiple folder 
