@@ -3,7 +3,7 @@ name: Build library
 on:
   push:
     branches:
-      - "**"
+      - "does-not-exist"
 
 jobs:
   build-and-publish:

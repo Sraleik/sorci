@@ -3,7 +3,7 @@ name: Build Api Docs
 on:
   push:
     branches:
-      - "**"
+      - "does-not-exist"
 
 jobs:
   build-api-docs:
