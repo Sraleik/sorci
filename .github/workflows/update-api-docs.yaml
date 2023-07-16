@@ -5,7 +5,7 @@ on:
     branches:
       - "main"
 
-jobs:jobs:
+jobs:
   # Single deploy job since we're just deploying
   deploy:
     environment:
