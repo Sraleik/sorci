@@ -29,10 +29,8 @@ jobs:
           cache-name: cache-node-modules
         with:
           path: $ {{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-build-${{ env.cache-name }}\
-          -${{ hashFiles('**/yarn.lock') }}
-          restore-keys:
-            ${{ runner.os }}-build-${{ env.cache-name }}-
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
 
@@ -46,7 +44,6 @@ jobs:
 
       - name: Run tests
         run: yarn run test:unit
-
 
   benchmark:
     runs-on: ubuntu-latest
