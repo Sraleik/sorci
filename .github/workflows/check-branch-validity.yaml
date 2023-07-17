@@ -53,12 +53,12 @@ jobs:
           node-version: 18
 
       - name: Checkout code
-      - uses: actions/checkout@v3
+        uses: actions/checkout@v3
 
       - name: Install dependencies
         run: yarn install
 
-      - name: Build Api Docs 
+      - name: Build Api Docs
         run: yarn run build:docs
 
   build-library:
