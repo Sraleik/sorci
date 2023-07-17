@@ -1796,6 +1796,11 @@ kolorist@^1.7.0:
   resolved "https://registry.yarnpkg.com/kolorist/-/kolorist-1.8.0.tgz#edddbbbc7894bc13302cdf740af6374d4a04743c"
   integrity sha512-Y+60/zizpJ3HRH8DCss+q95yr6145JXZo46OTpFvDZWLfRCE4qChOyk1b26nMaNpfHHgxagk9dXT5OP0Tfe+dQ==
 
+layerr@^2.0.0:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/layerr/-/layerr-2.0.1.tgz#0c98e6f599de4f76b75c7a6522c54b8c6c591ff0"
+  integrity sha512-z0730CwG/JO24evdORnyDkwG1Q7b7mF2Tp1qRQ0YvrMMARbt1DFG694SOv439Gm7hYKolyZyaB49YIrYIfZBdg==
+
 lazystream@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/lazystream/-/lazystream-1.0.1.tgz#494c831062f1f9408251ec44db1cba29242a2638"
@@ -2646,6 +2651,13 @@ ufo@^1.1.1:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/ufo/-/ufo-1.1.2.tgz#d0d9e0fa09dece0c31ffd57bd363f030a35cfe76"
   integrity sha512-TrY6DsjTQQgyS3E3dBaOXf0TpPD8u9FVrVYmKVegJuFw51n/YB9XPt+U6ydzFG5ZIN7+DIjPbNmXoBj9esYhgQ==
+
+ulidx@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/ulidx/-/ulidx-2.0.0.tgz#c6120dbf2ac717621f94af0f2c5c78400e4d5277"
+  integrity sha512-cz6HnYL8aQeR1l7qgo4qK88kLhnVQn1qLjALMoa4rtmj6/jw3yS2KUxu3r+d8GSKkeK9ctw+n8VmCygqfDtckA==
+  dependencies:
+    layerr "^2.0.0"
 
 universalify@^0.1.0:
   version "0.1.2"

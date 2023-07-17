@@ -41,6 +41,7 @@
   "dependencies": {
     "nanoid": "^4.0.2",
     "postgres": "^3.3.4",
+    "ulidx": "^2.0.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
