@@ -64,6 +64,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install dependencies
+        run: yarn install
+
       - name: Bump version
         id: bump-version
         run: |
