@@ -30,11 +30,11 @@ jobs:
         env:
           cache-name: cache-node-modules
         with:
-          path: $ {{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: 
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
+            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+            ${{ runner.os }}-yarn-
             ${{ runner.os }}-
 
       - name: List the state of node modules
