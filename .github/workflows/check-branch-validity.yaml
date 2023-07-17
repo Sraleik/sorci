@@ -60,6 +60,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: |
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" 
+
+      - name: Cache node modules
+        id: cache-yarn
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: 
+            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-
+
       - name: Install dependencies
         run: yarn install
 
@@ -79,6 +98,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: |
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" 
+
+      - name: Cache node modules
+        id: cache-yarn
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: 
+            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-
+
       - name: Install dependencies
         run: yarn install
 
@@ -97,6 +135,25 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v3
+        
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: |
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" 
+
+      - name: Cache node modules
+        id: cache-yarn
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: 
+            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-
 
       - name: Install dependencies
         run: yarn install
