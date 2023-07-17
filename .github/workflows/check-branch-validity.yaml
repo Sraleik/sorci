@@ -20,7 +20,9 @@ jobs:
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+        run: |
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" 
 
       - name: Cache node modules
         id: cache-yarn
@@ -28,9 +30,10 @@ jobs:
         env:
           cache-name: cache-node-modules
         with:
-          path: $ {{ steps.yarn-cache-dir-path.outputs.dir }}
+          path: $ {{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}-
+          restore-keys: 
+            ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
 
