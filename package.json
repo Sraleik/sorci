@@ -39,9 +39,8 @@
     "dist"
   ],
   "dependencies": {
-    "nanoid": "^4.0.2",
     "postgres": "^3.3.4",
-    "uuid": "^9.0.0"
+    "ulidx": "^2.0.0"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.0.1",

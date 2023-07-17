@@ -62,7 +62,7 @@ jobs:
       - name: Build References
         run: yarn run build:docs
 
-      - name: Check for docs changes and commit if exists
+      - name: Commit api doc 
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
