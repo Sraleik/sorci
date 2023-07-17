@@ -18,11 +18,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - name: Cache node modules
+        id: cache-yarn
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: $ {{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}\
+          -${{ hashFiles('**/yarn.lock') }}
+          restore-keys:
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: List the state of node modules
+        if: ${{ steps.cache-yarn.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        run: yarn list
+
       - name: Install dependencies
         run: yarn install
 
       - name: Run tests
         run: yarn run test:unit
+
 
   benchmark:
     runs-on: ubuntu-latest
