@@ -40,8 +40,7 @@ jobs:
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: 
-            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+          restore-keys: ${{ runner.os }}-yarn-${{ env.cache-name }}-
             ${{ runner.os }}-yarn-
             ${{ runner.os }}-
 
@@ -77,8 +76,7 @@ jobs:
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: 
-            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+          restore-keys: ${{ runner.os }}-yarn-${{ env.cache-name }}-
             ${{ runner.os }}-yarn-
             ${{ runner.os }}-
 
@@ -121,33 +119,15 @@ jobs:
             ${{ runner.os }}-yarn-
             ${{ runner.os }}-
 
-      - name: Install dependencies
-        run: yarn install
-
       - name: Bump version
         id: bump-version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          VERSION_PARTS=(${VERSION//./ })
-          MAJOR=${VERSION_PARTS[0]}
-          MINOR=${VERSION_PARTS[1]}
-          PATCH=${VERSION_PARTS[2]}
-
-          if [ "${{ github.event.inputs.type }}" == "major" ]; then
-            MAJOR=$((MAJOR + 1))
-            MINOR=0
-            PATCH=0
-          elif [ "${{ github.event.inputs.type }}" == "minor" ]; then
-            MINOR=$((MINOR + 1))
-            PATCH=0
-          else
-            PATCH=$((PATCH + 1))
-          fi
-
-          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          jq '.version = $newVersion' --arg newVersion "$NEW_VERSION" package.json > package.json.tmp
-          mv package.json.tmp package.json
+          npm version ${{ github.event.inputs.type }}
+          NEW_VERSION=$(node -p "require('./package.json').version")
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: yarn install
 
       - name: Build library
         run: yarn run build
@@ -164,20 +144,13 @@ jobs:
           git commit -am "Bump version to ${{steps.bump-version.outputs.NEW_VERSION}}" --quiet
           git push
 
-  # create-github-release:
-  #   runs-on: ubuntu-latest
-  #   needs: [unit-test, benchmark]
-
-  #   steps:
-
-  # - name: Create GitHub release
-  #   id: create_release
-  #   uses: actions/create-release@v1
-  #   env:
-  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-  #   with:
-  #     tag_name: ${{ github.event.inputs.version }}
-  #     release_name: Release ${{ github.event.inputs.version }}
-  #     body: New release of the project.
-  #     draft: false
-  #     prerelease: false
+      - name: Create GitHub release
+          uses: actions/create-release@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          with:
+            tag_name: ${{ github.event.inputs.version }}
+            release_name: Release ${{ github.event.inputs.version }}
+            body: New release of the project.
+            draft: false
+            prerelease: false
