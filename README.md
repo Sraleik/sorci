@@ -192,6 +192,8 @@ It will take around 30s ~ to load the half a million event into the table.
 - [ ] Rename clean/clear en dropStream 
 
 ### Repository 
+- [ ] Use npm version to publish new version 
+- [ ] Create new release inside git on new version 
 - [ ] Fix eslint
 - [ ] Make a github workflow to create a new release 
 - [ ] Version the Api Doc with multiple folder 
