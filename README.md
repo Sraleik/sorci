@@ -180,14 +180,23 @@ It will take around 30s ~ to load the half a million event into the table.
 
 ## TODO
 
-- [X] Auto generate the API reference 
-- [X] Display the API with github page 
-- [ ] Fix eslint
-- [ ] Add option to serialize data into binary
-- [ ] Make the constructor parameter a single explicit payload
+### Feature 
 - [ ] Add a appendEvents 
+- [ ] Add a mergeStreams 
+- [ ] Add a splitStream 
+- [ ] Add a way to be able to inject a createId function to SorciEvent 
+
+### Technical
+- [ ] Make the constructor parameter a single explicit payload
+- [ ] Add option to serialize data into binary
+- [ ] Rename clean/clear en dropStream 
+
+### Repository 
+- [ ] Fix eslint
+- [ ] Make a github workflow to create a new release 
+- [ ] Version the Api Doc with multiple folder 
 - [X] Remove dependency to uuid (make it possible to give a createId function to SorciEvent)
 - [X] Make the github CI run the unit test 
 - [X] Make the github CI run the benchmark 
-- [ ] Make a github workflow to create a new release 
-- [ ] Version the Api Doc with multiple folder 
+- [X] Auto generate the API reference 
+- [X] Display the API with github page 
