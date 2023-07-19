@@ -41,7 +41,7 @@ export type ToPersistEvent = {
   data: Record<string, any>;
   identifier: Record<string, any>;
   /**
-   * @remarks The creation date of the event. If not provided, it will be generated automatically
+   * @remarks The creation date of the event. If not provided will be generated automatically
    */
   timestamp?: Date;
 };
