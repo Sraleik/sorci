@@ -99,14 +99,14 @@ export interface Sorci {
    * Usefull to cleanup a test stream
    * @category Tooling
    */
-  cleanCurrentStream(): Promise<void>;
+  dropCurrentStream(): Promise<void>;
 
   /**
    * Will destroy every stream prefixed by 'test-'
    * Usefull to cleanup all test stream
    * @category Tooling
    */
-  clearAllTestStream(payload?: {
+  dropAllTestStream(payload?: {
     excludeCurrentStream: boolean;
   }): Promise<void>;
 

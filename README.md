@@ -189,14 +189,14 @@ It will take around 30s ~ to load the half a million event into the table.
 ### Technical
 - [ ] Make the constructor parameter a single explicit payload
 - [ ] Add option to serialize data into binary
-- [ ] Rename clean/clear en dropStream 
+- [X] Rename clean/clear en dropStream 
 
 ### Repository 
-- [ ] Use npm version to publish new version 
-- [ ] Create new release inside git on new version 
+- [X] Use npm version to publish new version 
 - [ ] Fix eslint
-- [ ] Make a github workflow to create a new release 
+- [X] Make a github workflow to create a new release 
 - [ ] Version the Api Doc with multiple folder 
+- [X] Update documentation only when there is a diff
 - [X] Remove dependency to uuid (make it possible to give a createId function to SorciEvent)
 - [X] Make the github CI run the unit test 
 - [X] Make the github CI run the benchmark 

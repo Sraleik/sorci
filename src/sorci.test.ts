@@ -41,11 +41,11 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await sorci.cleanCurrentStream();
+  await sorci.dropCurrentStream();
 });
 
 afterAll(async () => {
-  // await sorci.clearAllTestStream({ excludeCurrentStream: true });
+  // await sorci.dropAllTestStream({ excludeCurrentStream: true });
   await pgInstance.stop();
 });
 
