@@ -74,7 +74,6 @@ jobs:
           else
             echo "NEED_DEPLOYMENT=false" >> "$GITHUB_OUTPUT"
           fi
-          exit 1
 
       - name: Setup Pages
         if: steps.check_changes.outputs.NEED_DEPLOYMENT == 'true'
