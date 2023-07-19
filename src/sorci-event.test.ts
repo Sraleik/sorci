@@ -7,7 +7,7 @@ describe("Given the default SorciEvent", () => {
   describe("When creating a new SorciEvent", () => {
     const eventPayload = {
       type: "course-created",
-      data: { name: "Maths", courseId: ulid() },
+      data: { name: "Maths", courseId: ulid() }
     };
 
     const event = SorciEvent.create(eventPayload);
@@ -23,7 +23,7 @@ describe("Given the default SorciEvent", () => {
     });
     test("Then the identifier is correct", () => {
       expect(event.identifier).toEqual({
-        courseId: eventPayload.data.courseId,
+        courseId: eventPayload.data.courseId
       });
     });
     test("Then the timestamp is correct", () => {
@@ -36,15 +36,17 @@ describe("Given SorciEvent customize to use uuid", () => {
   describe("When creating a new SorciEvent", () => {
     const eventPayload = {
       type: "course-created",
-      data: { name: "Maths", courseId: uuid() },
+      data: { name: "Maths", courseId: uuid() }
     };
 
-    const SorciEventUuid = sorciEventFactory(() =>  uuid())
+    const SorciEventUuid = sorciEventFactory(() => uuid());
 
     const event = SorciEventUuid.create(eventPayload);
 
     test("Then the event id is an ulid", () => {
-      expect(event.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[8|9aAbB][0-9a-f]{3}-[0-9a-f]{12}$/i);
+      expect(event.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[8|9aAbB][0-9a-f]{3}-[0-9a-f]{12}$/i
+      );
     });
     test("Then the type is correct", () => {
       expect(event.type).toEqual(eventPayload.type);
@@ -54,7 +56,7 @@ describe("Given SorciEvent customize to use uuid", () => {
     });
     test("Then the identifier is correct", () => {
       expect(event.identifier).toEqual({
-        courseId: eventPayload.data.courseId,
+        courseId: eventPayload.data.courseId
       });
     });
     test("Then the timestamp is correct", () => {
@@ -65,13 +67,13 @@ describe("Given SorciEvent customize to use uuid", () => {
 
 describe("Given SorciEvent customize to use nanoid", () => {
   describe("When creating a new SorciEvent", () => {
-    const tinyId = customAlphabet('0123456789abcdef', 12)
+    const tinyId = customAlphabet("0123456789abcdef", 12);
     const eventPayload = {
       type: "course-created",
-      data: { name: "Maths", courseId: tinyId() },
+      data: { name: "Maths", courseId: tinyId() }
     };
 
-    const SorciEventUuid = sorciEventFactory(() =>  tinyId())
+    const SorciEventUuid = sorciEventFactory(() => tinyId());
 
     const event = SorciEventUuid.create(eventPayload);
 
@@ -86,7 +88,7 @@ describe("Given SorciEvent customize to use nanoid", () => {
     });
     test("Then the identifier is correct", () => {
       expect(event.identifier).toEqual({
-        courseId: eventPayload.data.courseId,
+        courseId: eventPayload.data.courseId
       });
     });
     test("Then the timestamp is correct", () => {

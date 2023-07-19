@@ -1,6 +1,6 @@
 import {
   PostgreSqlContainer,
-  StartedPostgreSqlContainer,
+  StartedPostgreSqlContainer
 } from "testcontainers";
 import { createId } from "./common/utils";
 import { Sorci } from "./sorci.interface";
@@ -8,7 +8,7 @@ import { SorciPostgres } from "./sorci.postgres";
 import {
   createCourseCreated,
   createCourseCapacityChanged,
-  createCourseRenamed,
+  createCourseRenamed
 } from "./test-helpers";
 
 let pgInstance: StartedPostgreSqlContainer;
@@ -32,7 +32,7 @@ beforeAll(async () => {
     user,
     password,
     databaseName,
-    streamName: "useless_stream_name",
+    streamName: "useless_stream_name"
   });
 }, 30000);
 
@@ -55,7 +55,7 @@ describe("Given an empty stream", async () => {
       const courseCreated = createCourseCreated();
       const courseCapacityChanged = createCourseCapacityChanged({
         courseId: courseCreated.data.courseId,
-        oldCapacity: courseCreated.data.capacity,
+        oldCapacity: courseCreated.data.capacity
       });
 
       const [courseCreatedId, courseCapacityChangedId] =
@@ -77,7 +77,7 @@ describe("Given an empty stream", async () => {
       const courseCreated = createCourseCreated();
 
       const eventId = await sorci.appendEvent({
-        sourcingEvent: courseCreated,
+        sourcingEvent: courseCreated
       });
 
       const event = await sorci.getEventById(courseCreated.id);
@@ -96,16 +96,16 @@ describe("Given a populated stream", async () => {
   const course1Created = createCourseCreated();
   const course1CapacityChanged = createCourseCapacityChanged({
     courseId: course1Created.data.courseId,
-    oldCapacity: course1Created.data.capacity,
+    oldCapacity: course1Created.data.capacity
   });
   const course1Renamed = createCourseRenamed({
     courseId: course1Created.data.courseId,
-    oldName: course1Created.data.name,
+    oldName: course1Created.data.name
   });
   const course2Created = createCourseCreated();
   const course2CapacityChanged = createCourseCapacityChanged({
     courseId: course2Created.data.courseId,
-    oldCapacity: course2Created.data.capacity,
+    oldCapacity: course2Created.data.capacity
   });
 
   const streamData = [
@@ -113,7 +113,7 @@ describe("Given a populated stream", async () => {
     course1CapacityChanged,
     course2Created,
     course1Renamed,
-    course2CapacityChanged,
+    course2CapacityChanged
   ];
 
   const course1Id = course1Created.data.courseId;
@@ -127,7 +127,7 @@ describe("Given a populated stream", async () => {
       const course3Created = createCourseCreated();
 
       const eventId = await sorci.appendEvent({
-        sourcingEvent: course3Created,
+        sourcingEvent: course3Created
       });
       expect(eventId).toEqual(course3Created.id);
 
@@ -144,16 +144,16 @@ describe("Given a populated stream", async () => {
     test("Then the event is persisted in the stream", async () => {
       const course1CapacityChangedAgain = createCourseCapacityChanged({
         courseId: course1Id,
-        oldCapacity: course1CapacityChanged.data.newCapacity,
+        oldCapacity: course1CapacityChanged.data.newCapacity
       });
 
       const eventId = await sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
           types: ["course-created", "course-capacity-changed"],
-          identifiers: [{ courseId: course1Id }],
+          identifiers: [{ courseId: course1Id }]
         },
-        eventIdentifier: course1CapacityChanged.id,
+        eventIdentifier: course1CapacityChanged.id
       });
 
       const event = await sorci.getEventById(course1CapacityChangedAgain.id);
@@ -171,16 +171,16 @@ describe("Given a populated stream", async () => {
     test("Then the event is not persisted", async () => {
       const course1CapacityChangedAgain = createCourseCapacityChanged({
         courseId: course1Id,
-        oldCapacity: course1CapacityChanged.data.newCapacity,
+        oldCapacity: course1CapacityChanged.data.newCapacity
       });
 
       const promise = sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
           types: ["course-created", "course-capacity-changed"],
-          identifiers: [{ courseId: course1Id }],
+          identifiers: [{ courseId: course1Id }]
         },
-        eventIdentifier: createId(), // Wrong identifier on purpose
+        eventIdentifier: createId() // Wrong identifier on purpose
       });
 
       await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
@@ -193,15 +193,15 @@ describe("Given a populated stream", async () => {
     test("Then the event is not persisted in the stream", async () => {
       const course1CapacityChangedAgain = createCourseCapacityChanged({
         courseId: course1Id,
-        oldCapacity: course1CapacityChanged.data.newCapacity,
+        oldCapacity: course1CapacityChanged.data.newCapacity
       });
 
       const promise = sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
-          identifiers: [{ courseId: course1Id }],
+          identifiers: [{ courseId: course1Id }]
         },
-        eventIdentifier: createId(), // Wrong identifier on purpose
+        eventIdentifier: createId() // Wrong identifier on purpose
       });
 
       await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
@@ -214,15 +214,15 @@ describe("Given a populated stream", async () => {
     test("Then the event is persisted in the stream", async () => {
       const course1CapacityChangedAgain = createCourseCapacityChanged({
         courseId: course1Id,
-        oldCapacity: course1CapacityChanged.data.newCapacity,
+        oldCapacity: course1CapacityChanged.data.newCapacity
       });
 
       const eventId = await sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
-          types: ["course-created", "course-capacity-changed"],
+          types: ["course-created", "course-capacity-changed"]
         },
-        eventIdentifier: course2CapacityChanged.id,
+        eventIdentifier: course2CapacityChanged.id
       });
 
       const event = await sorci.getEventById(eventId);
@@ -240,15 +240,15 @@ describe("Given a populated stream", async () => {
     test("Then the event is persisted in the stream", async () => {
       const course1CapacityChangedAgain = createCourseCapacityChanged({
         courseId: course1Id,
-        oldCapacity: course1CapacityChanged.data.newCapacity,
+        oldCapacity: course1CapacityChanged.data.newCapacity
       });
 
       const eventId = await sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
-          identifiers: [{ courseId: course1Id }],
+          identifiers: [{ courseId: course1Id }]
         },
-        eventIdentifier: course1Renamed.id,
+        eventIdentifier: course1Renamed.id
       });
 
       const event = await sorci.getEventById(eventId);
@@ -275,7 +275,7 @@ describe("Given a populated stream", async () => {
     test("Then the events are returned", async () => {
       const events = await sorci.getEventsByQuery({
         types: ["course-created", "course-capacity-changed", "course-renamed"],
-        identifiers: [{ courseId: course1Id }],
+        identifiers: [{ courseId: course1Id }]
       });
 
       expect(events).toHaveLength(3);
@@ -287,16 +287,16 @@ describe("Concurrency", async () => {
   const course1Created = createCourseCreated();
   const course1CapacityChanged = createCourseCapacityChanged({
     courseId: course1Created.data.courseId,
-    oldCapacity: course1Created.data.capacity,
+    oldCapacity: course1Created.data.capacity
   });
   const course1Renamed = createCourseRenamed({
     courseId: course1Created.data.courseId,
-    oldName: course1Created.data.name,
+    oldName: course1Created.data.name
   });
   const course2Created = createCourseCreated();
   const course2CapacityChanged = createCourseCapacityChanged({
     courseId: course2Created.data.courseId,
-    oldCapacity: course2Created.data.capacity,
+    oldCapacity: course2Created.data.capacity
   });
 
   const streamData = [
@@ -304,7 +304,7 @@ describe("Concurrency", async () => {
     course1CapacityChanged,
     course2Created,
     course1Renamed,
-    course2CapacityChanged,
+    course2CapacityChanged
   ];
 
   const course1Id = course1Created.data.courseId;
@@ -316,7 +316,7 @@ describe("Concurrency", async () => {
   test("Persist first an event with query then persist an event without query", async () => {
     const course1CapacityChangedAgain = createCourseCapacityChanged({
       courseId: course1Id,
-      oldCapacity: course1CapacityChanged.data.newCapacity,
+      oldCapacity: course1CapacityChanged.data.newCapacity
     });
 
     const course3Created = createCourseCreated();
@@ -325,13 +325,13 @@ describe("Concurrency", async () => {
       sourcingEvent: course1CapacityChangedAgain,
       query: {
         types: ["course-created", "course-capacity-changed"],
-        identifiers: [{ courseId: course1Id }],
+        identifiers: [{ courseId: course1Id }]
       },
-      eventIdentifier: course1CapacityChanged.id,
+      eventIdentifier: course1CapacityChanged.id
     });
 
     await sorci.appendEvent({
-      sourcingEvent: course3Created,
+      sourcingEvent: course3Created
     });
 
     const event1 = await sorci.getEventById(course1CapacityChangedAgain.id);
@@ -356,9 +356,9 @@ describe("Concurrency", async () => {
           sourcingEvent: event,
           query: {
             types: ["course-created", "course-renamed"],
-            identifiers: [{ courseId: course1Id }],
+            identifiers: [{ courseId: course1Id }]
           },
-          eventIdentifier: course1Renamed.id,
+          eventIdentifier: course1Renamed.id
         })
         .then(() => {
           return "success";
@@ -418,30 +418,30 @@ describe("Concurrency", async () => {
   test("Try to persist two unrelated event a the same time, both should be persisted", async () => {
     const course1CapacityChangedAgain = createCourseCapacityChanged({
       courseId: course1Id,
-      oldCapacity: course1CapacityChanged.data.newCapacity,
+      oldCapacity: course1CapacityChanged.data.newCapacity
     });
 
     const course1RenamedAgain = createCourseRenamed({
       courseId: course1Id,
-      oldName: course1Renamed.data.newName,
+      oldName: course1Renamed.data.newName
     });
 
     const appendPromise1 = sorci.appendEvent({
       sourcingEvent: course1CapacityChangedAgain,
       query: {
         types: ["course-created", "course-capacity-changed"],
-        identifiers: [{ courseId: course1Id }],
+        identifiers: [{ courseId: course1Id }]
       },
-      eventIdentifier: course1CapacityChanged.id,
+      eventIdentifier: course1CapacityChanged.id
     });
 
     const appendPromise2 = sorci.appendEvent({
       sourcingEvent: course1RenamedAgain,
       query: {
         types: ["course-created", "course-renamed"],
-        identifiers: [{ courseId: course1Id }],
+        identifiers: [{ courseId: course1Id }]
       },
-      eventIdentifier: course1Renamed.id,
+      eventIdentifier: course1Renamed.id
     });
 
     await Promise.all([appendPromise1, appendPromise2]);
@@ -456,12 +456,12 @@ describe("Concurrency", async () => {
   test("Try to rename a course twice at the same time, one should fail", async () => {
     const course1RenamedAgain = createCourseRenamed({
       courseId: course1Id,
-      oldName: course1Renamed.data.newName,
+      oldName: course1Renamed.data.newName
     });
 
     const course1RenamedAgain2 = createCourseRenamed({
       courseId: course1Id,
-      oldName: course1Renamed.data.newName,
+      oldName: course1Renamed.data.newName
     });
 
     const appendPromise1 = sorci
@@ -469,9 +469,9 @@ describe("Concurrency", async () => {
         sourcingEvent: course1RenamedAgain,
         query: {
           types: ["course-created", "course-renamed"],
-          identifiers: [{ courseId: course1Id }],
+          identifiers: [{ courseId: course1Id }]
         },
-        eventIdentifier: course1Renamed.id,
+        eventIdentifier: course1Renamed.id
       })
       .then(() => "success")
       .catch(() => "error");
@@ -481,9 +481,9 @@ describe("Concurrency", async () => {
         sourcingEvent: course1RenamedAgain,
         query: {
           types: ["course-created", "course-renamed"],
-          identifiers: [{ courseId: course1Id }],
+          identifiers: [{ courseId: course1Id }]
         },
-        eventIdentifier: course1Renamed.id,
+        eventIdentifier: course1Renamed.id
       })
       .then(() => "success")
       .catch(() => "error");
@@ -493,7 +493,7 @@ describe("Concurrency", async () => {
     const res = (
       await Promise.all([
         sorci.getEventById(course1RenamedAgain.id),
-        sorci.getEventById(course1RenamedAgain2.id),
+        sorci.getEventById(course1RenamedAgain2.id)
       ])
     ).map((event) => (event ? "success" : "error"));
 

@@ -11,6 +11,11 @@
   "rules": {
     "@typescript-eslint/no-explicit-any": 0,
     "@typescript-eslint/no-non-null-assertion": "off",
-    "prettier/prettier": ["error", {}, { "usePrettierrc": true }]
+    "prettier/prettier": [
+      "error",
+      {
+        "trailingComma": "none"
+      }
+    ]
   }
 }

@@ -10,7 +10,7 @@ export default defineConfig({
       entry: resolve(__dirname, "src/index.ts"),
       name: "sorci",
       fileName: "sorci",
-      formats: ["es", "umd", "iife", "cjs"],
+      formats: ["es", "umd", "iife", "cjs"]
     },
     rollupOptions: {
       // make sure to externalize deps that shouldn't be bundled
@@ -20,11 +20,11 @@ export default defineConfig({
         // Provide global variables to use in the UMD build
         // for externalized deps
         globals: {
-          postgres: 'Postgres',
-          ulidx: 'Ulidx'
-        },
-      },
-    },
+          postgres: "Postgres",
+          ulidx: "Ulidx"
+        }
+      }
+    }
   },
-  plugins: [dts()],
+  plugins: [dts()]
 });

@@ -38,14 +38,17 @@ export class SorciEvent {
       if (key.match(/Id$/)) {
         return {
           ...acc,
-          [key]: payload[key],
+          [key]: payload[key]
         };
       }
       return acc;
     }, {});
   }
 
-  static create(payload: SorciEventCreatePayload, createId: createIdType = createIdDefault) {
+  static create(
+    payload: SorciEventCreatePayload,
+    createId: createIdType = createIdDefault
+  ) {
     let identifier = payload.identifier ? payload.identifier : {};
     if (!payload.identifier) {
       identifier = SorciEvent.extractKeyValuePairContainingId(payload.data);
@@ -91,36 +94,36 @@ export class SorciEvent {
       type: this.type,
       data: this.data,
       identifier: this.identifier,
-      timestamp: this.timestamp,
+      timestamp: this.timestamp
     };
   }
 }
 
 /**
  * This is a factory to create a SorciEvent class with a custom createId function
- * 
+ *
  * @example
  * ```typescript
  *  import { sorciEventFactory } from 'sorci';
  *  import { v4 as createId } from 'uuid';
- * 
+ *
  *  const SorciEvent = sorciEventFactory(createId);
- *   
+ *
  *  const event = SorciEvent.create({
- *    type: 'course-created', 
+ *    type: 'course-created',
  *    data: {
- *      courseId: '6c811e1c-a441-4dc0-af89-b92f6e1784ed', 
+ *      courseId: '6c811e1c-a441-4dc0-af89-b92f6e1784ed',
  *      name: 'Maths'
  *    }
  *  });
- *  
- *  console.log(event.id); // 98e4654d-ff79-4636-854b-7f51fcf54988 
+ *
+ *  console.log(event.id); // 98e4654d-ff79-4636-854b-7f51fcf54988
  * ```
  */
 export function sorciEventFactory(createId: createIdType) {
-  return class SorciEventCustomized extends SorciEvent{
+  return class SorciEventCustomized extends SorciEvent {
     static create(payload: SorciEventCreatePayload) {
       return SorciEvent.create(payload, createId);
     }
-  }
+  };
 }

@@ -8,7 +8,7 @@ const bench = new Bench({ time: 5000 });
 const pgInstance = await new PostgreSqlContainer("postgres:15.3-alpine")
   .withExposedPorts({
     container: 5432,
-    host: 42420,
+    host: 42420
   })
   .withReuse()
   .start();
@@ -58,7 +58,7 @@ await sorci.insertEvents([courseCreated]);
 await prepareBigStream();
 
 const fullCourse2 = createCourseFullLife({
-  courseId: "f863ae13-0a8d-4e61-b3a4-1d8f40f340d1",
+  courseId: "f863ae13-0a8d-4e61-b3a4-1d8f40f340d1"
 });
 const eventIdentifierList2 = fullCourse2[0].id;
 await sorci.insertEvents(fullCourse2);
@@ -79,7 +79,7 @@ bench
       },
       beforeEach: () => {
         eventToPersist = createCourseCreated();
-      },
+      }
     }
   )
   .add(
@@ -93,7 +93,7 @@ bench
       },
       beforeEach: () => {
         eventToPersist = createCourseCreated();
-      },
+      }
     }
   )
   .add(
@@ -102,9 +102,9 @@ bench
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         query: {
-          types: ["course-created"],
+          types: ["course-created"]
         },
-        eventIdentifier: eventIdentifierList2,
+        eventIdentifier: eventIdentifierList2
       });
     },
     {
@@ -113,7 +113,7 @@ bench
       },
       beforeEach: () => {
         eventToPersist = createCourseCreated();
-      },
+      }
     }
   )
   .add(
@@ -122,9 +122,9 @@ bench
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         query: {
-          identifiers: [{ courseId: course1Id }],
+          identifiers: [{ courseId: course1Id }]
         },
-        eventIdentifier: eventIdentifierList1,
+        eventIdentifier: eventIdentifierList1
       });
     },
     {
@@ -133,7 +133,7 @@ bench
       },
       beforeEach: () => {
         eventToPersist = createCourseCreated();
-      },
+      }
     }
   )
   .add(
@@ -143,9 +143,9 @@ bench
         sourcingEvent: eventToPersist,
         query: {
           types: ["course-created", "student-subscribed-to-course"],
-          identifiers: [{ courseId: course1Id }],
+          identifiers: [{ courseId: course1Id }]
         },
-        eventIdentifier: eventIdentifierList1, 
+        eventIdentifier: eventIdentifierList1
       });
     },
     {
@@ -154,33 +154,33 @@ bench
       },
       beforeEach: () => {
         eventToPersist = createCourseCreated();
-      },
+      }
     }
   )
   .add(
     "Get by Query, types",
     async () => {
       await sorci.getEventsByQuery({
-        types: ["student-created"],
+        types: ["student-created"]
       });
     },
     {
       beforeAll: async () => {
         console.log("Running - Get by Query, types");
-      },
+      }
     }
   )
   .add(
     "Get by Query, identifiers",
     async () => {
       await sorci.getEventsByQuery({
-        identifiers: [{ courseId: course1Id }],
+        identifiers: [{ courseId: course1Id }]
       });
     },
     {
       beforeAll: async () => {
         console.log("Running - Get by Query, identifiers");
-      },
+      }
     }
   )
   .add(
@@ -188,13 +188,13 @@ bench
     async () => {
       await sorci.getEventsByQuery({
         types: ["course-created", "course-renamed"],
-        identifiers: [{ courseId: course1Id }],
+        identifiers: [{ courseId: course1Id }]
       });
     },
     {
       beforeAll: async () => {
         console.log("Running - Get by Query, types & identifiers");
-      },
+      }
     }
   )
   .add(
@@ -205,7 +205,7 @@ bench
     {
       beforeAll: async () => {
         console.log("Running - Get by EventId");
-      },
+      }
     }
   );
 

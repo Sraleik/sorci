@@ -23,12 +23,12 @@ export type Query =
  *    },
  *    identifier: {
  *      courseId: "6c811e1c-a441-4dc0-af89-b92f6e1784ed",
- *    }, 
+ *    },
  *  }
- *  
+ *
  *  await sorci.appendEvent({
  *    sourcingEvent
- *  }),  
+ *  }),
  * ```
  */
 
@@ -106,9 +106,7 @@ export interface Sorci {
    * Usefull to cleanup all test stream
    * @category Tooling
    */
-  dropAllTestStream(payload?: {
-    excludeCurrentStream: boolean;
-  }): Promise<void>;
+  dropAllTestStream(payload?: { excludeCurrentStream: boolean }): Promise<void>;
 
   // Commands
 

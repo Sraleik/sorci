@@ -22,7 +22,7 @@ export class SorciPostgres implements Sorci {
       port,
       database: databaseName,
       username: user,
-      password,
+      password
     });
   }
 
@@ -273,7 +273,7 @@ export class SorciPostgres implements Sorci {
       type: rawEvent.type,
       data: rawEvent.data,
       identifier: rawEvent.identifier,
-      timestamp: rawEvent.timestamp,
+      timestamp: rawEvent.timestamp
     };
   }
 
@@ -295,7 +295,7 @@ export class SorciPostgres implements Sorci {
         type: rawEvent.type,
         data: rawEvent.data,
         identifier: rawEvent.identifier,
-        timestamp: rawEvent.timestamp,
+        timestamp: rawEvent.timestamp
       };
     });
   }
