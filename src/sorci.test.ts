@@ -26,14 +26,14 @@ beforeAll(async () => {
   const password = pgInstance.getPassword();
   const databaseName = pgInstance.getDatabase();
 
-  sorci = new SorciPostgres(
+  sorci = new SorciPostgres({
     host,
     port,
     user,
     password,
     databaseName,
-    "useless_stream_name"
-  );
+    streamName: "useless_stream_name",
+  });
 }, 30000);
 
 beforeEach(async () => {

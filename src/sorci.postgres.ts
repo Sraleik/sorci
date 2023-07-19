@@ -6,14 +6,15 @@ export class SorciPostgres implements Sorci {
   private _sql;
   private _streamName: string;
 
-  constructor(
-    host: string,
-    port: number,
-    user: string,
-    password: string,
-    databaseName: string,
-    streamName: string
-  ) {
+  constructor(payload: {
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+    databaseName: string;
+    streamName: string;
+  }) {
+    const { host, port, user, password, databaseName, streamName } = payload;
     this._streamName = streamName;
 
     this._sql = postgres({

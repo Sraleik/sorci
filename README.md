@@ -184,10 +184,10 @@ It will take around 30s ~ to load the half a million event into the table.
 - [ ] Add a appendEvents 
 - [ ] Add a mergeStreams 
 - [ ] Add a splitStream 
-- [ ] Add a way to be able to inject a createId function to SorciEvent 
+- [X] Add a way to be able to inject a createId function to SorciEvent 
 
 ### Technical
-- [ ] Make the constructor parameter a single explicit payload
+- [X] Make the constructor parameter a single explicit payload
 - [ ] Add option to serialize data into binary
 - [X] Rename clean/clear en dropStream 
 
