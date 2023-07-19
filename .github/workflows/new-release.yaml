@@ -127,6 +127,8 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           npm version ${{ github.event.inputs.release-type }} -m "Bump version to %s"
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
         run: yarn install
@@ -144,8 +146,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
         with:
-          tag_name: ${{ github.event.inputs.version }}
-          release_name: Release ${{ github.event.inputs.version }}
+          tag_name: ${{ steps.bump-version.outputs.NEW_VERSION }}
+          release_name: Release v${{ steps.bump-version.outputs.NEW_VERSION }}
           body: New release of the project.
           draft: false
           prerelease: false

@@ -87,6 +87,7 @@ jobs:
 
   build-api-doc:
     runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
     needs: [unit-test, benchmark]
 
     steps:
