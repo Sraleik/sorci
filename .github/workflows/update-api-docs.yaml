@@ -71,9 +71,10 @@ jobs:
             git commit -m "Auto-update docs"
             git push
             echo "NEED_DEPLOYMENT=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "NEED_DEPLOYMENT=false" >> "$GITHUB_OUTPUT"
           fi
-          echo "NEED_DEPLOYMENT=false" >> "$GITHUB_OUTPUT"
-           
+          exit 1
 
       - name: Setup Pages
         if: steps.check_changes.outputs.NEED_DEPLOYMENT == 'true'
