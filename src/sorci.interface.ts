@@ -95,7 +95,7 @@ export interface Sorci {
   setupTestStream(streamName?: string): Promise<void>;
 
   /**
-   * Will destroy the current stream
+   * Will drop the current stream
    * Usefull to cleanup a test stream
    * @category Tooling
    */

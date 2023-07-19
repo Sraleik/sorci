@@ -63,6 +63,7 @@ jobs:
         run: yarn run build:docs
 
       - name: Commit api doc 
+        id: commit-doc-change 
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
@@ -71,22 +72,24 @@ jobs:
             git commit -m "Auto-update docs"
             git push
             echo "NEED_DEPLOYMENT=true" >> "$GITHUB_OUTPUT"
+            echo "Documentation updated"
           else
             echo "NEED_DEPLOYMENT=false" >> "$GITHUB_OUTPUT"
+            echo "No change in documentation"
           fi
 
       - name: Setup Pages
-        if: steps.check_changes.outputs.NEED_DEPLOYMENT == 'true'
+        if: steps.commit-doc-change.outputs.NEED_DEPLOYMENT == 'true'
         uses: actions/configure-pages@v3
 
       - name: Upload artifact
-        if: steps.check_changes.outputs.NEED_DEPLOYMENT == 'true'
+        if: steps.commit-doc-change.outputs.NEED_DEPLOYMENT == 'true'
         uses: actions/upload-pages-artifact@v2
         with:
           # Upload entire repository
           path: "./docs"
 
       - name: Deploy to GitHub Pages
-        if: steps.check_changes.outputs.NEED_DEPLOYMENT == 'true'
+        if: steps.commit-doc-change.outputs.NEED_DEPLOYMENT == 'true'
         id: deployment
         uses: actions/deploy-pages@v2
