@@ -42,20 +42,16 @@ This library has never been used in production yet. Use at your own risk :)
 ```typescript
 import { SorciPostgres } from "sorci";
 
-const host = "localhost";
-const port = 54322;
-const user = "postgres";
-const password = "postgres";
-const database = "postgres";
-const streamName = "Your-Stream-Name";
 
 const sorci = new SorciPostgres(
-	host,
-	port,
-	user,
-	password,
-	database,
-	streamName
+	{
+		host : "localhost";
+		port : 54322;
+		user : "postgres";
+		password : "postgres";
+		database : "postgres";
+		streamName : "Your-Stream-Name";
+	}
 );
 
 // This will create everything needed to persist the events properly
