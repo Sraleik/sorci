@@ -1,12 +1,12 @@
 {
   "name": "sorci",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Library to be able to do event sourcing without worrying about the aggregate.",
   "author": "Sraleik",
   "license": "MIT",
   "scripts": {
     "build": "tsc && vite build",
-    "build:docs": "typedoc --out docs --theme default --name 'Sorci.js' ./src && cp -r ./image ./docs/image",
+    "build:docs": "typedoc --gitRevision main --out docs --theme default --name 'Sorci.js' ./src && cp -r ./image ./docs/image",
     "test:unit": "vitest --config ./vitest.config.ts --single-thread",
     "bench": "tsx ./src/sorci.bench.ts",
     "bench:watch": "tsx watch ./src/sorci.bench.ts"

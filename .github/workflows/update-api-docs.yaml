@@ -66,18 +66,27 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git commit -am "Auto-update docs"
-          git push
+          git add docs
+          if ! git diff --quiet --cached; then
+            git commit -m "Auto-update docs"
+            git push
+            echo "NEED_DEPLOYMENT=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "NEED_DEPLOYMENT=false" >> "$GITHUB_OUTPUT"
+           
 
       - name: Setup Pages
+        if: steps.check_changes.outputs.NEED_DEPLOYMENT == 'true'
         uses: actions/configure-pages@v3
 
       - name: Upload artifact
+        if: steps.check_changes.outputs.NEED_DEPLOYMENT == 'true'
         uses: actions/upload-pages-artifact@v2
         with:
           # Upload entire repository
           path: "./docs"
 
       - name: Deploy to GitHub Pages
+        if: steps.check_changes.outputs.NEED_DEPLOYMENT == 'true'
         id: deployment
         uses: actions/deploy-pages@v2
