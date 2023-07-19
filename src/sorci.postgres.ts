@@ -186,11 +186,11 @@ export class SorciPostgres implements Sorci {
     });
   }
 
-  async cleanCurrentStream() {
+  async dropCurrentStream() {
     await this.cleanStream(this.streamName);
   }
 
-  async clearAllTestStream(payload?: { excludeCurrentStream: boolean }) {
+  async dropAllTestStream(payload?: { excludeCurrentStream: boolean }) {
     const { excludeCurrentStream } = payload || { excludeCurrentStream: false };
     const excludeStatement = excludeCurrentStream
       ? this.sql`AND table_name NOT LIKE ${this.streamName + "%"}`
