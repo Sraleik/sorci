@@ -193,7 +193,7 @@ It will take around 30s ~ to load the half a million event into the table.
 
 ### Repository 
 - [X] Use npm version to publish new version 
-- [ ] Fix eslint
+- [X] Fix eslint
 - [X] Make a github workflow to create a new release 
 - [ ] Version the Api Doc with multiple folder 
 - [X] Update documentation only when there is a diff
