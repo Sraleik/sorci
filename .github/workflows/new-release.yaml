@@ -123,10 +123,8 @@ jobs:
 
       - name: Bump version
         id: bump-version
-        env: 
-          RELEASE_TYPE: ${{ github.event.inputs.type }} 
-        run: |
-          npm version $RELEASE_TYPE
+        run: |      
+          npm version ${{ github.event.inputs.release-type }} 
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
