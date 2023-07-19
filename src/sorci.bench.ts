@@ -19,14 +19,14 @@ const user = pgInstance.getUsername();
 const password = pgInstance.getPassword();
 const databaseName = pgInstance.getDatabase();
 
-const sorci = new SorciPostgres(
+const sorci = new SorciPostgres({
   host,
   port,
   user,
   password,
   databaseName,
-  "useless_stream_name"
-);
+  streamName: "useless_stream_name"
+});
 
 const FULL_LIST_MULTIPLICATOR = 50;
 const FULL_LIST_ON_INSERT_COUNT = 1000;
