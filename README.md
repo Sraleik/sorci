@@ -1,8 +1,8 @@
 <div align="center">
-	<br/>
-	<img src="./image/sorci.png" width="300" />
-	<br/>
-	<br/>
+  <br/>
+  <img src="./image/sorci.png" width="300" />
+  <br/>
+  <br/>
 </div>
 
 Library to do event sourcing while keeping the focus on events and not on aggregates.
@@ -42,16 +42,15 @@ This library has never been used in production yet. Use at your own risk :)
 ```typescript
 import { SorciPostgres } from "sorci";
 
-
 const sorci = new SorciPostgres(
-	{
-		host : "localhost";
-		port : 54322;
-		user : "postgres";
-		password : "postgres";
-		database : "postgres";
-		streamName : "Your-Stream-Name";
-	}
+  {
+    host : "localhost";
+    port : 54322;
+    user : "postgres";
+    password : "postgres";
+    database : "postgres";
+    streamName : "Your-Stream-Name";
+  }
 );
 
 // This will create everything needed to persist the events properly
@@ -60,15 +59,15 @@ await sorci.createStream();
 
 // Small exemple of adding an Event with no impact (No concurrency issue)
 await sorci.appendEvent({
-	id: "0a19448ba362",
-	type: "todo-item-created",
-	data: {
-		todoItemId: "0a19448ba362",
-		text: "Create the Readme of Sorci.js",
-	},
-	identifier: {
-		todoItemId: "0a19448ba362",
-	},
+  id: "0a19448ba362",
+  type: "todo-item-created",
+  data: {
+    todoItemId: "0a19448ba362",
+    text: "Create the Readme of Sorci.js",
+  },
+  identifier: {
+    todoItemId: "0a19448ba362",
+  },
 });
 ```
 
