@@ -10,15 +10,20 @@
         "name": "Sorci.js",
         "moduleRoot": true,
         "children": [
-          { "name": "Tutorial", "source": "./pages/tuto.md" },
-          // {
-          //   "name": "Configuration",
-          //   "childrenDir": "configuration",
-          //   "children": [
-          //     { "name": "Configuration file", "source": "file.md" },
-          //     { "name": "CLI options", "source": "cli.md" }
-          //   ]
-          // }
+          {
+            "name": "Tutorial",
+            "childrenDir": "tutorial",
+            "children": [
+              {
+                "name": "Create a Command",
+                "source": "create-a-command.md"
+              },
+              {
+                "name": "Create a Repository",
+                "source": "create-a-repository.md"
+              }
+            ]
+          }
         ]
       }
     ]
