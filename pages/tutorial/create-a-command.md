@@ -1,7 +1,7 @@
 ## Here is a fonctional exemple without any Dependency Injection
 
 ```typescript
-import { SorciPostgres, Sorci } from "sorci";
+import { SorciPostgres, SorciEvent } from "sorci";
 
 // I'll assume the stream already exist
 // so no need to call sorci.createStream()
@@ -78,7 +78,7 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
   const isCourseFull = courseCapacity >= subscribedStudentsCount;
   if (isCourseFull) throw new Error("The course is full");
 
-  const courseSubscribed = Sorci.createEvent({
+  const courseSubscribed = SorciEvent.create({
     type: "course-subscribed",
     data: {
       studentId: payload.studentId,
