@@ -107,7 +107,7 @@ export class SorciEvent {
  *  import { sorciEventFactory } from 'sorci';
  *  import { v4 as createId } from 'uuid';
  *
- *  const SorciEvent = sorciEventFactory(createId);
+ *  const SorciEvent = sorciEventFactory(() => createId());
  *
  *  const event = SorciEvent.create({
  *    type: 'course-created',

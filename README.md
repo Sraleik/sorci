@@ -44,12 +44,12 @@ import { SorciPostgres } from "sorci";
 
 const sorci = new SorciPostgres(
   {
-    host : "localhost";
-    port : 54322;
-    user : "postgres";
-    password : "postgres";
-    database : "postgres";
-    streamName : "Your-Stream-Name";
+    host : "localhost",
+    port : 54322,
+    user : "postgres",
+    password : "postgres",
+    database : "postgres",
+    streamName : "Your-Stream-Name",
   }
 );
 

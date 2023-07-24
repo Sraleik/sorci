@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc && vite build",
-    "build:docs": "typedoc --gitRevision main --out docs --theme default --name 'Sorci.js' ./src && cp -r ./image ./docs/image",
+    "build:docs": "typedoc && cp -r ./image ./docs/image",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "test:unit": "vitest --config ./vitest.config.ts --single-thread",
@@ -46,6 +46,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^8.0.1",
+    "@knodes/typedoc-plugin-pages": "^0.23.4",
     "@types/dotenv": "^8.2.0",
     "@types/jest": "^29.5.2",
     "@types/node": "^20.3.1",
@@ -60,7 +61,7 @@
     "testcontainers": "^9.9.1",
     "tinybench": "^2.5.0",
     "tsx": "^3.12.7",
-    "typedoc": "^0.24.8",
+    "typedoc": "0.23.28",
     "typescript": "^5.1.3",
     "uuid": "^9.0.0",
     "vite": "^4.3.9",

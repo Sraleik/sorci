@@ -1,0 +1,26 @@
+{
+  "out": "./docs",
+  "entryPoints": ["./src/index.ts"],
+  "gitRevision": "main",
+  "name": "Sorci.js",
+  "plugin": ["@knodes/typedoc-plugin-pages"],
+  "pluginPages": {
+    "pages": [
+      {
+        "name": "Sorci.js",
+        "moduleRoot": true,
+        "children": [
+          { "name": "Tutorial", "source": "./pages/tuto.md" },
+          // {
+          //   "name": "Configuration",
+          //   "childrenDir": "configuration",
+          //   "children": [
+          //     { "name": "Configuration file", "source": "file.md" },
+          //     { "name": "CLI options", "source": "cli.md" }
+          //   ]
+          // }
+        ]
+      }
+    ]
+  }
+}
