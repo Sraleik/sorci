@@ -26,7 +26,7 @@ export type SubscribeToCoursePayload = {
 // The course should not be full
 export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
   const query = {
-    // For simplicity we will assume their is no "course-deleted", "student-delete", "course-unsubscribed"
+    // For simplicity we will assume their is no "course-deleted", "student-deleted", "course-unsubscribed"
     type: [
       "course-created",
       "course-subscribed",
@@ -119,6 +119,10 @@ export type SubscribeToCoursePayload = {
   courseId: string;
 };
 
+// Simple aggregate
+// It could be usefull only for this command/decision
+// or exported and use for every command/decision
+// that require the same types of events
 class Course {
   constructor(public sourcingEvent: PersistedEvent[]) {}
 
@@ -223,7 +227,7 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
     // So if new events are added in the stream while this command was running it will not be able to persist, we will be notified
     query,
     // When the database try to persit, if the last event of the stream is not the same as the last event of the query, it will throw an error
-    eventIdentifier: necessaryEvent[necessaryEvent.length - 1].id
+    eventIdentifier: course.eventIdentifier 
   });
 };
 ```
