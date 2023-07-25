@@ -34,15 +34,15 @@ yarn add sorci
 
 ## Usage
 
-The idea was to be able to do Full Event Sourcing without the need of an event store.
+The idea was to be able to do DBC without the need of an event store.
 So for now there is only one implementation of Sorci => SorciPostgres.
 Maybe other implementation will be done later.
 This library has never been used in production yet. Use at your own risk :)
 
 ```typescript
-import { SorciPostgres } from "sorci";
+import { Sorci, SorciPostgres } from "sorci";
 
-const sorci = new SorciPostgres({
+const sorci: Sorci = new SorciPostgres({
   host: "localhost",
   port: 54322,
   user: "postgres",
@@ -85,24 +85,24 @@ await sorci.appendEvent({
   },
   query: {
     types: ["todo-item-created"],
-    identifiers: [{
-      todoItemId: "0a19448ba362"
-    ]
+    identifiers: [
+      {
+        todoItemId: "0a19448ba362",
+      },
+    ],
   },
-  eventIdentifier: "48efa9d568d3"
+  eventIdentifier: "48efa9d568d3",
 });
-
-
 ```
 
-## Features
+## Technical Explanation 
 
 The library create 2 tables:
 
 - 1 writable
 - 1 read-only
 
-The writable table act as an append log. The read-only is a synchronize copy of the writable table.
+The writable table act as an append log. The read-only is a synchronized copy of the writable table.
 
 ### Why two tables ?
 
@@ -112,6 +112,10 @@ Wich mean it's also unreadable during write. The read-only table allow read whil
 ## API
 
 Full References - [here](https://sraleik.github.io/sorci/)
+
+## Tutorial
+
+[Create a Command](https://sraleik.github.io/sorci/pages/tutorial/create-a-command.html)
 
 ## Testing
 
@@ -201,6 +205,16 @@ yarn run bench
 
 It will take around 30s ~ to load the half a million event into the table.
 
+## Acknowledgment
+
+I've be figthing aggregate for a while now. Sometimes it really feel like trying to fit a square into a circle.
+The approache of Sara Pellegrini & Milan Savic (DBC) solve the concurrency issue I had with an event only approach.
+There conference talk is really great and explain the concept so well that this implementation was possible I highly recommend it : https://www.youtube.com/watch?v=0iP65Durhbs
+
+## Contributions
+
+I'm really curious to get feedback on this one. Feel free to start/join a discussion, issues or Pull requests.
+
 ## TODO
 
 ### Feature
@@ -209,6 +223,10 @@ It will take around 30s ~ to load the half a million event into the table.
 - [ ] Add a mergeStreams
 - [ ] Add a splitStream
 - [x] Add a way to be able to inject a createId function to SorciEvent
+
+### Documentation
+
+- [ ] Do Explanation/postgres-stream.md
 
 ### Technical
 
