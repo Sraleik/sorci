@@ -27,6 +27,7 @@ export type createIdType = (id?: string) => EventId;
  * {@link PersistedEvent} to query events
  *
  * @remarks The class will genereate automatically the identifier if not provided
+ * @remarks The generated ids are using the ulidx library
  */
 export class SorciEvent {
   /**
