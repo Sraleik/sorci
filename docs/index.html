@@ -19,8 +19,8 @@
   <br/>
 </div>
 
-<p>Library to do event sourcing while keeping the focus on events and not on aggregates.</p>
-<p>Inspired by this talk: <a href="https://www.youtube.com/watch?v=0iP65Durhbs">https://www.youtube.com/watch?v=0iP65Durhbs</a></p>
+<p>This is an implementation attempt to Dynamic Consistency Boundary (DBC) with typescript &amp; postgres.
+Described by Sara Pellegrini &amp; Milan Savic : <a href="https://www.youtube.com/watch?v=0iP65Durhbs">https://www.youtube.com/watch?v=0iP65Durhbs</a></p>
 
 <a href="#table-of-contents" id="table-of-contents" style="color: inherit; text-decoration: none;">
   <h2>Table of Contents</h2>
@@ -58,7 +58,7 @@
 So for now there is only one implementation of Sorci =&gt; SorciPostgres.
 Maybe other implementation will be done later.
 This library has never been used in production yet. Use at your own risk :)</p>
-<pre><code class="language-typescript"><span class="hl-4">import</span><span class="hl-1"> { </span><span class="hl-5">SorciPostgres</span><span class="hl-1"> } </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&quot;sorci&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-3">const</span><span class="hl-1"> </span><span class="hl-6">sorci</span><span class="hl-1"> = </span><span class="hl-3">new</span><span class="hl-1"> </span><span class="hl-0">SorciPostgres</span><span class="hl-1">(</span><br/><span class="hl-1">  {</span><br/><span class="hl-1">    </span><span class="hl-5">host :</span><span class="hl-1"> </span><span class="hl-2">&quot;localhost&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">port :</span><span class="hl-1"> </span><span class="hl-7">54322</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">user :</span><span class="hl-1"> </span><span class="hl-2">&quot;postgres&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">password :</span><span class="hl-1"> </span><span class="hl-2">&quot;postgres&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">database :</span><span class="hl-1"> </span><span class="hl-2">&quot;postgres&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">streamName :</span><span class="hl-1"> </span><span class="hl-2">&quot;Your-Stream-Name&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  }</span><br/><span class="hl-1">);</span><br/><br/><span class="hl-8">// This will create everything needed to persist the events properly</span><br/><span class="hl-4">await</span><span class="hl-1"> </span><span class="hl-5">sorci</span><span class="hl-1">.</span><span class="hl-0">createStream</span><span class="hl-1">();</span><br/><br/><br/><span class="hl-8">// Small exemple of adding an Event with no impact (No concurrency issue)</span><br/><span class="hl-4">await</span><span class="hl-1"> </span><span class="hl-5">sorci</span><span class="hl-1">.</span><span class="hl-0">appendEvent</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-5">id:</span><span class="hl-1"> </span><span class="hl-2">&quot;0a19448ba362&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">type:</span><span class="hl-1"> </span><span class="hl-2">&quot;todo-item-created&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">data:</span><span class="hl-1"> {</span><br/><span class="hl-1">    </span><span class="hl-5">todoItemId:</span><span class="hl-1"> </span><span class="hl-2">&quot;0a19448ba362&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">text:</span><span class="hl-1"> </span><span class="hl-2">&quot;Create the Readme of Sorci.js&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  },</span><br/><span class="hl-1">  </span><span class="hl-5">identifier:</span><span class="hl-1"> {</span><br/><span class="hl-1">    </span><span class="hl-5">todoItemId:</span><span class="hl-1"> </span><span class="hl-2">&quot;0a19448ba362&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  },</span><br/><span class="hl-1">});</span>
+<pre><code class="language-typescript"><span class="hl-4">import</span><span class="hl-1"> { </span><span class="hl-5">SorciPostgres</span><span class="hl-1"> } </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&quot;sorci&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-3">const</span><span class="hl-1"> </span><span class="hl-6">sorci</span><span class="hl-1"> = </span><span class="hl-3">new</span><span class="hl-1"> </span><span class="hl-0">SorciPostgres</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-5">host:</span><span class="hl-1"> </span><span class="hl-2">&quot;localhost&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">port:</span><span class="hl-1"> </span><span class="hl-7">54322</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">user:</span><span class="hl-1"> </span><span class="hl-2">&quot;postgres&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">password:</span><span class="hl-1"> </span><span class="hl-2">&quot;postgres&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">database:</span><span class="hl-1"> </span><span class="hl-2">&quot;postgres&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">streamName:</span><span class="hl-1"> </span><span class="hl-2">&quot;Your-Stream-Name&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-8">// This will create everything needed to persist the events properly</span><br/><span class="hl-4">await</span><span class="hl-1"> </span><span class="hl-5">sorci</span><span class="hl-1">.</span><span class="hl-0">createStream</span><span class="hl-1">();</span><br/><br/><span class="hl-8">// Small exemple of adding an Event with no impact (No concurrency issue)</span><br/><span class="hl-4">await</span><span class="hl-1"> </span><span class="hl-5">sorci</span><span class="hl-1">.</span><span class="hl-0">appendEvent</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-5">sourcingEvent:</span><span class="hl-1"> {</span><br/><span class="hl-1">    </span><span class="hl-5">id:</span><span class="hl-1"> </span><span class="hl-2">&quot;48efa9d568d3&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">type:</span><span class="hl-1"> </span><span class="hl-2">&quot;todo-item-created&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">data:</span><span class="hl-1"> {</span><br/><span class="hl-1">      </span><span class="hl-5">todoItemId:</span><span class="hl-1"> </span><span class="hl-2">&quot;0a19448ba362&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">      </span><span class="hl-5">text:</span><span class="hl-1"> </span><span class="hl-2">&quot;Create the Readme of Sorci.js&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">    </span><span class="hl-5">identifier:</span><span class="hl-1"> {</span><br/><span class="hl-1">      </span><span class="hl-5">todoItemId:</span><span class="hl-1"> </span><span class="hl-2">&quot;0a19448ba362&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  },</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-8">// Small exemple of adding an Event with query </span><br/><span class="hl-4">await</span><span class="hl-1"> </span><span class="hl-5">sorci</span><span class="hl-1">.</span><span class="hl-0">appendEvent</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-5">sourcingEvent:</span><span class="hl-1"> {</span><br/><span class="hl-1">    </span><span class="hl-5">id:</span><span class="hl-1"> </span><span class="hl-2">&quot;ec5cb643e454&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">type:</span><span class="hl-1"> </span><span class="hl-2">&quot;todo-item-name-updated&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-5">data:</span><span class="hl-1"> {</span><br/><span class="hl-1">      </span><span class="hl-5">todoItemId:</span><span class="hl-1"> </span><span class="hl-2">&quot;0a19448ba362&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">      </span><span class="hl-5">previousText:</span><span class="hl-1"> </span><span class="hl-2">&quot;Create the Readme of Sorci.js&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">      </span><span class="hl-5">newText:</span><span class="hl-1"> </span><span class="hl-2">&quot;Improve the Readme of Sorci.js&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">    </span><span class="hl-5">identifier:</span><span class="hl-1"> {</span><br/><span class="hl-1">      </span><span class="hl-5">todoItemId:</span><span class="hl-1"> </span><span class="hl-2">&quot;0a19448ba362&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  },</span><br/><span class="hl-1">  </span><span class="hl-5">query:</span><span class="hl-1"> {</span><br/><span class="hl-1">    </span><span class="hl-5">types:</span><span class="hl-1"> [</span><span class="hl-2">&quot;todo-item-created&quot;</span><span class="hl-1">]</span><br/><span class="hl-1">    </span><span class="hl-5">identifiers</span><span class="hl-1">: [{</span><br/><span class="hl-1">      </span><span class="hl-5">todoItemId:</span><span class="hl-1"> </span><span class="hl-2">&quot;0a19448ba362&quot;</span><br/><span class="hl-1">    ]</span><br/><span class="hl-1">  }</span><br/><span class="hl-1">  </span><span class="hl-5">eventIdentifier</span><span class="hl-1">: </span><span class="hl-2">&quot;48efa9d568d3&quot;</span><br/><span class="hl-1">});</span><br/><br/>
 </code></pre>
 
 <a href="#features" id="features" style="color: inherit; text-decoration: none;">
@@ -99,58 +99,58 @@ But for most application it should not be a problem.</p>
 <p><img src="./image/benchmark-on-500k-events.png" alt="plot"></p>
 
 <a href="#simple-insert-" id="simple-insert-" style="color: inherit; text-decoration: none;">
-  <h3><strong>Simple Insert :</strong></h3>
+  <h3>**Simple Insert **</h3>
 </a>
 <p><small>~300 ops/s</small></p>
 <p>This is for reference. To know the baseline of Insert.</p>
 
 <a href="#simple-append-" id="simple-append-" style="color: inherit; text-decoration: none;">
-  <h3><strong>Simple Append :</strong></h3>
+  <h3>**Simple Append **</h3>
 </a>
 <p><small>~300 ops/s</small></p>
 <p>This is when we want to persist an event that we know don&#39;t impact decision.
 The library will be very close to baseline. It&#39;s almost a simple insert.</p>
 
 <a href="#append-with-query---types-" id="append-with-query---types-" style="color: inherit; text-decoration: none;">
-  <h3><strong>Append with query - types :</strong></h3>
+  <h3>**Append with query - types **</h3>
 </a>
 <p>Here we have a big variation, in the first exemple there is only 2 event of the selected type <code>course-created</code>, so getting the lastVersion is fast</p>
 <p>In the second exemple we have 55 000 event of types <code>course-created</code> it take a bit longer to get the lastVersion</p>
 <p>This should not be a big issue because filtering only by types should not happen very often. The option remain available if necessary</p>
 
 <a href="#append-with-query---identifiers-" id="append-with-query---identifiers-" style="color: inherit; text-decoration: none;">
-  <h3><strong>Append with query - identifiers :</strong></h3>
+  <h3>**Append with query - identifiers **</h3>
 </a>
 <p><small>~230 ops/s</small></p>
-<p>Here volume should not impact the persistence. Identifier has a gin index. Wich make retrieving event by id fast. </p>
+<p>Here volume should not impact the persistence. Identifier has a gin index. Wich make retrieving event by id fast.</p>
 <p>This is great because it will be one of the most use way of persisting event.</p>
 
 <a href="#append-with-query---types-amp-identifiers-" id="append-with-query---types-amp-identifiers-" style="color: inherit; text-decoration: none;">
-  <h3><strong>Append with query - types &amp; identifiers :</strong></h3>
+  <h3>**Append with query - types &amp; identifiers **</h3>
 </a>
 <p>Here volume is impacting the results. But performance are for most cases acceptable. On a benchmark with 1M events the library still score a 50 ops/s</p>
 
 <a href="#get-by-query---type-" id="get-by-query---type-" style="color: inherit; text-decoration: none;">
-  <h3><strong>Get by Query - type :</strong></h3>
+  <h3>**Get by Query - type **</h3>
 </a>
 <p>Here volume is important, in the second exemple we are retrieving 55 000 events whereas in the first we retrieve 2.</p>
 
 <a href="#get-by-query---identifier-" id="get-by-query---identifier-" style="color: inherit; text-decoration: none;">
-  <h3><strong>Get by Query - identifier :</strong></h3>
+  <h3>**Get by Query - identifier **</h3>
 </a>
-<p>Here volume is important, 
-In those exemple we retrieve the same amount of event but going through the btree index is a bit slower since there is more data. </p>
+<p>Here volume is important,
+In those exemple we retrieve the same amount of event but going through the btree index is a bit slower since there is more data.</p>
 <p>Perfomance should be good for most cases</p>
 
 <a href="#get-by-query---types-amp-identifier-" id="get-by-query---types-amp-identifier-" style="color: inherit; text-decoration: none;">
-  <h3><strong>Get by Query - types &amp; identifier :</strong></h3>
+  <h3>**Get by Query - types &amp; identifier **</h3>
 </a>
-<p>Here volume is important, 
-In those exemple we retrieve the same amount of event but going through the btree &amp; gin index is a bit slower since there is more data. </p>
+<p>Here volume is important,
+In those exemple we retrieve the same amount of event but going through the btree &amp; gin index is a bit slower since there is more data.</p>
 <p>Perfomance should be good for most cases</p>
 
 <a href="#get-by-eventid-" id="get-by-eventid-" style="color: inherit; text-decoration: none;">
-  <h3><strong>Get by EventId :</strong></h3>
+  <h3>**Get by EventId **</h3>
 </a>
 <p><small>~20 000 ops/s</small></p>
 <p>This is for reference. To know the baseline Query.</p>
@@ -173,9 +173,9 @@ In those exemple we retrieve the same amount of event but going through the btre
   <h3>Feature</h3>
 </a>
 <ul>
-<li><input disabled="" type="checkbox"> Add a appendEvents </li>
-<li><input disabled="" type="checkbox"> Add a mergeStreams </li>
-<li><input disabled="" type="checkbox"> Add a splitStream </li>
+<li><input disabled="" type="checkbox"> Add a appendEvents</li>
+<li><input disabled="" type="checkbox"> Add a mergeStreams</li>
+<li><input disabled="" type="checkbox"> Add a splitStream</li>
 <li><input checked="" disabled="" type="checkbox"> Add a way to be able to inject a createId function to SorciEvent</li>
 </ul>
 
@@ -192,15 +192,15 @@ In those exemple we retrieve the same amount of event but going through the btre
   <h3>Repository</h3>
 </a>
 <ul>
-<li><input checked="" disabled="" type="checkbox"> Use npm version to publish new version </li>
+<li><input checked="" disabled="" type="checkbox"> Use npm version to publish new version</li>
 <li><input checked="" disabled="" type="checkbox"> Fix eslint</li>
-<li><input checked="" disabled="" type="checkbox"> Make a github workflow to create a new release </li>
-<li><input disabled="" type="checkbox"> Version the Api Doc with multiple folder </li>
+<li><input checked="" disabled="" type="checkbox"> Make a github workflow to create a new release</li>
+<li><input disabled="" type="checkbox"> Version the Api Doc with multiple folder</li>
 <li><input checked="" disabled="" type="checkbox"> Update documentation only when there is a diff</li>
 <li><input checked="" disabled="" type="checkbox"> Remove dependency to uuid (make it possible to give a createId function to SorciEvent)</li>
-<li><input checked="" disabled="" type="checkbox"> Make the github CI run the unit test </li>
-<li><input checked="" disabled="" type="checkbox"> Make the github CI run the benchmark </li>
-<li><input checked="" disabled="" type="checkbox"> Auto generate the API reference </li>
+<li><input checked="" disabled="" type="checkbox"> Make the github CI run the unit test</li>
+<li><input checked="" disabled="" type="checkbox"> Make the github CI run the benchmark</li>
+<li><input checked="" disabled="" type="checkbox"> Auto generate the API reference</li>
 <li><input checked="" disabled="" type="checkbox"> Display the API with github page</li>
 </ul>
 </div></div>
