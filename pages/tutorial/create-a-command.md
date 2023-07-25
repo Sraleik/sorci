@@ -1,19 +1,23 @@
-## Here is a fonctional exemple without any Dependency Injection
+## First let's create a sorci instance
 
 ```typescript
-import { SorciPostgres, SorciEvent } from "sorci";
+import { SorciPostgres, Sorci, SorciEvent } from "sorci";
 
 // I'll assume the stream already exist
 // so no need to call sorci.createStream()
-const sorci = new SorciPostgres({
+const sorci: Sorci = new SorciPostgres({
   host: "localhost",
   port: 54322,
   user: "postgres",
   password: "postgres",
   database: "postgres",
-  streamName: "sorci-school"
+  streamName: "sorci-school",
 });
+```
 
+## Here is a fonctional exemple without any Dependency Injection
+
+```typescript
 export type SubscribeToCoursePayload = {
   studentId: string;
   courseId: string;
@@ -31,12 +35,12 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
       "course-created",
       "course-subscribed",
       "course-capacity-changed",
-      "student-created"
+      "student-created",
     ],
     identifiers: [
       { studentId: payload.studentId },
-      { courseId: payload.courseId }
-    ]
+      { courseId: payload.courseId },
+    ],
   };
 
   // We need to get all the events that are necessary to check the domain rules
@@ -82,8 +86,8 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
     type: "course-subscribed",
     data: {
       studentId: payload.studentId,
-      courseId: payload.courseId
-    }
+      courseId: payload.courseId,
+    },
   });
 
   await sorci.appendEvent({
@@ -92,28 +96,14 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
     // So if new events are added in the stream while this command was running it will not be able to persist, we will be notified
     query,
     // When the database try to persit, if the last event of the stream is not the same as the last event of the query, it will throw an error
-    eventIdentifier: necessaryEvent[necessaryEvent.length - 1].id
+    eventIdentifier: necessaryEvent[necessaryEvent.length - 1].id,
   });
 };
-
 ```
 
-## Same exemple but with a small aggregate that will compute necessary states 
+## Same exemple but with a small aggregate that will compute necessary states
 
 ```typescript
-import { SorciPostgres, Sorci, PersistedEvent } from "sorci";
-
-// I'll assume the stream already exist
-// so no need to call sorci.createStream()
-const sorci = new SorciPostgres({
-  host: "localhost",
-  port: 54322,
-  user: "postgres",
-  password: "postgres",
-  database: "postgres",
-  streamName: "sorci-school"
-});
-
 export type SubscribeToCoursePayload = {
   studentId: string;
   courseId: string;
@@ -185,12 +175,12 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
       "course-created",
       "course-subscribed",
       "course-capacity-changed",
-      "student-created"
+      "student-created",
     ],
     identifiers: [
       { studentId: payload.studentId },
-      { courseId: payload.courseId }
-    ]
+      { courseId: payload.courseId },
+    ],
   };
 
   // We need to get all the events that are necessary to check the domain rules
@@ -217,8 +207,8 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
     type: "course-subscribed",
     data: {
       studentId: payload.studentId,
-      courseId: course.id
-    }
+      courseId: course.id,
+    },
   });
 
   await sorci.appendEvent({
@@ -227,7 +217,7 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
     // So if new events are added in the stream while this command was running it will not be able to persist, we will be notified
     query,
     // When the database try to persit, if the last event of the stream is not the same as the last event of the query, it will throw an error
-    eventIdentifier: course.eventIdentifier 
+    eventIdentifier: course.eventIdentifier,
   });
 };
 ```
