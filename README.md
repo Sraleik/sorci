@@ -69,7 +69,7 @@ await sorci.appendEvent({
   },
 });
 
-// Small exemple of adding an Event with query 
+// Small exemple of adding an Event with query
 await sorci.appendEvent({
   sourcingEvent: {
     id: "ec5cb643e454",
@@ -84,11 +84,11 @@ await sorci.appendEvent({
     },
   },
   query: {
-    types: ["todo-item-created"]
+    types: ["todo-item-created"],
     identifiers: [{
       todoItemId: "0a19448ba362"
     ]
-  }
+  },
   eventIdentifier: "48efa9d568d3"
 });
 

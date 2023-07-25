@@ -17,10 +17,6 @@
               {
                 "name": "Create a Command",
                 "source": "create-a-command.md"
-              },
-              {
-                "name": "Create a Repository",
-                "source": "create-a-repository.md"
               }
             ]
           }
