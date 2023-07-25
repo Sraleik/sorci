@@ -5,7 +5,7 @@
   <br/>
 </div>
 
-This is an implementation attempt to Dynamic Consistency Boundary (DBC) with typescript & postgres.
+This is an implementation attempt to Dynamic Consistency Boundary (DCB) with typescript & postgres.
 Described by Sara Pellegrini & Milan Savic : https://www.youtube.com/watch?v=0iP65Durhbs
 
 ## Table of Contents
@@ -34,7 +34,7 @@ yarn add sorci
 
 ## Usage
 
-The idea was to be able to do DBC without the need of an event store.
+The idea was to be able to do DCB without the need of an event store.
 So for now there is only one implementation of Sorci => SorciPostgres.
 Maybe other implementation will be done later.
 This library has never been used in production yet. Use at your own risk :)
@@ -212,7 +212,7 @@ It will take around 30s ~ to load the half a million event into the table.
 ## Acknowledgment
 
 I've be figthing aggregate for a while now. Sometimes it really feel like trying to fit a square into a circle.
-The approache of Sara Pellegrini & Milan Savic (DBC) solve the concurrency issue I had with an event only approach.
+The approache of Sara Pellegrini & Milan Savic (DCB) solve the concurrency issue I had with an event only approach.
 There conference talk is really great and explain the concept so well that this implementation was possible I highly recommend it : https://www.youtube.com/watch?v=0iP65Durhbs
 
 ## Contributions
