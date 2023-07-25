@@ -27,20 +27,20 @@ export type SubscribeToCoursePayload = {
 export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
   const query = {
     // For simplicity we will assume their is no "course-deleted", "student-deleted", "course-unsubscribed"
-    type: [
+    types: [
       "course-created",
       "course-subscribed",
       "course-capacity-changed",
       "student-created"
     ],
-    identifier: [
+    identifiers: [
       { studentId: payload.studentId },
       { courseId: payload.courseId }
     ]
   };
 
   // We need to get all the events that are necessary to check the domain rules
-  const necessaryEvent = await sorci.query(query);
+  const necessaryEvent = await sorci.getEventsByQuery(query);
 
   const isCourseCreated = necessaryEvent.some(
     (event) => event.type === "course-created"
@@ -86,7 +86,7 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
     }
   });
 
-  await sorci.append({
+  await sorci.appendEvent({
     sourcingEvent: courseSubscribed,
     // We pass the same query as in the start of the command.
     // So if new events are added in the stream while this command was running it will not be able to persist, we will be notified
@@ -119,7 +119,7 @@ export type SubscribeToCoursePayload = {
   courseId: string;
 };
 
-// Simple aggregate
+// Simple "aggregate"
 // It could be usefull only for this command/decision
 // or exported and use for every command/decision
 // that require the same types of events
@@ -181,20 +181,20 @@ class Course {
 export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
   const query = {
     // For simplicity we will assume their is no "course-deleted", "student-delete", "course-unsubscribed"
-    type: [
+    types: [
       "course-created",
       "course-subscribed",
       "course-capacity-changed",
       "student-created"
     ],
-    identifier: [
+    identifiers: [
       { studentId: payload.studentId },
       { courseId: payload.courseId }
     ]
   };
 
   // We need to get all the events that are necessary to check the domain rules
-  const necessaryEvent = await sorci.query(query);
+  const necessaryEvent = await sorci.getEventsByQuery(query);
 
   const isCourseCreated = necessaryEvent.some(
     (event) => event.type === "course-created"
@@ -221,7 +221,7 @@ export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
     }
   });
 
-  await sorci.append({
+  await sorci.appendEvent({
     sourcingEvent: courseSubscribed,
     // We pass the same query as in the start of the command.
     // So if new events are added in the stream while this command was running it will not be able to persist, we will be notified
