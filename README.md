@@ -12,9 +12,9 @@ Described by Sara Pellegrini & Milan Savic : https://www.youtube.com/watch?v=0iP
 
 - [Installation](#installation)
 - [Usage](#usage)
-- [Features](#features)
+- [Technical Explanation](#technical-explanation)
 - [API](#api)
-- [Development](#development)
+- [Tutorial](#tutorial)
 - [Testing](#testing)
 - [Benchmark](#benchmark)
 
@@ -95,7 +95,7 @@ await sorci.appendEvent({
 });
 ```
 
-## Technical Explanation 
+## Technical Explanation
 
 The library create 2 tables:
 
@@ -127,10 +127,14 @@ yarn run test:unit
 
 ## Benchmark
 
+Since the table where the event are persisted is locked during write.
+My main concern was performance. So I did some benchmark to see how it perform.
+
 Performance vary with volume of events in the stream.
 But for most application it should not be a problem.
 
-Those benchmark are done on a dell xps pro.
+Every benchmark is run for 5s with 23 events and 500 000~ events.
+Those benchmark are done on a dell xps pro, they also run in the CI.
 
 ![plot](./image/benchmark-on-23-events.png)
 

@@ -30,7 +30,7 @@ export type SubscribeToCoursePayload = {
 // The course should not be full
 export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
   const query = {
-    // For simplicity we will assume their is no "course-deleted", "student-deleted", "course-unsubscribed"
+    // For simplicity, we will assume that there are no events for "course-deleted", "student-deleted", or "course-unsubscribed" 
     types: [
       "course-created",
       "course-subscribed",
@@ -170,7 +170,7 @@ class Course {
 // The course should not be full
 export const subscribeToCourse = async (payload: SubscribeToCoursePayload) => {
   const query = {
-    // For simplicity we will assume their is no "course-deleted", "student-delete", "course-unsubscribed"
+    // For simplicity, we will assume that there are no events for "course-deleted", "student-deleted", or "course-unsubscribed" 
     types: [
       "course-created",
       "course-subscribed",
