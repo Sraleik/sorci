@@ -19,7 +19,7 @@
   <br/>
 </div>
 
-<p>This is an implementation attempt to Dynamic Consistency Boundary (DBC) with typescript &amp; postgres.
+<p>This is an implementation attempt to Dynamic Consistency Boundary (DCB) with typescript &amp; postgres.
 Described by Sara Pellegrini &amp; Milan Savic : <a href="https://www.youtube.com/watch?v=0iP65Durhbs">https://www.youtube.com/watch?v=0iP65Durhbs</a></p>
 
 <a href="#table-of-contents" id="table-of-contents" style="color: inherit; text-decoration: none;">
@@ -54,7 +54,7 @@ Described by Sara Pellegrini &amp; Milan Savic : <a href="https://www.youtube.co
 <a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
   <h2>Usage</h2>
 </a>
-<p>The idea was to be able to do DBC without the need of an event store.
+<p>The idea was to be able to do DCB without the need of an event store.
 So for now there is only one implementation of Sorci =&gt; SorciPostgres.
 Maybe other implementation will be done later.
 This library has never been used in production yet. Use at your own risk :)</p>
@@ -177,7 +177,7 @@ In those exemple we retrieve the same amount of event but going through the btre
   <h2>Acknowledgment</h2>
 </a>
 <p>I&#39;ve be figthing aggregate for a while now. Sometimes it really feel like trying to fit a square into a circle.
-The approache of Sara Pellegrini &amp; Milan Savic (DBC) solve the concurrency issue I had with an event only approach.
+The approache of Sara Pellegrini &amp; Milan Savic (DCB) solve the concurrency issue I had with an event only approach.
 There conference talk is really great and explain the concept so well that this implementation was possible I highly recommend it : <a href="https://www.youtube.com/watch?v=0iP65Durhbs">https://www.youtube.com/watch?v=0iP65Durhbs</a></p>
 
 <a href="#contributions" id="contributions" style="color: inherit; text-decoration: none;">
