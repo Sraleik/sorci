@@ -244,9 +244,14 @@ I'm really curious to get feedback on this one. Feel free to start/join a discus
 - [x] Fix eslint
 - [x] Make a github workflow to create a new release
 - [ ] Version the Api Doc with multiple folder
+- [ ] Add eslint workflow on new-release 
 - [x] Update documentation only when there is a diff
 - [x] Remove dependency to uuid (make it possible to give a createId function to SorciEvent)
 - [x] Make the github CI run the unit test
 - [x] Make the github CI run the benchmark
 - [x] Auto generate the API reference
 - [x] Display the API with github page
+
+## Tweet
+
+Thrilled to share a new #typescript library I've been working on. Implementing #DynamicConsistencyBoundary from @_sara_p_ & @MilanSavic14 #killAggregate #DCB.🌐 I would love your feedback on it: https://github.com/Sraleik/sorci
