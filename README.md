@@ -47,7 +47,7 @@ const sorci: Sorci = new SorciPostgres({
   port: 54322,
   user: "postgres",
   password: "postgres",
-  database: "postgres",
+  databaseName: "postgres",
   streamName: "Your-Stream-Name",
 });
 

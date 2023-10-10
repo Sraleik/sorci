@@ -73,6 +73,12 @@ export interface Sorci {
   // Tooling
 
   /**
+   * Will create necessary tables, function & triggers
+   * @category Tooling
+   */
+  createStream(): Promise<void>;
+
+  /**
    * Will remove every events of the stream
    * @category Tooling
    */
