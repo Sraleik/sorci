@@ -22,7 +22,12 @@ export class SorciPostgres implements Sorci {
       port,
       database: databaseName,
       username: user,
-      password
+      password,
+      onnotice(notice) {
+        // simple notice of already existing table, index, relation
+        if (notice.code === "42P07") return;
+        console.log(notice);
+      }
     });
   }
 
