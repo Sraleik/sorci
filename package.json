@@ -1,6 +1,6 @@
 {
   "name": "sorci",
-  "version": "0.4.11",
+  "version": "0.4.12",
   "description": "Library to be able to do event sourcing without worrying about the aggregate.",
   "author": "Sraleik",
   "license": "MIT",
