@@ -124,6 +124,13 @@ export class SorciPostgres implements Sorci {
   }
 
   async createSyncronizationPgFunction() {
+    const isSyncFunctionAlreadyCreated = !!(
+      await this
+        .sql`SELECT 1 FROM pg_proc WHERE proname = ${this.syncronizationFunctionName};`
+    ).length;
+
+    if (isSyncFunctionAlreadyCreated) return;
+
     await this.sql`
       CREATE OR REPLACE FUNCTION ${this.syncronizationFunctionNameIdentifier}()
       RETURNS TRIGGER AS $$
@@ -137,6 +144,13 @@ export class SorciPostgres implements Sorci {
   }
 
   async createSyncronizationTrigger() {
+    const isTriggerAlreadyCreated = !!(
+      await this
+        .sql`SELECT 1 FROM pg_trigger WHERE tgname = ${this.syncronizationTriggerName};`
+    ).length;
+
+    if (isTriggerAlreadyCreated) return;
+
     await this.sql`
       CREATE TRIGGER ${this.syncronizationTriggerNameIdentifier} 
       AFTER INSERT ON ${this.streamNameWritableIdentifier} 
