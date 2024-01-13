@@ -27,7 +27,7 @@
 <ul class="tsd-hierarchy">
 <li><a href="../interfaces/Sorci.html" class="tsd-signature-type" data-tsd-kind="Interface">Sorci</a></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L5">sorci.postgres.ts:5</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L28">sorci.postgres.ts:28</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -83,41 +83,43 @@
 <section class="tsd-panel tsd-member tsd-kind-constructor tsd-parent-kind-class"><a id="constructor" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>constructor</span><a href="#constructor" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" id="icon-anchor-a"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" id="icon-anchor-b"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" id="icon-anchor-c"></path></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class">
-<li class="tsd-signature tsd-anchor-link" id="constructor.new_SorciPostgres">new <wbr/>Sorci<wbr/>Postgres<span class="tsd-signature-symbol">(</span>payload<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>databaseName<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>host<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>password<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>port<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>streamName<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>user<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="SorciPostgres.html" class="tsd-signature-type" data-tsd-kind="Class">SorciPostgres</a><a href="#constructor.new_SorciPostgres" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
+<li class="tsd-signature tsd-anchor-link" id="constructor.new_SorciPostgres">new <wbr/>Sorci<wbr/>Postgres<span class="tsd-signature-symbol">(</span>payload<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">SorciConstructorPayload</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="SorciPostgres.html" class="tsd-signature-type" data-tsd-kind="Class">SorciPostgres</a><a href="#constructor.new_SorciPostgres" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
 <li class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li>
-<h5>payload: <span class="tsd-signature-symbol">{ </span><br/><span>    </span>databaseName<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>host<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>password<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>port<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>streamName<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>user<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></h5>
-<ul class="tsd-parameters">
-<li class="tsd-parameter">
-<h5>database<wbr/>Name<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5></li>
-<li class="tsd-parameter">
-<h5>host<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5></li>
-<li class="tsd-parameter">
-<h5>password<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5></li>
-<li class="tsd-parameter">
-<h5>port<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></h5></li>
-<li class="tsd-parameter">
-<h5>stream<wbr/>Name<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5></li>
-<li class="tsd-parameter">
-<h5>user<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5></li></ul></li></ul></div>
+<h5>payload: <span class="tsd-signature-type">SorciConstructorPayload</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="SorciPostgres.html" class="tsd-signature-type" data-tsd-kind="Class">SorciPostgres</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L9">sorci.postgres.ts:9</a></li></ul></aside></li></ul></section></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L32">sorci.postgres.ts:32</a></li></ul></aside></li>
+<li class="tsd-signature tsd-anchor-link" id="constructor.new_SorciPostgres-1">new <wbr/>Sorci<wbr/>Postgres<span class="tsd-signature-symbol">(</span>payload<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>connectionString<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>streamName<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="SorciPostgres.html" class="tsd-signature-type" data-tsd-kind="Class">SorciPostgres</a><a href="#constructor.new_SorciPostgres-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5>payload: <span class="tsd-signature-symbol">{ </span><br/><span>    </span>connectionString<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>streamName<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></h5>
+<ul class="tsd-parameters">
+<li class="tsd-parameter">
+<h5>connection<wbr/>String<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5></li>
+<li class="tsd-parameter">
+<h5>stream<wbr/>Name<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5></li></ul></li></ul></div>
+<h4 class="tsd-returns-title">Returns <a href="SorciPostgres.html" class="tsd-signature-type" data-tsd-kind="Class">SorciPostgres</a></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L33">sorci.postgres.ts:33</a></li></ul></aside></li></ul></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Properties</h2>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private"><a id="_sql" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>_sql</span><a href="#_sql" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">_sql<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">any</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L6">sorci.postgres.ts:6</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L29">sorci.postgres.ts:29</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private"><a id="_streamName" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>_stream<wbr/>Name</span><a href="#_streamName" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">_stream<wbr/>Name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L7">sorci.postgres.ts:7</a></li></ul></aside></section></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L30">sorci.postgres.ts:30</a></li></ul></aside></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Accessors</h2>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="sql" class="tsd-anchor"></a>
@@ -127,7 +129,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">any</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L35">sorci.postgres.ts:35</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L62">sorci.postgres.ts:62</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="streamName" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>stream<wbr/>Name</span><a href="#streamName" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
@@ -135,7 +137,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L39">sorci.postgres.ts:39</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L66">sorci.postgres.ts:66</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="streamNameReadOnly" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>stream<wbr/>Name<wbr/>Read<wbr/>Only</span><a href="#streamNameReadOnly" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
@@ -143,7 +145,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L69">sorci.postgres.ts:69</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L96">sorci.postgres.ts:96</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="streamNameReadOnlyIdentifier" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>stream<wbr/>Name<wbr/>Read<wbr/>Only<wbr/>Identifier</span><a href="#streamNameReadOnlyIdentifier" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
@@ -151,7 +153,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">any</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L86">sorci.postgres.ts:86</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L113">sorci.postgres.ts:113</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="streamNameWritable" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>stream<wbr/>Name<wbr/>Writable</span><a href="#streamNameWritable" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
@@ -159,7 +161,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L65">sorci.postgres.ts:65</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L92">sorci.postgres.ts:92</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="streamNameWritableIdentifier" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>stream<wbr/>Name<wbr/>Writable<wbr/>Identifier</span><a href="#streamNameWritableIdentifier" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
@@ -167,7 +169,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">any</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L82">sorci.postgres.ts:82</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L109">sorci.postgres.ts:109</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="syncronizationFunctionName" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>syncronization<wbr/>Function<wbr/>Name</span><a href="#syncronizationFunctionName" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
@@ -175,7 +177,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L73">sorci.postgres.ts:73</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L100">sorci.postgres.ts:100</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="syncronizationFunctionNameIdentifier" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>syncronization<wbr/>Function<wbr/>Name<wbr/>Identifier</span><a href="#syncronizationFunctionNameIdentifier" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
@@ -183,7 +185,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">any</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L90">sorci.postgres.ts:90</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L117">sorci.postgres.ts:117</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="syncronizationTriggerName" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>syncronization<wbr/>Trigger<wbr/>Name</span><a href="#syncronizationTriggerName" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
@@ -191,7 +193,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L77">sorci.postgres.ts:77</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L104">sorci.postgres.ts:104</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class"><a id="syncronizationTriggerNameIdentifier" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>syncronization<wbr/>Trigger<wbr/>Name<wbr/>Identifier</span><a href="#syncronizationTriggerNameIdentifier" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
@@ -199,7 +201,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">any</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L94">sorci.postgres.ts:94</a></li></ul></aside></li></ul></section></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L121">sorci.postgres.ts:121</a></li></ul></aside></li></ul></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Methods</h2>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="appendEvent" class="tsd-anchor"></a>
@@ -220,7 +222,7 @@ issue if query &amp; eventIdentifier is provided</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/Sorci.html">Sorci</a>.<a href="../interfaces/Sorci.html#appendEvent">appendEvent</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L322">sorci.postgres.ts:322</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L349">sorci.postgres.ts:349</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private"><a id="appendEventWithQuery" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>append<wbr/>Event<wbr/>With<wbr/>Query</span><a href="#appendEventWithQuery" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
@@ -240,7 +242,7 @@ issue if query &amp; eventIdentifier is provided</p>
 <h5>sourcing<wbr/>Event<span class="tsd-signature-symbol">: </span><a href="../types/ToPersistEvent.html" class="tsd-signature-type" data-tsd-kind="Type alias">ToPersistEvent</a></h5></li></ul></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L350">sorci.postgres.ts:350</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L377">sorci.postgres.ts:377</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private"><a id="appendEventWithoutQuery" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>append<wbr/>Event<wbr/>Without<wbr/>Query</span><a href="#appendEventWithoutQuery" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
@@ -253,7 +255,7 @@ issue if query &amp; eventIdentifier is provided</p>
 <h5>sourcingEvent: <a href="../types/ToPersistEvent.html" class="tsd-signature-type" data-tsd-kind="Type alias">ToPersistEvent</a></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L397">sorci.postgres.ts:397</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L424">sorci.postgres.ts:424</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="cleanStream" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>clean<wbr/>Stream</span><a href="#cleanStream" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -266,7 +268,7 @@ issue if query &amp; eventIdentifier is provided</p>
 <h5>streamName: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L180">sorci.postgres.ts:180</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L207">sorci.postgres.ts:207</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="createBasicTable" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>create<wbr/>Basic<wbr/>Table</span><a href="#createBasicTable" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -279,7 +281,7 @@ issue if query &amp; eventIdentifier is provided</p>
 <h5>tableName: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L98">sorci.postgres.ts:98</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L125">sorci.postgres.ts:125</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="createStream" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>create<wbr/>Stream</span><a href="#createStream" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -290,7 +292,7 @@ issue if query &amp; eventIdentifier is provided</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/Sorci.html">Sorci</a>.<a href="../interfaces/Sorci.html#createStream">createStream</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L167">sorci.postgres.ts:167</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L194">sorci.postgres.ts:194</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="createSyncronizationPgFunction" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>create<wbr/>Syncronization<wbr/>Pg<wbr/>Function</span><a href="#createSyncronizationPgFunction" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -298,7 +300,7 @@ issue if query &amp; eventIdentifier is provided</p>
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L131">sorci.postgres.ts:131</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L158">sorci.postgres.ts:158</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="createSyncronizationTrigger" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>create<wbr/>Syncronization<wbr/>Trigger</span><a href="#createSyncronizationTrigger" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -306,7 +308,7 @@ issue if query &amp; eventIdentifier is provided</p>
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L151">sorci.postgres.ts:151</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L178">sorci.postgres.ts:178</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="dropAllTestStream" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>drop<wbr/>All<wbr/>Test<wbr/>Stream</span><a href="#dropAllTestStream" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -326,7 +328,7 @@ Usefull to cleanup all test stream</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/Sorci.html">Sorci</a>.<a href="../interfaces/Sorci.html#dropAllTestStream">dropAllTestStream</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L213">sorci.postgres.ts:213</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L240">sorci.postgres.ts:240</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="dropCurrentStream" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>drop<wbr/>Current<wbr/>Stream</span><a href="#dropCurrentStream" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -338,7 +340,7 @@ Usefull to cleanup a test stream</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/Sorci.html">Sorci</a>.<a href="../interfaces/Sorci.html#dropCurrentStream">dropCurrentStream</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L209">sorci.postgres.ts:209</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L236">sorci.postgres.ts:236</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="getEventById" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>get<wbr/>Event<wbr/>By<wbr/>Id</span><a href="#getEventById" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -354,7 +356,7 @@ Usefull to cleanup a test stream</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>id<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>identifier<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>timestamp<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>type<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/Sorci.html">Sorci</a>.<a href="../interfaces/Sorci.html#getEventById">getEventById</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L282">sorci.postgres.ts:282</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L309">sorci.postgres.ts:309</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="getEventsByQuery" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>get<wbr/>Events<wbr/>By<wbr/>Query</span><a href="#getEventsByQuery" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -370,7 +372,7 @@ Usefull to cleanup a test stream</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/Sorci.html">Sorci</a>.<a href="../interfaces/Sorci.html#getEventsByQuery">getEventsByQuery</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L299">sorci.postgres.ts:299</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L326">sorci.postgres.ts:326</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private"><a id="getStreamNameReadOnly" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>get<wbr/>Stream<wbr/>Name<wbr/>Read<wbr/>Only</span><a href="#getStreamNameReadOnly" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
@@ -383,7 +385,7 @@ Usefull to cleanup a test stream</p>
 <h5>streamName: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L48">sorci.postgres.ts:48</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L75">sorci.postgres.ts:75</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private"><a id="getStreamNameWritable" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>get<wbr/>Stream<wbr/>Name<wbr/>Writable</span><a href="#getStreamNameWritable" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
@@ -396,7 +398,7 @@ Usefull to cleanup a test stream</p>
 <h5>streamName: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L44">sorci.postgres.ts:44</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L71">sorci.postgres.ts:71</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private"><a id="getSyncronizationFunctionName" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>get<wbr/>Syncronization<wbr/>Function<wbr/>Name</span><a href="#getSyncronizationFunctionName" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
@@ -409,7 +411,7 @@ Usefull to cleanup a test stream</p>
 <h5>streamName: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L53">sorci.postgres.ts:53</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L80">sorci.postgres.ts:80</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private"><a id="getSyncronizationTriggerName" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>get<wbr/>Syncronization<wbr/>Trigger<wbr/>Name</span><a href="#getSyncronizationTriggerName" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
@@ -422,7 +424,7 @@ Usefull to cleanup a test stream</p>
 <h5>streamName: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L59">sorci.postgres.ts:59</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L86">sorci.postgres.ts:86</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private"><a id="getWhereStatement" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>get<wbr/>Where<wbr/>Statement</span><a href="#getWhereStatement" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
@@ -437,7 +439,7 @@ Usefull to cleanup a test stream</p>
 <h5>query: <a href="../types/Query.html" class="tsd-signature-type" data-tsd-kind="Type alias">Query</a></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">PendingQuery</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Row</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L262">sorci.postgres.ts:262</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L289">sorci.postgres.ts:289</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="insertEvents" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>insert<wbr/>Events</span><a href="#insertEvents" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -456,7 +458,7 @@ Usefull to setup a test stream with a lot of events</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/Sorci.html">Sorci</a>.<a href="../interfaces/Sorci.html#insertEvents">insertEvents</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L253">sorci.postgres.ts:253</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L280">sorci.postgres.ts:280</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="setupTestStream" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>setup<wbr/>Test<wbr/>Stream</span><a href="#setupTestStream" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -475,7 +477,7 @@ Usefull to setup a test stream</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/Sorci.html">Sorci</a>.<a href="../interfaces/Sorci.html#setupTestStream">setupTestStream</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L174">sorci.postgres.ts:174</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L201">sorci.postgres.ts:201</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class"><a id="truncate" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>truncate</span><a href="#truncate" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -486,7 +488,7 @@ Usefull to setup a test stream</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/Sorci.html">Sorci</a>.<a href="../interfaces/Sorci.html#truncate">truncate</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L241">sorci.postgres.ts:241</a></li></ul></aside></li></ul></section></section></div>
+<li>Defined in <a href="https://github.com/Sraleik/sorci/blob/main/src/sorci.postgres.ts#L268">sorci.postgres.ts:268</a></li></ul></aside></li></ul></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
