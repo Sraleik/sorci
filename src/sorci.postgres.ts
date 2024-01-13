@@ -2,33 +2,60 @@ import postgres from "postgres";
 import { EventId, Sorci, Query, ToPersistEvent } from "./sorci.interface";
 import { shortId } from "./common/utils";
 
+type SorciConstructorPayload = {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  databaseName: string;
+  streamName: string;
+};
+
+function isSorciConstructorPayload(
+  payload?: any
+): payload is SorciConstructorPayload {
+  return (
+    typeof payload === "object" &&
+    payload.host &&
+    payload.port &&
+    payload.user &&
+    payload.password &&
+    payload.databaseName &&
+    payload.streamName
+  );
+}
+
 export class SorciPostgres implements Sorci {
   private _sql;
   private _streamName: string;
 
-  constructor(payload: {
-    host: string;
-    port: number;
-    user: string;
-    password: string;
-    databaseName: string;
-    streamName: string;
-  }) {
-    const { host, port, user, password, databaseName, streamName } = payload;
-    this._streamName = streamName;
+  constructor(payload: SorciConstructorPayload);
+  constructor(payload: { connectionString: string; streamName: string });
+  constructor(
+    payload:
+      | { connectionString: string; streamName: string }
+      | SorciConstructorPayload
+  ) {
+    this._streamName = payload.streamName;
 
-    this._sql = postgres({
-      host,
-      port,
-      database: databaseName,
-      username: user,
-      password,
-      onnotice(notice) {
-        // simple notice of already existing table, index, relation
-        if (notice.code === "42P07") return;
-        console.log(notice);
-      }
-    });
+    if (isSorciConstructorPayload(payload)) {
+      const { host, port, user, password, databaseName } = payload;
+
+      this._sql = postgres({
+        host,
+        port,
+        database: databaseName,
+        username: user,
+        password,
+        onnotice(notice) {
+          // simple notice of already existing table, index, relation
+          if (notice.code === "42P07") return;
+          console.log(notice);
+        }
+      });
+    } else {
+      this._sql = postgres(payload.connectionString);
+    }
   }
 
   // Making them readonly outside of the instance
