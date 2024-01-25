@@ -135,7 +135,7 @@ export class SorciPostgres implements Sorci {
 
       await sql`
         CREATE TABLE IF NOT EXISTS ${currentTableIdentifier} (
-          id text PRIMARY KEY DEFAULT uuid_generate_v4(),
+          id char(26) PRIMARY KEY,
           type text NOT NULL,
           data JSONB NOT NULL,
           identifier JSONB NOT NULL,
@@ -329,7 +329,7 @@ export class SorciPostgres implements Sorci {
     const rows = await this.sql`
       SELECT * FROM ${this.streamNameReadOnlyIdentifier}
       ${whereStatement}
-      ORDER BY ctid ASC;
+      ORDER BY id ASC;
     `;
 
     if (!rows?.length) return [];
@@ -389,7 +389,7 @@ export class SorciPostgres implements Sorci {
           SELECT id as last_event_identifier
           FROM ${this.streamNameWritableIdentifier}
           ${this.getWhereStatement(sql, payload.query)}
-          ORDER BY ctid DESC 
+          ORDER BY id DESC 
           LIMIT 1
         `;
 
