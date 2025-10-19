@@ -11,6 +11,28 @@ export type Query =
       types: Array<string>;
     };
 
+export type QueryV2Property =
+  | { $eq: string; $in?: never }
+  | { $in: Array<string>; $eq?: never };
+
+export type QueryV2Or = Array<Record<string, QueryV2Property>>;
+export type QueryV2And = Array<Record<string, QueryV2Property>>;
+export type QueryV2 = {
+  $where:
+    | {
+        $or: QueryV2Or;
+      }
+    | {
+        $and: QueryV2And;
+      }
+    | {
+        [key: string]: QueryV2Property;
+      };
+  $limit?: number;
+  $offset?: number;
+  $order?: "ASC" | "DESC";
+};
+
 /**
  * This is the structure of an event to give to the {@link Sorci.appendEvent} function
  * @example
@@ -138,4 +160,10 @@ export interface Sorci {
    */
   getEventsByQuery(query: Query): Promise<PersistedEvent[]>;
   // appendEvents(payload: AppendEventPayload[]): Promise<EntityId[]>;
+
+  /**
+   * Will retrieve every event that match the Query
+   * @category Stream
+   */
+  getEventsByQueryV2(query: QueryV2): Promise<PersistedEvent[]>;
 }

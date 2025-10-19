@@ -1,5 +1,13 @@
 import postgres from "postgres";
-import { EventId, Sorci, Query, ToPersistEvent } from "./sorci.interface";
+import {
+  EventId,
+  Sorci,
+  Query,
+  ToPersistEvent,
+  QueryV2,
+  QueryV2Property,
+  QueryV2Or
+} from "./sorci.interface";
 import { shortId } from "./common/utils";
 
 type SorciConstructorPayload = {
@@ -297,7 +305,7 @@ export class SorciPostgres implements Sorci {
       : sql``;
 
     const containType = hasType
-      ? sql`type = ANY ( ${query.types!}::text[])`
+      ? sql`type = ANY (${query.types!}::text[])`
       : sql``;
     const and = hasType && hasIdentifier ? sql`AND` : sql``;
 
@@ -321,6 +329,106 @@ export class SorciPostgres implements Sorci {
       identifier: rawEvent.identifier,
       timestamp: rawEvent.timestamp
     };
+  }
+
+  getInStatement(payload: {
+    sql: postgres.Sql;
+    key: string;
+    values: Array<string>;
+  }) {
+    const { sql, key, values } = payload;
+    return sql`${this.sql(key)} = ANY ( ${values}::text[] )`;
+  }
+
+  getEqStatement(payload: { sql: postgres.Sql; key: string; value: string }) {
+    const { sql, key, value } = payload;
+
+    if (key === "type") {
+      return sql`${sql(key)} = ${value}`;
+    }
+
+    return sql`identifier->>${key} = ${value}`;
+  }
+
+  getPropertySatetment(payload: {
+    sql: postgres.Sql;
+    key: string;
+    property: QueryV2Property;
+  }) {
+    const { sql, key, property } = payload;
+
+    if ("$in" in property) {
+      return this.getInStatement({ sql, key, values: property.$in! });
+    }
+    return this.getEqStatement({ sql, key, value: property.$eq! });
+  }
+
+  getPropertiesAndStatement(payload: {
+    sql: postgres.Sql;
+    data: Record<string, QueryV2Property>;
+  }) {
+    const { sql, data } = payload;
+    const statements = Object.keys(data).map((key) => {
+      return this.getPropertySatetment({
+        sql: this.sql,
+        key,
+        property: data[key]
+      });
+    });
+
+    const res = statements.reduce((acc, statement, index) => {
+      if (index === 0) {
+        return statement;
+      }
+      return sql`${acc} AND ${statement}`;
+    });
+    return sql`(${res})`;
+  }
+
+  getOrStatement(payload: { sql: postgres.Sql; data: QueryV2Or }) {
+    const { sql, data } = payload;
+
+    const statements = data.map((item) => {
+      return this.getPropertiesAndStatement({ sql, data: item });
+    });
+
+    return statements.reduce((acc, statement, index) => {
+      if (index === 0) {
+        return statement;
+      }
+      return sql`(${acc} OR ${statement})`;
+    });
+  }
+
+  getWhereStatementV2(where: QueryV2["$where"]) {
+    const keys = Object.keys(where);
+    const hasOr = keys.includes("$or");
+    const hasAnd = keys.includes("$and");
+
+    if (!hasOr && !hasAnd) {
+      return this.getPropertiesAndStatement({
+        sql: this.sql,
+        data: where as Record<string, QueryV2Property>
+      });
+    }
+
+    if (hasOr) {
+      return this.getOrStatement({
+        sql: this.sql,
+        data: (where as { $or: QueryV2Or }).$or!
+      });
+    }
+  }
+
+  async getEventsByQueryV2(query: QueryV2) {
+    const whereStatement = this.getWhereStatementV2(query.$where);
+
+    const rows = await this.sql`
+      SELECT * FROM ${this.streamNameReadOnlyIdentifier}
+      WHERE ${whereStatement} 
+      ORDER BY id ASC;
+    `;
+    return rows;
   }
 
   async getEventsByQuery(query: Query) {
