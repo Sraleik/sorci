@@ -23,8 +23,7 @@ export class TodoListItemBuilder {
           todoListId: this.todoListId,
           todoListItemId: initialAggregateId
         },
-        type: "todo-list-item-created",
-        timestamp: new Date()
+        type: "todo-list-item-created"
       })
     );
   }
