@@ -89,6 +89,16 @@ export type AppendEventPayload =
       eventIdentifier: EventId;
     };
 
+export type AppendEventPayloadV2 =
+  | {
+      sourcingEvent: ToPersistEvent;
+    }
+  | {
+      sourcingEvent: ToPersistEvent;
+      queryV2: QueryV2;
+      lastKnownEventId: EventId;
+    };
+
 // This interface is agnostic of the domain, so the typing is generic on purpose
 /** @namespace */
 export interface Sorci {
@@ -145,6 +155,16 @@ export interface Sorci {
    * @returns The event id
    */
   appendEvent(payload: AppendEventPayload): Promise<EventId>; // Proper append with check on eventIdentifier and query
+
+  /**
+   * Will append an event with optimistic concurrency control.
+   * Uses Dynamic Consistency Boundary (DCB) to detect conflicts without table locks.
+   * If queryV2 & lastKnownEventId are provided, it checks if any relevant events
+   * were added since lastKnownEventId. If yes, throws a concurrency error.
+   * @category Stream
+   * @returns The event id
+   */
+  appendEventV2(payload: AppendEventPayloadV2): Promise<EventId>;
 
   // Query
 

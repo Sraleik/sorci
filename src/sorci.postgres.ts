@@ -6,7 +6,8 @@ import {
   ToPersistEvent,
   QueryV2,
   QueryV2Property,
-  QueryV2Or
+  QueryV2Or,
+  AppendEventPayloadV2
 } from "./sorci.interface";
 import { shortId } from "./common/utils";
 
@@ -34,7 +35,8 @@ function isSorciConstructorPayload(
 }
 
 export class SorciPostgres implements Sorci {
-  private _sql;
+  //TODO put the type, resolving the issue will fix/avoid issue
+  private _sql; //: postgres.Sql;
   private _streamName: string;
 
   constructor(payload: SorciConstructorPayload);
@@ -400,31 +402,31 @@ export class SorciPostgres implements Sorci {
     });
   }
 
-  getWhereStatementV2(where: QueryV2["$where"]) {
+  getWhereStatementV2(where: QueryV2["$where"], sql: postgres.Sql) {
     const keys = Object.keys(where);
     const hasOr = keys.includes("$or");
     const hasAnd = keys.includes("$and");
 
     if (!hasOr && !hasAnd) {
       return this.getPropertiesAndStatement({
-        sql: this.sql,
+        sql,
         data: where as Record<string, QueryV2Property>
       });
     }
 
     if (hasOr) {
       return this.getOrStatement({
-        sql: this.sql,
+        sql,
         data: (where as { $or: QueryV2Or }).$or!
       });
     }
   }
 
-  async getEventsByQueryV2(query: QueryV2) {
-    const whereStatement = this.getWhereStatementV2(query.$where);
+  async getEventsByQueryV2(query: QueryV2, sql = this.sql) {
+    const whereStatement = this.getWhereStatementV2(query.$where, sql);
 
-    const rows = await this.sql`
-      SELECT * FROM ${this.streamNameReadOnlyIdentifier}
+    const rows = await sql`
+      SELECT * FROM ${this.streamNameWritableIdentifier}
       WHERE ${whereStatement} 
       ORDER BY id ASC;
     `;
@@ -435,7 +437,7 @@ export class SorciPostgres implements Sorci {
     const whereStatement = this.getWhereStatement(this.sql, query);
 
     const rows = await this.sql`
-      SELECT * FROM ${this.streamNameReadOnlyIdentifier}
+      SELECT * FROM ${this.streamNameWritableIdentifier}
       ${whereStatement}
       ORDER BY id ASC;
     `;
@@ -489,7 +491,7 @@ export class SorciPostgres implements Sorci {
   }) {
     const eventPersistedId = await this.sql.begin(async (sql) => {
       await sql`
-        LOCK TABLE ${this.streamNameWritableIdentifier} IN EXCLUSIVE MODE;
+        LOCK TABLE ${this.streamNameWritableIdentifier} IN SHARE ROW EXCLUSIVE MODE;
       `;
 
       // TODO: rename in a way that remove the "aggregate" word
@@ -532,7 +534,7 @@ export class SorciPostgres implements Sorci {
   private async appendEventWithoutQuery(sourcingEvent: ToPersistEvent) {
     const id = await this.sql.begin(async (sql) => {
       await sql`
-          LOCK TABLE ${this.streamNameWritableIdentifier} IN EXCLUSIVE MODE;
+          LOCK TABLE ${this.streamNameWritableIdentifier} IN SHARE ROW EXCLUSIVE MODE;
         `;
 
       const res = await sql`
@@ -544,5 +546,70 @@ export class SorciPostgres implements Sorci {
       return res[0].id;
     });
     return id as string;
+  }
+
+  async appendEventV2(payload: AppendEventPayloadV2) {
+    if (!("queryV2" in payload)) {
+      return this.appendEventWithoutQuery(payload.sourcingEvent);
+    }
+
+    return this.appendEventWithQueryV2(payload);
+  }
+
+  private async appendEventWithQueryV2(payload: {
+    sourcingEvent: ToPersistEvent;
+    queryV2: QueryV2;
+    lastKnownEventId: EventId;
+  }) {
+    return await this.sql.begin(async (sql) => {
+      const queryHash = this.hashQuery(payload.queryV2);
+
+      await sql`SELECT pg_advisory_xact_lock(${queryHash})`;
+
+      const whereStatement = this.getWhereStatementV2(
+        payload.queryV2.$where,
+        sql
+      );
+
+      const existingEvents = await sql`
+        SELECT id FROM ${this.streamNameWritableIdentifier}
+        WHERE ${whereStatement}
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+
+      if (existingEvents.length > 0) {
+        const lastEventId = existingEvents[0].id;
+
+        if (lastEventId !== payload.lastKnownEventId) {
+          throw new Error(
+            `Concurrency conflict detected: expected lastKnownEventId to be ${payload.lastKnownEventId}, but found ${lastEventId}`
+          );
+        }
+      } else if (payload.lastKnownEventId) {
+        throw new Error(
+          `Concurrency conflict detected: no events matching the query found, but lastKnownEventId was provided`
+        );
+      }
+
+      const result = await sql`
+        INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier)
+        VALUES (${payload.sourcingEvent.id}, ${payload.sourcingEvent.type}, ${payload.sourcingEvent.data}, ${payload.sourcingEvent.identifier})
+        RETURNING id
+      `;
+
+      return result[0].id as string;
+    });
+  }
+
+  private hashQuery(query: QueryV2): number {
+    const queryString = JSON.stringify(query);
+    let hash = 0;
+    for (let i = 0; i < queryString.length; i++) {
+      const char = queryString.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash);
   }
 }
