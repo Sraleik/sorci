@@ -12,10 +12,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": [
-      "jest",
-      "vitest/globals"
-    ],
+    "types": ["vitest/globals"],
 
     /* Linting */
     "strict": true,
@@ -24,6 +21,5 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": false
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts", "**/*.bench.ts"]
+  "include": ["src", "vitest.setup.ts"]
 }
