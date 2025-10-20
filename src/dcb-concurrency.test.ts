@@ -123,7 +123,110 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
       "fulfilled"
     ]);
   });
-  test("should have one event persisted the other one rejected", async () => {
+
+  test("concurrency delete", async () => {
+    const todoListId = createId();
+
+    const { events } = await aTodoList().withId(todoListId).build();
+
+    const todoListLastId = events[events.length - 1].id;
+
+    const concurrentPromises = [
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: {
+            todoListId
+          }
+        }),
+        queryV2: {
+          $where: {
+            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      }),
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: {
+            todoListId
+          }
+        }),
+        queryV2: {
+          $where: {
+            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      }),
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: {
+            todoListId
+          }
+        }),
+        queryV2: {
+          $where: {
+            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      }),
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: {
+            todoListId
+          }
+        }),
+        queryV2: {
+          $where: {
+            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      }),
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: {
+            todoListId
+          }
+        }),
+        queryV2: {
+          $where: {
+            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      })
+    ];
+
+    const results = await Promise.allSettled(concurrentPromises);
+    console.log("🚀 ~ dcb-concurrency.test.ts:284 ~ results:", results);
+
+    const statusArray = results.map((result) => result.status);
+    const fulfilledCount = statusArray.filter(
+      (status) => status === "fulfilled"
+    ).length;
+    const rejectedCount = statusArray.filter(
+      (status) => status === "rejected"
+    ).length;
+
+    console.log("🚀 ~ dcb-concurrency.test.ts:286 ~ statusArray:", statusArray);
+
+    expect(fulfilledCount).toBe(1);
+    expect(rejectedCount).toBe(4);
+  }, 60_000);
+
+  test("two different use cases, one impacting the other", async () => {
     const todoListId = createId();
 
     await aTodoList()
@@ -149,25 +252,27 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
 
     const todoListLastId = itemEvents[itemEvents.length - 1].id;
 
-    const todoListCreated2 = SorciEvent.create({
-      type: "todo-list-created",
+    // Here the idea is the todo list is being delete at the same time as it is being renamed
+    // Renaming a deleted todo list should not be allowed
+    const todoListDeleted = SorciEvent.create({
+      type: "todo-list-deleted",
       data: {
         title: "Shopping list - User A",
         todoListId
       }
     });
 
-    const todoListCreated3 = SorciEvent.create({
-      type: "todo-list-created",
+    const todoListRenamed = SorciEvent.create({
+      type: "todo-list-renamed",
       data: {
-        title: "Shopping list - User B",
+        title: "Shopping list - renamed",
         todoListId
       }
     });
 
     const concurrentPromises = [
       sorci.appendEventV2({
-        sourcingEvent: todoListCreated2,
+        sourcingEvent: todoListDeleted,
         queryV2: {
           $where: {
             type: { $eq: "todo-list-created" },
@@ -177,10 +282,10 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         lastKnownEventId: todoListLastId
       }),
       sorci.appendEventV2({
-        sourcingEvent: todoListCreated3,
+        sourcingEvent: todoListRenamed,
         queryV2: {
           $where: {
-            type: { $eq: "todo-list-created" },
+            type: { $in: ["todo-list-created", "todo-list-deleted"] },
             todoListId: { $eq: todoListId }
           }
         },
@@ -190,10 +295,19 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
 
     const results = await Promise.allSettled(concurrentPromises);
 
+    const events = await sorci.getEventsByQueryV2({
+      $where: {
+        type: {
+          $in: ["todo-list-created", "todo-list-deleted", "todo-list-renamed"]
+        },
+        todoListId: { $eq: todoListId }
+      }
+    });
+    console.log("🚀 ~ dcb-concurrency.test.ts:276 ~ events:", events);
+
     const statusArray = results.map((result) => result.status);
 
-    expect(statusArray).toContain("fulfilled");
-    expect(statusArray).toContain("rejected");
+    expect(statusArray).toEqual(["fulfilled", "rejected"]);
   });
 
   test("should work without query (simple append without concurrency check)", async () => {

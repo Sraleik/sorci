@@ -561,34 +561,62 @@ export class SorciPostgres implements Sorci {
     queryV2: QueryV2;
     lastKnownEventId: EventId;
   }) {
-    return await this.sql.begin(async (sql) => {
-      const queryHash = this.hashQuery(payload.queryV2);
+    const queryIdentifiers = this.extractIdentifiers(payload.queryV2.$where);
+    const eventIdentifier = payload.sourcingEvent.identifier;
+    const allIdentifiers = { ...queryIdentifiers, ...eventIdentifier };
 
-      await sql`SELECT pg_advisory_xact_lock(${queryHash})`;
+    const typeCondition =
+      "$or" in payload.queryV2.$where || "$and" in payload.queryV2.$where
+        ? undefined
+        : payload.queryV2.$where.type;
+    const queryEventTypes = this.extractEventTypes(typeCondition);
+    const allEventTypes = [
+      ...new Set([...queryEventTypes, payload.sourcingEvent.type])
+    ].filter((type) => !type.endsWith("-created"));
+
+    const locks: Array<{ key: string; hash: number }> = [];
+    for (const [idKey, idValue] of Object.entries(allIdentifiers)) {
+      for (const eventType of allEventTypes) {
+        const lockKey = `${idKey}:${idValue}:${eventType}`;
+        locks.push({
+          key: lockKey,
+          hash: this.hashString(lockKey)
+        });
+      }
+    }
+
+    locks.sort((a, b) => a.key.localeCompare(b.key));
+
+    return await this.sql.begin(async (sql) => {
+      for (const lock of locks) {
+        const [result] = await sql<[{ pg_try_advisory_xact_lock: boolean }]>`
+          SELECT pg_try_advisory_xact_lock(${lock.hash})
+        `;
+
+        if (!result.pg_try_advisory_xact_lock) {
+          throw new Error(
+            `Lock acquisition failed for key: ${lock.key}. Another transaction is currently processing this resource.`
+          );
+        }
+      }
 
       const whereStatement = this.getWhereStatementV2(
         payload.queryV2.$where,
         sql
       );
 
-      const existingEvents = await sql`
+      const conflictingEvents = await sql`
         SELECT id FROM ${this.streamNameWritableIdentifier}
         WHERE ${whereStatement}
+        AND id > ${payload.lastKnownEventId}
         ORDER BY id DESC
         LIMIT 1
       `;
 
-      if (existingEvents.length > 0) {
-        const lastEventId = existingEvents[0].id;
-
-        if (lastEventId !== payload.lastKnownEventId) {
-          throw new Error(
-            `Concurrency conflict detected: expected lastKnownEventId to be ${payload.lastKnownEventId}, but found ${lastEventId}`
-          );
-        }
-      } else if (payload.lastKnownEventId) {
+      if (conflictingEvents.length > 0) {
+        const conflictingEventId = conflictingEvents[0].id;
         throw new Error(
-          `Concurrency conflict detected: no events matching the query found, but lastKnownEventId was provided`
+          `Concurrency conflict detected: found new event ${conflictingEventId} after lastKnownEventId ${payload.lastKnownEventId}`
         );
       }
 
@@ -602,11 +630,55 @@ export class SorciPostgres implements Sorci {
     });
   }
 
-  private hashQuery(query: QueryV2): number {
-    const queryString = JSON.stringify(query);
+  private extractIdentifiers(data: any): Record<string, string> {
+    const identifiers: Record<string, string> = {};
+
+    if (!data || typeof data !== "object") {
+      return identifiers;
+    }
+
+    for (const [key, value] of Object.entries(data)) {
+      if (key === "type") continue;
+      if (!key.endsWith("Id")) continue;
+
+      if (value && typeof value === "object" && "$eq" in value) {
+        const eqValue = (value as any).$eq;
+        if (typeof eqValue === "string") {
+          identifiers[key] = eqValue;
+        }
+      } else if (typeof value === "string") {
+        identifiers[key] = value;
+      }
+    }
+
+    return identifiers;
+  }
+
+  private extractEventTypes(typeCondition: any): string[] {
+    if (!typeCondition) {
+      return [];
+    }
+
+    if (typeof typeCondition === "object") {
+      if ("$eq" in typeCondition) {
+        return [typeCondition.$eq];
+      }
+      if ("$in" in typeCondition) {
+        return typeCondition.$in;
+      }
+    }
+
+    if (typeof typeCondition === "string") {
+      return [typeCondition];
+    }
+
+    return [];
+  }
+
+  private hashString(input: string): number {
     let hash = 0;
-    for (let i = 0; i < queryString.length; i++) {
-      const char = queryString.charCodeAt(i);
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
       hash = (hash << 5) - hash + char;
       hash = hash & hash;
     }

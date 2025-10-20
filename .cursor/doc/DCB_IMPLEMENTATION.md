@@ -105,48 +105,123 @@ const existingEvents = await sql`
 - What if there are no existing events matching the query?
 - Nothing to lock = no synchronization
 
-### Final Solution: PostgreSQL Advisory Locks ✅
+### Final Solution: PostgreSQL Advisory Locks with Cartesian Product ✅
+
+**Evolution:** Initially implemented with a single advisory lock per query hash, but this missed conflicts when different queries overlapped in event types. The solution evolved to use **cartesian product locks** (identifier × eventType) to ensure proper conflict detection while maintaining fine-grained concurrency.
 
 ## Implementation Details
 
 ### Core Concept
 
-Use PostgreSQL advisory locks based on a hash of the query to serialize access to specific consistency boundaries, while allowing parallel access to different boundaries.
+Use PostgreSQL advisory locks based on a **cartesian product** of identifiers and event types to serialize access to specific consistency boundaries, while allowing parallel access to different boundaries.
+
+The lock strategy ensures that:
+
+- Operations on the same entity with overlapping event types will conflict
+- Operations on different entities run in parallel
+- Operations on the same entity but different event types (e.g., rename list vs. rename item) run in parallel
 
 ### Key Components
 
-#### 1. Query Hashing
+#### 1. Identifier Extraction
 
 ```typescript
-private hashQuery(query: QueryV2): number {
-  const queryString = JSON.stringify(query);
-  let hash = 0;
-  for (let i = 0; i < queryString.length; i++) {
-    const char = queryString.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+private extractIdentifiers(data: any): Record<string, string> {
+  const identifiers: Record<string, string> = {};
+
+  if (!data || typeof data !== "object") {
+    return identifiers;
   }
-  return Math.abs(hash);
+
+  for (const [key, value] of Object.entries(data)) {
+    if (key === "type") continue;
+
+    if (value && typeof value === "object" && "$eq" in value) {
+      const eqValue = (value as any).$eq;
+      if (typeof eqValue === "string") {
+        identifiers[key] = eqValue;
+      }
+    } else if (typeof value === "string") {
+      identifiers[key] = value;
+    }
+  }
+
+  return identifiers;
 }
 ```
 
-**Purpose:** Convert a query into a unique integer that represents the consistency boundary.
+**Purpose:** Extract all identifier fields from both query conditions and event data (e.g., `todoListId`, `todoListItemId`).
 
-#### 2. Advisory Lock Acquisition
+#### 2. Event Type Extraction
 
 ```typescript
-await sql`SELECT pg_advisory_xact_lock(${queryHash})`;
+private extractEventTypes(typeCondition: any): string[] {
+  if (!typeCondition) {
+    return [];
+  }
+
+  if (typeof typeCondition === "object") {
+    if ("$eq" in typeCondition) {
+      return [typeCondition.$eq];
+    }
+    if ("$in" in typeCondition) {
+      return typeCondition.$in;
+    }
+  }
+
+  if (typeof typeCondition === "string") {
+    return [typeCondition];
+  }
+
+  return [];
+}
+```
+
+**Purpose:** Extract event types from query conditions and include the event type being inserted.
+
+#### 3. Cartesian Product Lock Acquisition
+
+```typescript
+// Extract identifiers from query + event
+const queryIdentifiers = this.extractIdentifiers(payload.queryV2.$where);
+const eventIdentifier = payload.sourcingEvent.identifier;
+const allIdentifiers = { ...queryIdentifiers, ...eventIdentifier };
+
+// Extract event types from query + event being inserted
+const queryEventTypes = this.extractEventTypes(payload.queryV2.$where.type);
+const allEventTypes = [
+  ...new Set([...queryEventTypes, payload.sourcingEvent.type])
+];
+
+// Create cartesian product: (identifier × eventType)
+const locks: Array<{ key: string; hash: number }> = [];
+for (const [idKey, idValue] of Object.entries(allIdentifiers)) {
+  for (const eventType of allEventTypes) {
+    const lockKey = `${idKey}:${idValue}:${eventType}`;
+    locks.push({
+      key: lockKey,
+      hash: this.hashString(lockKey)
+    });
+  }
+}
+
+// Sort locks and acquire them in order (deadlock prevention)
+locks.sort((a, b) => a.key.localeCompare(b.key));
+for (const lock of locks) {
+  await sql`SELECT pg_advisory_xact_lock(${lock.hash})`;
+}
 ```
 
 **Key Properties:**
 
 - `pg_advisory_xact_lock`: Transaction-scoped advisory lock
 - Automatically released when transaction commits/rolls back
-- Blocks other transactions with the same lock ID
+- Multiple locks acquired per transaction (one for each identifier×eventType combination)
+- Locks acquired in sorted order to prevent deadlocks
 - Does NOT lock any table or row
 - Zero storage overhead
 
-#### 3. Optimistic Concurrency Check
+#### 4. Optimistic Concurrency Check
 
 ```typescript
 const existingEvents = await sql`
@@ -177,12 +252,42 @@ private async appendEventWithQueryV2(payload: {
   queryV2: QueryV2;
   lastKnownEventId: EventId;
 }) {
-  return await this.sql.begin(async (sql) => {
-    // 1. Acquire advisory lock for this consistency boundary
-    const queryHash = this.hashQuery(payload.queryV2);
-    await sql`SELECT pg_advisory_xact_lock(${queryHash})`;
+  // 1. Extract identifiers from query + event (BEFORE transaction)
+  const queryIdentifiers = this.extractIdentifiers(payload.queryV2.$where);
+  const eventIdentifier = payload.sourcingEvent.identifier;
+  const allIdentifiers = { ...queryIdentifiers, ...eventIdentifier };
 
-    // 2. Get the current last event matching the query
+  // 2. Extract event types from query + event being inserted (BEFORE transaction)
+  const typeCondition =
+    "$or" in payload.queryV2.$where || "$and" in payload.queryV2.$where
+      ? undefined
+      : payload.queryV2.$where.type;
+  const queryEventTypes = this.extractEventTypes(typeCondition);
+  const allEventTypes = [
+    ...new Set([...queryEventTypes, payload.sourcingEvent.type])
+  ];
+
+  // 3. Create cartesian product locks (BEFORE transaction)
+  const locks: Array<{ key: string; hash: number }> = [];
+  for (const [idKey, idValue] of Object.entries(allIdentifiers)) {
+    for (const eventType of allEventTypes) {
+      const lockKey = `${idKey}:${idValue}:${eventType}`;
+      locks.push({
+        key: lockKey,
+        hash: this.hashString(lockKey)
+      });
+    }
+  }
+
+  locks.sort((a, b) => a.key.localeCompare(b.key));
+
+  return await this.sql.begin(async (sql) => {
+    // 4. Acquire locks IMMEDIATELY when transaction starts
+    for (const lock of locks) {
+      await sql`SELECT pg_advisory_xact_lock(${lock.hash})`;
+    }
+
+    // 5. Get the current last event matching the query
     const whereStatement = this.getWhereStatementV2(payload.queryV2.$where, sql);
     const existingEvents = await sql`
       SELECT id FROM ${this.streamNameWritableIdentifier}
@@ -191,7 +296,7 @@ private async appendEventWithQueryV2(payload: {
       LIMIT 1
     `;
 
-    // 3. Verify optimistic concurrency
+    // 6. Verify optimistic concurrency
     if (existingEvents.length > 0) {
       const lastEventId = existingEvents[0].id;
 
@@ -206,7 +311,7 @@ private async appendEventWithQueryV2(payload: {
       );
     }
 
-    // 4. Insert the new event
+    // 7. Insert the new event
     const result = await sql`
       INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier)
       VALUES (${payload.sourcingEvent.id}, ${payload.sourcingEvent.type}, ${payload.sourcingEvent.data}, ${payload.sourcingEvent.identifier})
@@ -214,38 +319,127 @@ private async appendEventWithQueryV2(payload: {
     `;
 
     return result[0].id as string;
-    // 5. Lock automatically released on transaction commit
+    // 8. Locks automatically released on transaction commit
   });
 }
 ```
 
 ## How It Works in Practice
 
-### Scenario 1: Concurrent Appends to Same Boundary (Conflict)
+### Scenario 1: Delete Todo-List + Rename Todo-List (CONFLICT)
 
 ```
-Query: { type: "todo-list-item-created", todoListId: "abc123" }
-Hash: 42
+Transaction A (Delete):
+  Query: {type: "todo-list-created", todoListId: "abc"}
+  Event: {type: "todo-list-deleted", data: {todoListId: "abc"}}
+  Locks:
+    - hash("todoListId:abc:todo-list-created")
+    - hash("todoListId:abc:todo-list-deleted")
+
+Transaction B (Rename):
+  Query: {type: {$in: ["todo-list-created", "todo-list-deleted"]}, todoListId: "abc"}
+  Event: {type: "todo-list-renamed", data: {todoListId: "abc"}}
+  Locks:
+    - hash("todoListId:abc:todo-list-created")  ← OVERLAP!
+    - hash("todoListId:abc:todo-list-deleted")  ← OVERLAP!
+    - hash("todoListId:abc:todo-list-renamed")
 
 Time →
-Tx A: pg_advisory_xact_lock(42) ────→ Check (lastId matches) ──→ INSERT ──→ COMMIT ✓
-Tx B: pg_advisory_xact_lock(42) (waits...) ────────────────────────────────────→ Check (lastId MISMATCH!) ──→ THROW ❌
+Tx A: Acquire locks ────→ Check (lastId matches) ──→ INSERT ──→ COMMIT ✓
+Tx B: Acquire locks (waits on overlapping locks...) ──→ Check (lastId MISMATCH!) ──→ THROW ❌
 ```
 
-**Result:** One succeeds, one fails with concurrency conflict.
+**Result:** One succeeds, one fails with concurrency conflict because they have overlapping locks.
 
-### Scenario 2: Concurrent Appends to Different Boundaries (No Conflict)
+### Scenario 2: Rename Todo-List + Rename Todo-List-Item (NO CONFLICT)
 
 ```
-Query A: { type: "todo-list-renamed", todoListId: "abc123" }  → Hash: 42
-Query B: { type: "todo-list-item-created", todoListItemId: "xyz789" } → Hash: 99
+Transaction A (Rename List):
+  Query: {type: "todo-list-renamed", todoListId: "abc"}
+  Event: {type: "todo-list-renamed", data: {todoListId: "abc"}}
+  Locks:
+    - hash("todoListId:abc:todo-list-renamed")
+
+Transaction B (Rename Item):
+  Query: {type: "todo-list-item-renamed", todoListItemId: "xyz"}
+  Event: {type: "todo-list-item-renamed", data: {todoListItemId: "xyz"}}
+  Locks:
+    - hash("todoListItemId:xyz:todo-list-item-renamed")
 
 Time →
-Tx A: pg_advisory_xact_lock(42) ─→ Check ─→ INSERT ─→ COMMIT ✓
-Tx B: pg_advisory_xact_lock(99) ─→ Check ─→ INSERT ─→ COMMIT ✓
+Tx A: Acquire locks ─→ Check ─→ INSERT ─→ COMMIT ✓
+Tx B: Acquire locks ─→ Check ─→ INSERT ─→ COMMIT ✓
 ```
 
-**Result:** Both succeed because they lock different advisory locks (different consistency boundaries).
+**Result:** Both succeed because they have no overlapping locks (different identifiers).
+
+### Scenario 3: Delete Todo-List + Create Todo-List-Item (WITH parent check)
+
+```
+Transaction A (Delete List):
+  Query: {type: "todo-list-created", todoListId: "abc"}
+  Event: {type: "todo-list-deleted", data: {todoListId: "abc"}}
+  Locks:
+    - hash("todoListId:abc:todo-list-created")
+    - hash("todoListId:abc:todo-list-deleted")
+
+Transaction B (Create Item with parent check):
+  Query: {type: {$in: ["todo-list-item-created", "todo-list-deleted"]}, todoListId: "abc", todoListItemId: "xyz"}
+  Event: {type: "todo-list-item-created", data: {todoListId: "abc", todoListItemId: "xyz"}}
+  Locks:
+    - hash("todoListId:abc:todo-list-item-created")
+    - hash("todoListId:abc:todo-list-deleted")  ← OVERLAP!
+    - hash("todoListItemId:xyz:todo-list-item-created")
+    - hash("todoListItemId:xyz:todo-list-deleted")
+
+Time →
+Tx A: Acquire locks ────→ INSERT ──→ COMMIT ✓
+Tx B: Acquire locks (waits on hash("todoListId:abc:todo-list-deleted")...) ──→ Check (finds deletion!) ──→ THROW ❌
+```
+
+**Result:** Transaction B blocks on the overlapping lock and detects the parent deletion.
+
+## Why Cartesian Product?
+
+The cartesian product approach solves a critical problem that simple query hashing cannot:
+
+### The Problem with Query-Only Hashing
+
+```typescript
+// Old approach: hash the entire query
+Transaction A: hash({type: "todo-list-created", todoListId: "abc"}) → 123
+Transaction B: hash({type: {$in: ["todo-list-created", "todo-list-deleted"]}, todoListId: "abc"}) → 456
+// Different hashes → No conflict → Both succeed → WRONG!
+```
+
+Even though Transaction B's query includes the event type that Transaction A is checking, they get different hashes and don't conflict.
+
+### The Solution: Identifier × Event Type
+
+By creating locks for each combination of identifier and event type, we ensure that:
+
+1. **Overlapping event types create conflicts**: If Transaction A is inserting `todo-list-deleted` and Transaction B is checking for `todo-list-deleted`, they share a lock.
+
+2. **Fine-grained concurrency**: Different identifiers don't conflict, even with the same event types.
+
+3. **Explicit consistency boundaries**: Developers control what conflicts by choosing which identifiers and event types to include in their queries.
+
+4. **Parent-child relationships**: By including parent identifiers in child queries, you can enforce referential integrity.
+
+### Lock Count
+
+The number of locks acquired = `|identifiers| × |eventTypes|`
+
+Example:
+
+- 1 identifier (`todoListId`) × 2 event types (`created`, `deleted`) = 2 locks
+- 2 identifiers (`todoListId`, `todoListItemId`) × 3 event types = 6 locks
+
+This is acceptable because:
+
+- Advisory locks are lightweight (no storage overhead)
+- Locks are acquired in sorted order (no deadlocks)
+- Most operations involve 2-6 locks maximum
 
 ## API Usage
 
@@ -307,6 +501,13 @@ try {
 - Can change boundaries dynamically
 - Supports complex cross-aggregate rules
 
+### ✅ Optimized Lock Acquisition
+
+- Locks are computed before transaction starts
+- Advisory locks acquired immediately when transaction begins
+- Minimizes time spent inside transaction before acquiring locks
+- Reduces wasted computation if waiting for locks
+
 ## Potential Improvements
 
 ### 1. Retry Logic
@@ -338,13 +539,14 @@ Use a cryptographic hash (SHA-256) for better collision resistance:
 ```typescript
 import crypto from 'crypto';
 
-private hashQuery(query: QueryV2): number {
-  const queryString = JSON.stringify(query);
-  const hash = crypto.createHash('sha256').update(queryString).digest();
+private hashString(input: string): number {
+  const hash = crypto.createHash('sha256').update(input).digest();
   // Take first 8 bytes and convert to bigint, then to int
   return Math.abs(hash.readInt32BE(0));
 }
 ```
+
+This would reduce the already-low probability of hash collisions between different lock keys.
 
 ### 3. Metrics and Monitoring
 
@@ -353,19 +555,23 @@ Track conflict rates to identify hotspots:
 ```typescript
 private conflictCounter = new Map<string, number>();
 
-private recordConflict(queryHash: number) {
-  const count = this.conflictCounter.get(queryHash.toString()) || 0;
-  this.conflictCounter.set(queryHash.toString(), count + 1);
+private recordConflict(lockKey: string) {
+  const count = this.conflictCounter.get(lockKey) || 0;
+  this.conflictCounter.set(lockKey, count + 1);
 }
 ```
+
+This would help identify which specific identifier+eventType combinations have the most contention.
 
 ### 4. Timeout on Advisory Locks
 
 Set a timeout to avoid indefinite waits:
 
 ```typescript
-await sql`SELECT pg_try_advisory_xact_lock(${queryHash})`;
-// Returns true if lock acquired, false if not
+const acquired = await sql`SELECT pg_try_advisory_xact_lock(${lock.hash})`;
+if (!acquired) {
+  throw new Error("Failed to acquire lock within timeout");
+}
 ```
 
 ### 5. Support for Multiple Consistency Boundaries
