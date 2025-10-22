@@ -560,6 +560,7 @@ export class SorciPostgres implements Sorci {
     sourcingEvent: ToPersistEvent;
     queryV2: QueryV2;
     lastKnownEventId: EventId;
+    _testOnlyOnLockAcquired?: () => Promise<void> | void;
   }) {
     const queryIdentifiers = this.extractIdentifiers(payload.queryV2.$where);
     const eventIdentifier = payload.sourcingEvent.identifier;
@@ -588,9 +589,32 @@ export class SorciPostgres implements Sorci {
 
     return await this.sql.begin(async (sql) => {
       for (const lock of locks) {
+        // if (payload._testOnlyOnLockAcquired) {
+        //   console.log(
+        //     `[${new Date().toISOString()}][${
+        //       payload.sourcingEvent.type
+        //     }] Acquiring lock ${lock.key}`
+        //   );
+        // }
+
         await sql`
           SELECT pg_advisory_xact_lock(${lock.hash})
         `;
+      }
+
+      if (payload._testOnlyOnLockAcquired) {
+        // console.log(
+        //   `[${new Date().toISOString()}][${
+        //     payload.sourcingEvent.type
+        //   }] Lock acquired`
+        // );
+        await payload._testOnlyOnLockAcquired();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        // console.log(
+        //   `[${new Date().toISOString()}][${
+        //     payload.sourcingEvent.type
+        //   }] Starting transaction`
+        // );
       }
 
       const whereStatement = this.getWhereStatementV2(
