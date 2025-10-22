@@ -565,14 +565,13 @@ export class SorciPostgres implements Sorci {
     const eventIdentifier = payload.sourcingEvent.identifier;
     const allIdentifiers = { ...queryIdentifiers, ...eventIdentifier };
 
-    const typeCondition =
-      "$or" in payload.queryV2.$where || "$and" in payload.queryV2.$where
-        ? undefined
-        : payload.queryV2.$where.type;
-    const queryEventTypes = this.extractEventTypes(typeCondition);
+    const queryEventTypes = this.extractEventTypesForLocking(
+      payload.queryV2.$where
+    );
+
     const allEventTypes = [
       ...new Set([...queryEventTypes, payload.sourcingEvent.type])
-    ].filter((type) => !type.endsWith("-created"));
+    ];
 
     const locks: Array<{ key: string; hash: number }> = [];
     for (const [idKey, idValue] of Object.entries(allIdentifiers)) {
@@ -589,15 +588,9 @@ export class SorciPostgres implements Sorci {
 
     return await this.sql.begin(async (sql) => {
       for (const lock of locks) {
-        const [result] = await sql<[{ pg_try_advisory_xact_lock: boolean }]>`
-          SELECT pg_try_advisory_xact_lock(${lock.hash})
+        await sql`
+          SELECT pg_advisory_xact_lock(${lock.hash})
         `;
-
-        if (!result.pg_try_advisory_xact_lock) {
-          throw new Error(
-            `Lock acquisition failed for key: ${lock.key}. Another transaction is currently processing this resource.`
-          );
-        }
       }
 
       const whereStatement = this.getWhereStatementV2(
@@ -673,6 +666,51 @@ export class SorciPostgres implements Sorci {
     }
 
     return [];
+  }
+
+  private extractEventTypesForLocking(whereClause: any): string[] {
+    if (whereClause.$or) {
+      const allTypes: string[] = [];
+      for (const condition of whereClause.$or) {
+        const typeCondition = condition.type;
+        if (typeCondition) {
+          const types = this.extractEventTypes(typeCondition);
+          const skipLockOn =
+            typeof typeCondition === "object" && typeCondition.$skipLockOn
+              ? typeCondition.$skipLockOn
+              : [];
+          allTypes.push(...types.filter((t) => !skipLockOn.includes(t)));
+        }
+      }
+      return allTypes;
+    }
+
+    if (whereClause.$and) {
+      const allTypes: string[] = [];
+      for (const condition of whereClause.$and) {
+        const typeCondition = condition.type;
+        if (typeCondition) {
+          const types = this.extractEventTypes(typeCondition);
+          const skipLockOn =
+            typeof typeCondition === "object" && typeCondition.$skipLockOn
+              ? typeCondition.$skipLockOn
+              : [];
+          allTypes.push(...types.filter((t) => !skipLockOn.includes(t)));
+        }
+      }
+      return allTypes;
+    }
+
+    const typeCondition = whereClause.type;
+    if (!typeCondition) return [];
+
+    const types = this.extractEventTypes(typeCondition);
+    const skipLockOn =
+      typeof typeCondition === "object" && typeCondition.$skipLockOn
+        ? typeCondition.$skipLockOn
+        : [];
+
+    return types.filter((t) => !skipLockOn.includes(t));
   }
 
   private hashString(input: string): number {
