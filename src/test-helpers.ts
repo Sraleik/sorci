@@ -171,3 +171,111 @@ export const createCourseFullLife = (payload?: {
     studentSubscribedToCourse2
   ];
 };
+
+export const createTodoListFullLife = (payload?: {
+  todoListId?: string;
+  todoListItemId?: string;
+}) => {
+  const todoListId = payload?.todoListId || createId();
+  const todoListItemId1 = payload?.todoListItemId || createId();
+  const todoListItemId2 = createId();
+  const todoListItemId3 = createId();
+
+  const todoListCreated = SorciEvent.create({
+    type: "todo-list-created",
+    data: {
+      title: faker.lorem.sentence(),
+      todoListId
+    }
+  });
+
+  const todoListRenamed1 = SorciEvent.create({
+    type: "todo-list-renamed",
+    data: {
+      title: faker.lorem.sentence(),
+      todoListId
+    }
+  });
+
+  const todoListRenamed2 = SorciEvent.create({
+    type: "todo-list-renamed",
+    data: {
+      title: faker.lorem.sentence(),
+      todoListId
+    }
+  });
+
+  const todoListItemCreated1 = SorciEvent.create({
+    type: "todo-list-item-created",
+    data: {
+      title: faker.lorem.words(3),
+      todoListId,
+      todoListItemId: todoListItemId1
+    }
+  });
+
+  const todoListItemCreated2 = SorciEvent.create({
+    type: "todo-list-item-created",
+    data: {
+      title: faker.lorem.words(3),
+      todoListId,
+      todoListItemId: todoListItemId2
+    }
+  });
+
+  const todoListItemCreated3 = SorciEvent.create({
+    type: "todo-list-item-created",
+    data: {
+      title: faker.lorem.words(3),
+      todoListId,
+      todoListItemId: todoListItemId3
+    }
+  });
+
+  const todoListItemRenamed1 = SorciEvent.create({
+    type: "todo-list-item-renamed",
+    data: {
+      title: faker.lorem.words(3),
+      todoListId,
+      todoListItemId: todoListItemId1
+    }
+  });
+
+  const todoListItemRenamed2 = SorciEvent.create({
+    type: "todo-list-item-renamed",
+    data: {
+      title: faker.lorem.words(3),
+      todoListId,
+      todoListItemId: todoListItemId2
+    }
+  });
+
+  const todoListItemDeleted1 = SorciEvent.create({
+    type: "todo-list-item-deleted",
+    data: {
+      todoListId,
+      todoListItemId: todoListItemId1
+    }
+  });
+
+  const todoListRenamed3 = SorciEvent.create({
+    type: "todo-list-renamed",
+    data: {
+      title: faker.lorem.sentence(),
+      todoListId
+    }
+  });
+
+  return [
+    todoListCreated,
+    todoListRenamed1,
+    todoListItemCreated1,
+    todoListItemCreated2,
+    todoListRenamed2,
+    todoListItemRenamed1,
+    todoListItemCreated3,
+    todoListItemRenamed2,
+    todoListItemDeleted1,
+    todoListRenamed3
+  ];
+};
