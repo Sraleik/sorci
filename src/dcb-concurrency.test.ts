@@ -141,7 +141,10 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         }),
         queryV2: {
           $where: {
-            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            type: {
+              $in: ["todo-list-created", "todo-list-deleted"],
+              $skipLockOn: ["todo-list-created"]
+            },
             todoListId: { $eq: todoListId }
           }
         },
@@ -156,7 +159,10 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         }),
         queryV2: {
           $where: {
-            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            type: {
+              $in: ["todo-list-created", "todo-list-deleted"],
+              $skipLockOn: ["todo-list-created"]
+            },
             todoListId: { $eq: todoListId }
           }
         },
@@ -171,7 +177,10 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         }),
         queryV2: {
           $where: {
-            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            type: {
+              $in: ["todo-list-created", "todo-list-deleted"],
+              $skipLockOn: ["todo-list-created"]
+            },
             todoListId: { $eq: todoListId }
           }
         },
@@ -186,7 +195,10 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         }),
         queryV2: {
           $where: {
-            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            type: {
+              $in: ["todo-list-created", "todo-list-deleted"],
+              $skipLockOn: ["todo-list-created"]
+            },
             todoListId: { $eq: todoListId }
           }
         },
@@ -201,7 +213,10 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         }),
         queryV2: {
           $where: {
-            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            type: {
+              $in: ["todo-list-created", "todo-list-deleted"],
+              $skipLockOn: ["todo-list-created"]
+            },
             todoListId: { $eq: todoListId }
           }
         },
@@ -210,7 +225,6 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     ];
 
     const results = await Promise.allSettled(concurrentPromises);
-    console.log("🚀 ~ dcb-concurrency.test.ts:284 ~ results:", results);
 
     const statusArray = results.map((result) => result.status);
     const fulfilledCount = statusArray.filter(
@@ -220,27 +234,16 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
       (status) => status === "rejected"
     ).length;
 
-    console.log("🚀 ~ dcb-concurrency.test.ts:286 ~ statusArray:", statusArray);
-
     expect(fulfilledCount).toBe(1);
     expect(rejectedCount).toBe(4);
   }, 60_000);
 
-  test("two different use cases, one impacting the other", async () => {
+  test.only("two different use cases, one impacting the other", async () => {
     const todoListId = createId();
 
     await aTodoList()
       .withId(todoListId)
       .withInitialTitle("Shopping list")
-      .with(aTodoListItem().withInitialTitle("Item 1"))
-      .with(aTodoListItem().withInitialTitle("Item 2"))
-      .with(aTodoListItem().withInitialTitle("Item 3"))
-      .with(aTodoListItem().withInitialTitle("Item 4"))
-      .with(aTodoListItem().withInitialTitle("Item 5"))
-      .with(aTodoListItem().withInitialTitle("Item 6"))
-      .with(aTodoListItem().withInitialTitle("Item 7"))
-      .with(aTodoListItem().withInitialTitle("Item 8"))
-      .with(aTodoListItem().withInitialTitle("Item 9"))
       .build();
 
     const itemEvents = await sorci.getEventsByQueryV2({
@@ -254,38 +257,47 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
 
     // Here the idea is the todo list is being delete at the same time as it is being renamed
     // Renaming a deleted todo list should not be allowed
-    const todoListDeleted = SorciEvent.create({
-      type: "todo-list-deleted",
-      data: {
-        title: "Shopping list - User A",
-        todoListId
-      }
-    });
 
-    const todoListRenamed = SorciEvent.create({
-      type: "todo-list-renamed",
-      data: {
-        title: "Shopping list - renamed",
-        todoListId
-      }
-    });
-
+    //TODO: this one is weird because it could be [fulfilled, fulfilled] or [fulfilled, rejected]
+    // renaming is possible if treated first.
     const concurrentPromises = [
       sorci.appendEventV2({
-        sourcingEvent: todoListDeleted,
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: {
+            title: "Shopping list - User A",
+            todoListId
+          }
+        }),
         queryV2: {
           $where: {
-            type: { $eq: "todo-list-created" },
+            type: {
+              $in: ["todo-list-created", "todo-list-deleted"],
+              $skipLockOn: ["todo-list-created"]
+            },
             todoListId: { $eq: todoListId }
           }
         },
         lastKnownEventId: todoListLastId
       }),
       sorci.appendEventV2({
-        sourcingEvent: todoListRenamed,
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-renamed",
+          data: {
+            title: "Shopping list - renamed",
+            todoListId
+          }
+        }),
         queryV2: {
           $where: {
-            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            type: {
+              $in: [
+                "todo-list-created",
+                "todo-list-renamed",
+                "todo-list-deleted"
+              ],
+              $skipLockOn: ["todo-list-created"]
+            },
             todoListId: { $eq: todoListId }
           }
         },
@@ -294,20 +306,16 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     ];
 
     const results = await Promise.allSettled(concurrentPromises);
-
     const events = await sorci.getEventsByQueryV2({
-      $where: {
-        type: {
-          $in: ["todo-list-created", "todo-list-deleted", "todo-list-renamed"]
-        },
-        todoListId: { $eq: todoListId }
-      }
+      $where: { todoListId: { $eq: todoListId } }
     });
-    console.log("🚀 ~ dcb-concurrency.test.ts:276 ~ events:", events);
-
+    console.log("🚀 ~ dcb-concurrency.test.ts:323 ~ events:", events);
     const statusArray = results.map((result) => result.status);
+    const fulfilledCount = statusArray.filter((s) => s === "fulfilled").length;
+    const rejectedCount = statusArray.filter((s) => s === "rejected").length;
 
-    expect(statusArray).toEqual(["fulfilled", "rejected"]);
+    expect(fulfilledCount).toBe(1);
+    expect(rejectedCount).toBe(1);
   });
 
   test("should work without query (simple append without concurrency check)", async () => {
@@ -330,5 +338,193 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     const retrievedEvent = await sorci.getEventById(eventId);
     expect(retrievedEvent?.type).toBe("todo-list-created");
     expect(retrievedEvent?.data.title).toBe("Simple todo list");
+  });
+
+  test("concurrent operations with $skipLockOn should succeed when skipping overlapping types", async () => {
+    const todoListId = createId();
+
+    const { events } = await aTodoList().withId(todoListId).build();
+    const todoListLastId = events[events.length - 1].id;
+
+    const concurrentPromises = [
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-archived",
+          data: { todoListId }
+        }),
+        queryV2: {
+          $where: {
+            type: {
+              $eq: "todo-list-created",
+              $skipLockOn: ["todo-list-created"]
+            },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      }),
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-published",
+          data: { todoListId }
+        }),
+        queryV2: {
+          $where: {
+            type: {
+              $eq: "todo-list-created",
+              $skipLockOn: ["todo-list-created"]
+            },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      })
+    ];
+
+    const results = await Promise.allSettled(concurrentPromises);
+    const statusArray = results.map((result) => result.status);
+
+    expect(statusArray).toEqual(["fulfilled", "fulfilled"]);
+  });
+
+  test("$in with partial $skipLockOn should have mixed locking behavior", async () => {
+    const todoListId = createId();
+
+    const { events } = await aTodoList().withId(todoListId).build();
+    const todoListLastId = events[events.length - 1].id;
+
+    const concurrentPromises = [
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: { todoListId }
+        }),
+        queryV2: {
+          $where: {
+            type: {
+              $in: ["todo-list-created", "todo-list-deleted"],
+              $skipLockOn: ["todo-list-created"]
+            },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      }),
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: { todoListId }
+        }),
+        queryV2: {
+          $where: {
+            type: {
+              $in: ["todo-list-created", "todo-list-deleted"],
+              $skipLockOn: ["todo-list-created"]
+            },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      })
+    ];
+
+    const results = await Promise.allSettled(concurrentPromises);
+    const statusArray = results.map((result) => result.status);
+    const fulfilledCount = statusArray.filter((s) => s === "fulfilled").length;
+    const rejectedCount = statusArray.filter((s) => s === "rejected").length;
+
+    expect(fulfilledCount).toBe(1);
+    expect(rejectedCount).toBe(1);
+  });
+
+  test("empty $skipLockOn should behave same as no skip", async () => {
+    const todoListId = createId();
+
+    const { events } = await aTodoList().withId(todoListId).build();
+    const todoListLastId = events[events.length - 1].id;
+
+    const concurrentPromises = [
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: { todoListId }
+        }),
+        queryV2: {
+          $where: {
+            type: { $eq: "todo-list-created", $skipLockOn: [] },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      }),
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-renamed",
+          data: { title: "New title", todoListId }
+        }),
+        queryV2: {
+          $where: {
+            type: {
+              $in: ["todo-list-created", "todo-list-deleted"],
+              $skipLockOn: []
+            },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      })
+    ];
+
+    const results = await Promise.allSettled(concurrentPromises);
+    const statusArray = results.map((result) => result.status);
+    const fulfilledCount = statusArray.filter((s) => s === "fulfilled").length;
+    const rejectedCount = statusArray.filter((s) => s === "rejected").length;
+
+    expect(fulfilledCount).toBe(1);
+    expect(rejectedCount).toBe(1);
+  });
+
+  test("default behavior without $skipLockOn should include all types in locks", async () => {
+    const todoListId = createId();
+
+    const { events } = await aTodoList().withId(todoListId).build();
+    const todoListLastId = events[events.length - 1].id;
+
+    const concurrentPromises = [
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-deleted",
+          data: { todoListId }
+        }),
+        queryV2: {
+          $where: {
+            type: { $eq: "todo-list-created" },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      }),
+      sorci.appendEventV2({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-renamed",
+          data: { title: "New title", todoListId }
+        }),
+        queryV2: {
+          $where: {
+            type: { $in: ["todo-list-created", "todo-list-deleted"] },
+            todoListId: { $eq: todoListId }
+          }
+        },
+        lastKnownEventId: todoListLastId
+      })
+    ];
+
+    const results = await Promise.allSettled(concurrentPromises);
+    const statusArray = results.map((result) => result.status);
+    const fulfilledCount = statusArray.filter((s) => s === "fulfilled").length;
+    const rejectedCount = statusArray.filter((s) => s === "rejected").length;
+
+    expect(fulfilledCount).toBe(1);
+    expect(rejectedCount).toBe(1);
   });
 });

@@ -12,8 +12,8 @@ export type Query =
     };
 
 export type QueryV2Property =
-  | { $eq: string; $in?: never }
-  | { $in: Array<string>; $eq?: never };
+  | { $eq: string; $in?: never; $skipLockOn?: string[] }
+  | { $in: Array<string>; $eq?: never; $skipLockOn?: string[] };
 
 export type QueryV2Or = Array<Record<string, QueryV2Property>>;
 export type QueryV2And = Array<Record<string, QueryV2Property>>;
