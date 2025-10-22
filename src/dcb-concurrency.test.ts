@@ -238,9 +238,8 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     expect(rejectedCount).toBe(4);
   }, 60_000);
 
-  test.only("two different use cases, one impacting the other", async () => {
+  test("delete todo-list blocks rename - deterministic", async () => {
     const todoListId = createId();
-
     await aTodoList()
       .withId(todoListId)
       .withInitialTitle("Shopping list")
@@ -252,70 +251,139 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         todoListId: { $eq: todoListId }
       }
     });
-
     const todoListLastId = itemEvents[itemEvents.length - 1].id;
 
-    // Here the idea is the todo list is being delete at the same time as it is being renamed
-    // Renaming a deleted todo list should not be allowed
-
-    //TODO: this one is weird because it could be [fulfilled, fulfilled] or [fulfilled, rejected]
-    // renaming is possible if treated first.
-    const concurrentPromises = [
-      sorci.appendEventV2({
-        sourcingEvent: SorciEvent.create({
-          type: "todo-list-deleted",
-          data: {
-            title: "Shopping list - User A",
-            todoListId
-          }
-        }),
-        queryV2: {
-          $where: {
-            type: {
-              $in: ["todo-list-created", "todo-list-deleted"],
-              $skipLockOn: ["todo-list-created"]
-            },
-            todoListId: { $eq: todoListId }
-          }
-        },
-        lastKnownEventId: todoListLastId
-      }),
-      sorci.appendEventV2({
-        sourcingEvent: SorciEvent.create({
-          type: "todo-list-renamed",
-          data: {
-            title: "Shopping list - renamed",
-            todoListId
-          }
-        }),
-        queryV2: {
-          $where: {
-            type: {
-              $in: [
-                "todo-list-created",
-                "todo-list-renamed",
-                "todo-list-deleted"
-              ],
-              $skipLockOn: ["todo-list-created"]
-            },
-            todoListId: { $eq: todoListId }
-          }
-        },
-        lastKnownEventId: todoListLastId
-      })
-    ];
-
-    const results = await Promise.allSettled(concurrentPromises);
-    const events = await sorci.getEventsByQueryV2({
-      $where: { todoListId: { $eq: todoListId } }
+    let deleteHasLock: () => void;
+    const deleteLockAcquired = new Promise<void>((resolve) => {
+      deleteHasLock = resolve;
     });
-    console.log("🚀 ~ dcb-concurrency.test.ts:323 ~ events:", events);
-    const statusArray = results.map((result) => result.status);
-    const fulfilledCount = statusArray.filter((s) => s === "fulfilled").length;
-    const rejectedCount = statusArray.filter((s) => s === "rejected").length;
 
-    expect(fulfilledCount).toBe(1);
-    expect(rejectedCount).toBe(1);
+    const deletePromise = sorci.appendEventV2({
+      sourcingEvent: SorciEvent.create({
+        type: "todo-list-deleted",
+        data: {
+          title: "Shopping list - User A",
+          todoListId
+        }
+      }),
+      queryV2: {
+        $where: {
+          type: {
+            $in: ["todo-list-created", "todo-list-deleted"],
+            $skipLockOn: ["todo-list-created"]
+          },
+          todoListId: { $eq: todoListId }
+        }
+      },
+      lastKnownEventId: todoListLastId,
+      _testOnlyOnLockAcquired: () => deleteHasLock()
+    });
+
+    await deleteLockAcquired;
+
+    const renamePromise = sorci.appendEventV2({
+      sourcingEvent: SorciEvent.create({
+        type: "todo-list-renamed",
+        data: {
+          title: "Shopping list - renamed",
+          todoListId
+        }
+      }),
+      queryV2: {
+        $where: {
+          type: {
+            $in: [
+              "todo-list-created",
+              "todo-list-renamed",
+              "todo-list-deleted"
+            ],
+            $skipLockOn: ["todo-list-created"]
+          },
+          todoListId: { $eq: todoListId }
+        }
+      },
+      lastKnownEventId: todoListLastId,
+      _testOnlyOnLockAcquired: () => Promise.resolve()
+    });
+
+    const results = await Promise.allSettled([deletePromise, renamePromise]);
+
+    expect(results[0].status).toBe("fulfilled");
+    expect(results[1].status).toBe("rejected");
+  });
+
+  test("rename todo-list completes before delete - deterministic", async () => {
+    const todoListId = createId();
+    await aTodoList()
+      .withId(todoListId)
+      .withInitialTitle("Shopping list")
+      .build();
+
+    const itemEvents = await sorci.getEventsByQueryV2({
+      $where: {
+        type: { $eq: "todo-list-created" },
+        todoListId: { $eq: todoListId }
+      }
+    });
+    const todoListLastId = itemEvents[itemEvents.length - 1].id;
+
+    let renameHasLock: () => void;
+    const renameLockAcquired = new Promise<void>((resolve) => {
+      renameHasLock = resolve;
+    });
+
+    const renamePromise = sorci.appendEventV2({
+      sourcingEvent: SorciEvent.create({
+        type: "todo-list-renamed",
+        data: {
+          title: "Shopping list - renamed",
+          todoListId
+        }
+      }),
+      queryV2: {
+        $where: {
+          type: {
+            $in: [
+              "todo-list-created",
+              "todo-list-renamed",
+              "todo-list-deleted"
+            ],
+            $skipLockOn: ["todo-list-created"]
+          },
+          todoListId: { $eq: todoListId }
+        }
+      },
+      lastKnownEventId: todoListLastId,
+      _testOnlyOnLockAcquired: () => renameHasLock()
+    });
+
+    await renameLockAcquired;
+
+    const deletePromise = sorci.appendEventV2({
+      sourcingEvent: SorciEvent.create({
+        type: "todo-list-deleted",
+        data: {
+          title: "Shopping list - User A",
+          todoListId
+        }
+      }),
+      queryV2: {
+        $where: {
+          type: {
+            $in: ["todo-list-created", "todo-list-deleted"],
+            $skipLockOn: ["todo-list-created"]
+          },
+          todoListId: { $eq: todoListId }
+        }
+      },
+      lastKnownEventId: todoListLastId,
+      _testOnlyOnLockAcquired: () => Promise.resolve()
+    });
+
+    const results = await Promise.allSettled([renamePromise, deletePromise]);
+
+    expect(results[0].status).toBe("fulfilled");
+    expect(results[1].status).toBe("fulfilled");
   });
 
   test("should work without query (simple append without concurrency check)", async () => {

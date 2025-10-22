@@ -92,11 +92,13 @@ export type AppendEventPayload =
 export type AppendEventPayloadV2 =
   | {
       sourcingEvent: ToPersistEvent;
+      _testOnlyOnLockAcquired?: () => Promise<void> | void;
     }
   | {
       sourcingEvent: ToPersistEvent;
       queryV2: QueryV2;
       lastKnownEventId: EventId;
+      _testOnlyOnLockAcquired?: () => Promise<void> | void;
     };
 
 // This interface is agnostic of the domain, so the typing is generic on purpose
