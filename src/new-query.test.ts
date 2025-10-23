@@ -85,7 +85,7 @@ describe("Test on todo list", async () => {
       .build();
   });
   test("Get events by specific type", async () => {
-    const eventsPersisted = await sorci.getEventsByQueryV2({
+    const eventsPersisted = await sorci.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-created" }
       }
@@ -98,7 +98,7 @@ describe("Test on todo list", async () => {
   });
 
   test("Get events by specific aggregateid", async () => {
-    const eventsPersisted = await sorci.getEventsByQueryV2({
+    const eventsPersisted = await sorci.getEventsByQuery({
       $where: {
         todoListId: { $eq: groceryListId }
       }
@@ -110,7 +110,7 @@ describe("Test on todo list", async () => {
     });
   });
   test("Get events by specific types and aggregateId", async () => {
-    const eventsPersisted = await sorci.getEventsByQueryV2({
+    const eventsPersisted = await sorci.getEventsByQuery({
       $where: {
         type: { $in: ["todo-list-created", "todo-list-deleted"] },
         todoListId: { $eq: groceryListId }
@@ -125,7 +125,7 @@ describe("Test on todo list", async () => {
   });
 
   test("Get a $where with $or", async () => {
-    const eventsPersisted = await sorci.getEventsByQueryV2({
+    const eventsPersisted = await sorci.getEventsByQuery({
       $where: {
         $or: [
           {

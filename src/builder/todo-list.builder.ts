@@ -92,7 +92,9 @@ export class TodoListBuilder {
     await this.buildTodoListItems();
 
     const events = await this.sorci.getEventsByQuery({
-      identifiers: [{ todoListId: this.aggregateId }]
+      $where: {
+        todoListId: { $eq: this.aggregateId }
+      }
     });
 
     return { todoListBuilder: this, events };

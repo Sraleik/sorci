@@ -1,32 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type EventId = string;
 
-export type Query =
-  | {
-      identifiers: Array<Record<string, any>>;
-      types?: Array<string>;
-    }
-  | {
-      identifiers?: Array<Record<string, any>>;
-      types: Array<string>;
-    };
-
-export type QueryV2Property =
+export type QueryProperty =
   | { $eq: string; $in?: never; $skipLockOn?: string[] }
   | { $in: Array<string>; $eq?: never; $skipLockOn?: string[] };
-
-export type QueryV2Or = Array<Record<string, QueryV2Property>>;
-export type QueryV2And = Array<Record<string, QueryV2Property>>;
-export type QueryV2 = {
+export type QueryOr = Array<Record<string, QueryProperty>>;
+export type QueryAnd = Array<Record<string, QueryProperty>>;
+export type Query = {
   $where:
     | {
-        $or: QueryV2Or;
+        $or: QueryOr;
       }
     | {
-        $and: QueryV2And;
+        $and: QueryAnd;
       }
     | {
-        [key: string]: QueryV2Property;
+        [key: string]: QueryProperty;
       };
   $limit?: number;
   $offset?: number;
@@ -86,17 +75,6 @@ export type AppendEventPayload =
   | {
       sourcingEvent: ToPersistEvent;
       query: Query;
-      eventIdentifier: EventId;
-    };
-
-export type AppendEventPayloadV2 =
-  | {
-      sourcingEvent: ToPersistEvent;
-      _testOnlyOnLockAcquired?: () => Promise<void> | void;
-    }
-  | {
-      sourcingEvent: ToPersistEvent;
-      queryV2: QueryV2;
       lastKnownEventId: EventId;
       _testOnlyOnLockAcquired?: () => Promise<void> | void;
     };
@@ -151,14 +129,6 @@ export interface Sorci {
   // Commands
 
   /**
-   * Will append an event. It will make sure there is no concurrency
-   * issue if query & eventIdentifier is provided
-   * @category Stream
-   * @returns The event id
-   */
-  appendEvent(payload: AppendEventPayload): Promise<EventId>; // Proper append with check on eventIdentifier and query
-
-  /**
    * Will append an event with optimistic concurrency control.
    * Uses Dynamic Consistency Boundary (DCB) to detect conflicts without table locks.
    * If queryV2 & lastKnownEventId are provided, it checks if any relevant events
@@ -166,7 +136,7 @@ export interface Sorci {
    * @category Stream
    * @returns The event id
    */
-  appendEventV2(payload: AppendEventPayloadV2): Promise<EventId>;
+  appendEvent(payload: AppendEventPayload): Promise<EventId>;
 
   // Query
 
@@ -181,11 +151,4 @@ export interface Sorci {
    * @category Stream
    */
   getEventsByQuery(query: Query): Promise<PersistedEvent[]>;
-  // appendEvents(payload: AppendEventPayload[]): Promise<EntityId[]>;
-
-  /**
-   * Will retrieve every event that match the Query
-   * @category Stream
-   */
-  getEventsByQueryV2(query: QueryV2): Promise<PersistedEvent[]>;
 }

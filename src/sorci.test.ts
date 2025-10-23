@@ -150,10 +150,12 @@ describe("Given a populated stream", async () => {
       const eventId = await sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
-          types: ["course-created", "course-capacity-changed"],
-          identifiers: [{ courseId: course1Id }]
+          $where: {
+            type: { $in: ["course-created", "course-capacity-changed"] },
+            courseId: { $eq: course1Id }
+          }
         },
-        eventIdentifier: course1CapacityChanged.id
+        lastKnownEventId: course1CapacityChanged.id
       });
 
       const event = await sorci.getEventById(course1CapacityChangedAgain.id);
@@ -177,13 +179,15 @@ describe("Given a populated stream", async () => {
       const promise = sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
-          types: ["course-created", "course-capacity-changed"],
-          identifiers: [{ courseId: course1Id }]
+          $where: {
+            type: { $in: ["course-created", "course-capacity-changed"] },
+            courseId: { $eq: course1Id }
+          }
         },
-        eventIdentifier: createId() // Wrong identifier on purpose
+        lastKnownEventId: createId() // Wrong identifier on purpose
       });
 
-      await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
+      await expect(promise).rejects.toThrow(/Concurrency conflict detected/);
       const event = await sorci.getEventById(course1CapacityChangedAgain.id);
       expect(event).toBeFalsy();
     });
@@ -199,12 +203,15 @@ describe("Given a populated stream", async () => {
       const promise = sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
-          identifiers: [{ courseId: course1Id }]
+          $where: {
+            type: { $in: ["course-created", "course-capacity-changed"] },
+            courseId: { $eq: course1Id }
+          }
         },
-        eventIdentifier: createId() // Wrong identifier on purpose
+        lastKnownEventId: createId() // Wrong identifier on purpose
       });
 
-      await expect(promise).rejects.toThrow(/Event Identifier mismatch/);
+      await expect(promise).rejects.toThrow(/Concurrency conflict detected/);
       const event = await sorci.getEventById(course1CapacityChangedAgain.id);
       expect(event).toBeFalsy();
     });
@@ -220,9 +227,11 @@ describe("Given a populated stream", async () => {
       const eventId = await sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
-          types: ["course-created", "course-capacity-changed"]
+          $where: {
+            type: { $in: ["course-created", "course-capacity-changed"] }
+          }
         },
-        eventIdentifier: course2CapacityChanged.id
+        lastKnownEventId: course2CapacityChanged.id
       });
 
       const event = await sorci.getEventById(eventId);
@@ -246,9 +255,11 @@ describe("Given a populated stream", async () => {
       const eventId = await sorci.appendEvent({
         sourcingEvent: course1CapacityChangedAgain,
         query: {
-          identifiers: [{ courseId: course1Id }]
+          $where: {
+            courseId: { $eq: course1Id }
+          }
         },
-        eventIdentifier: course1Renamed.id
+        lastKnownEventId: course1Renamed.id
       });
 
       const event = await sorci.getEventById(eventId);
@@ -274,8 +285,12 @@ describe("Given a populated stream", async () => {
   describe("When querying events", async () => {
     test("Then the events are returned", async () => {
       const events = await sorci.getEventsByQuery({
-        types: ["course-created", "course-capacity-changed", "course-renamed"],
-        identifiers: [{ courseId: course1Id }]
+        $where: {
+          type: {
+            $in: ["course-created", "course-capacity-changed", "course-renamed"]
+          },
+          courseId: { $eq: course1Id }
+        }
       });
 
       expect(events).toHaveLength(3);
@@ -324,10 +339,12 @@ describe("Concurrency", async () => {
     await sorci.appendEvent({
       sourcingEvent: course1CapacityChangedAgain,
       query: {
-        types: ["course-created", "course-capacity-changed"],
-        identifiers: [{ courseId: course1Id }]
+        $where: {
+          type: { $in: ["course-created", "course-capacity-changed"] },
+          courseId: { $eq: course1Id }
+        }
       },
-      eventIdentifier: course1CapacityChanged.id
+      lastKnownEventId: course1CapacityChanged.id
     });
 
     await sorci.appendEvent({
@@ -355,10 +372,12 @@ describe("Concurrency", async () => {
         .appendEvent({
           sourcingEvent: event,
           query: {
-            types: ["course-created", "course-renamed"],
-            identifiers: [{ courseId: course1Id }]
+            $where: {
+              type: { $in: ["course-created", "course-renamed"] },
+              courseId: { $eq: course1Id }
+            }
           },
-          eventIdentifier: course1Renamed.id
+          lastKnownEventId: course1Renamed.id
         })
         .then(() => {
           return "success";
@@ -429,19 +448,23 @@ describe("Concurrency", async () => {
     const appendPromise1 = sorci.appendEvent({
       sourcingEvent: course1CapacityChangedAgain,
       query: {
-        types: ["course-created", "course-capacity-changed"],
-        identifiers: [{ courseId: course1Id }]
+        $where: {
+          type: { $in: ["course-created", "course-capacity-changed"] },
+          courseId: { $eq: course1Id }
+        }
       },
-      eventIdentifier: course1CapacityChanged.id
+      lastKnownEventId: course1CapacityChanged.id
     });
 
     const appendPromise2 = sorci.appendEvent({
       sourcingEvent: course1RenamedAgain,
       query: {
-        types: ["course-created", "course-renamed"],
-        identifiers: [{ courseId: course1Id }]
+        $where: {
+          type: { $in: ["course-created", "course-renamed"] },
+          courseId: { $eq: course1Id }
+        }
       },
-      eventIdentifier: course1Renamed.id
+      lastKnownEventId: course1Renamed.id
     });
 
     await Promise.all([appendPromise1, appendPromise2]);
@@ -468,10 +491,12 @@ describe("Concurrency", async () => {
       .appendEvent({
         sourcingEvent: course1RenamedAgain,
         query: {
-          types: ["course-created", "course-renamed"],
-          identifiers: [{ courseId: course1Id }]
+          $where: {
+            type: { $in: ["course-created", "course-renamed"] },
+            courseId: { $eq: course1Id }
+          }
         },
-        eventIdentifier: course1Renamed.id
+        lastKnownEventId: course1Renamed.id
       })
       .then(() => "success")
       .catch(() => "error");
@@ -480,10 +505,12 @@ describe("Concurrency", async () => {
       .appendEvent({
         sourcingEvent: course1RenamedAgain,
         query: {
-          types: ["course-created", "course-renamed"],
-          identifiers: [{ courseId: course1Id }]
+          $where: {
+            type: { $in: ["course-created", "course-renamed"] },
+            courseId: { $eq: course1Id }
+          }
         },
-        eventIdentifier: course1Renamed.id
+        lastKnownEventId: course1Renamed.id
       })
       .then(() => "success")
       .catch(() => "error");
