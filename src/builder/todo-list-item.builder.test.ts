@@ -66,11 +66,15 @@ describe("Test on todo list item", async () => {
     const { todoListItemBuilder: todoListItem } = await aTodoListItem().build();
 
     const todoListItemEvents = await sorci.getEventsByQuery({
-      identifiers: [{ todoListItemId: todoListItem.aggregateId }]
+      $where: {
+        todoListItemId: { $eq: todoListItem.aggregateId }
+      }
     });
 
     const todoListEvents = await sorci.getEventsByQuery({
-      identifiers: [{ todoListId: todoListItem.todoListId }]
+      $where: {
+        todoListId: { $eq: todoListItem.todoListId }
+      }
     });
 
     expect(todoListItemEvents).toHaveLength(1);

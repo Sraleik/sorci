@@ -4,10 +4,9 @@ import {
   Sorci,
   Query,
   ToPersistEvent,
-  QueryV2,
-  QueryV2Property,
-  QueryV2Or,
-  AppendEventPayloadV2
+  QueryOr,
+  AppendEventPayload,
+  QueryProperty
 } from "./sorci.interface";
 import { shortId } from "./common/utils";
 
@@ -77,72 +76,23 @@ export class SorciPostgres implements Sorci {
     return this._streamName;
   }
 
-  /* Getter from stream name to be able to clean every test stream easily */
-  private getStreamNameWritable(streamName: string) {
-    return `${streamName}_writable`;
-  }
-
-  private getStreamNameReadOnly(streamName: string) {
-    return `${streamName}_readonly`;
-  }
-
-  // For now it only synchronize insert, might need to rename to something more specific
-  private getSyncronizationFunctionName(streamName: string) {
-    const streamNameWritable = this.getStreamNameWritable(streamName);
-    return `sync_row_${streamNameWritable}_to_readonly`;
-  }
-
-  // Trigger for insert only, might need to rename to something more specific
-  private getSyncronizationTriggerName(streamName: string) {
-    const streamNameWritable = this.getStreamNameWritable(streamName);
-    return `trigger_from_${streamNameWritable}_to_sync_read`;
-  }
-
-  /* Simple strings */
-  get streamNameWritable() {
-    return this.getStreamNameWritable(this.streamName);
-  }
-
-  get streamNameReadOnly() {
-    return this.getStreamNameReadOnly(this.streamName);
-  }
-
-  get syncronizationFunctionName() {
-    return this.getSyncronizationFunctionName(this.streamName);
-  }
-
-  get syncronizationTriggerName() {
-    return this.getSyncronizationTriggerName(this.streamName);
-  }
-
   /* Identifiers based on the simple strings */
-  get streamNameWritableIdentifier() {
-    return this.sql(this.streamNameWritable);
-  }
-
-  get streamNameReadOnlyIdentifier() {
-    return this.sql(this.streamNameReadOnly);
-  }
-
-  get syncronizationFunctionNameIdentifier() {
-    return this.sql(this.syncronizationFunctionName);
-  }
-
-  get syncronizationTriggerNameIdentifier() {
-    return this.sql(this.syncronizationTriggerName);
+  get streamNameIdentifier() {
+    return this.sql(this._streamName);
   }
 
   async createBasicTable(tableName: string) {
     await this.sql.begin(async (sql) => {
       const currentTableIdentifier = sql(tableName);
 
-      const isUuidExtensionLoaded = !!(
-        await sql`SELECT * FROM pg_extension WHERE extname = 'uuid-ossp'`
-      ).length;
-      if (!isUuidExtensionLoaded) {
-        await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-      }
+      // const isUuidExtensionLoaded = !!(
+      //   await sql`SELECT * FROM pg_extension WHERE extname = 'uuid-ossp'`
+      // ).length;
+      // if (!isUuidExtensionLoaded) {
+      //   await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+      // }
 
+      //TODO, allow ulid or uuid
       await sql`
         CREATE TABLE IF NOT EXISTS ${currentTableIdentifier} (
           id char(26) PRIMARY KEY,
@@ -165,47 +115,8 @@ export class SorciPostgres implements Sorci {
     });
   }
 
-  async createSyncronizationPgFunction() {
-    const isSyncFunctionAlreadyCreated = !!(
-      await this
-        .sql`SELECT 1 FROM pg_proc WHERE proname = ${this.syncronizationFunctionName};`
-    ).length;
-
-    if (isSyncFunctionAlreadyCreated) return;
-
-    await this.sql`
-      CREATE OR REPLACE FUNCTION ${this.syncronizationFunctionNameIdentifier}()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        INSERT INTO ${this.streamNameReadOnlyIdentifier} (id, type, data, identifier)
-        VALUES (NEW.id, NEW.type, NEW.data, NEW.identifier);
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-   `;
-  }
-
-  async createSyncronizationTrigger() {
-    const isTriggerAlreadyCreated = !!(
-      await this
-        .sql`SELECT 1 FROM pg_trigger WHERE tgname = ${this.syncronizationTriggerName};`
-    ).length;
-
-    if (isTriggerAlreadyCreated) return;
-
-    await this.sql`
-      CREATE TRIGGER ${this.syncronizationTriggerNameIdentifier} 
-      AFTER INSERT ON ${this.streamNameWritableIdentifier} 
-      FOR EACH ROW
-      EXECUTE FUNCTION ${this.syncronizationFunctionNameIdentifier}()
-    `;
-  }
-
   async createStream() {
-    await this.createBasicTable(this.streamNameWritable);
-    await this.createBasicTable(this.streamNameReadOnly);
-    await this.createSyncronizationPgFunction();
-    await this.createSyncronizationTrigger();
+    await this.createBasicTable(this.streamName);
   }
 
   async setupTestStream(streamName?: string) {
@@ -216,29 +127,8 @@ export class SorciPostgres implements Sorci {
 
   async cleanStream(streamName: string) {
     return this.sql.begin(async (sql) => {
-      const syncronizationTriggerNameIdentifier = sql(
-        this.getSyncronizationTriggerName(streamName)
-      );
-      const syncronizationFunctionNameIdentifier = sql(
-        this.getSyncronizationFunctionName(streamName)
-      );
-      const streamNameReadOnlyIdentifier = sql(
-        this.getStreamNameReadOnly(streamName)
-      );
-      const streamNameWritableIdentifier = sql(
-        this.getStreamNameWritable(streamName)
-      );
       await sql`
-        DROP TRIGGER IF EXISTS ${syncronizationTriggerNameIdentifier} ON ${streamNameWritableIdentifier} 
-      `;
-      await sql`
-        DROP FUNCTION IF EXISTS ${syncronizationFunctionNameIdentifier}()
-      `;
-      await sql`
-        DROP TABLE IF EXISTS ${streamNameReadOnlyIdentifier} 
-      `;
-      await sql`
-        DROP TABLE IF EXISTS ${streamNameWritableIdentifier} 
+        DROP TABLE IF EXISTS ${sql(streamName)} 
       `;
     });
   }
@@ -276,49 +166,23 @@ export class SorciPostgres implements Sorci {
   }
 
   async truncate() {
-    await this.sql.begin(async (sql) => {
-      await sql`
-        TRUNCATE TABLE ${this.streamNameWritableIdentifier}
+    await this.sql`
+        TRUNCATE TABLE ${this.streamNameIdentifier}
       `;
-
-      await sql`
-        TRUNCATE TABLE ${this.streamNameReadOnlyIdentifier}
-      `;
-    });
   }
 
   async insertEvents(events: Array<ToPersistEvent>) {
     const res = (await this.sql`
-      INSERT INTO ${this.streamNameWritableIdentifier} ${this.sql(events)}
+      INSERT INTO ${this.streamNameIdentifier} ${this.sql(events)}
       RETURNING id
     `) as Array<{ id: string }>;
 
     return res.map((resItem) => resItem.id);
   }
 
-  private getWhereStatement(sql: postgres.Sql, query: Query) {
-    const { identifiers, types } = query;
-    const hasIdentifier = !!identifiers?.length;
-    const hasType = !!types?.length;
-
-    const containIdentifier = hasIdentifier
-      ? //@ts-expect-error don't know why but there is a typing issue here
-        sql`identifier @> ANY (${query.identifiers!}::jsonb[])`
-      : sql``;
-
-    const containType = hasType
-      ? sql`type = ANY (${query.types!}::text[])`
-      : sql``;
-    const and = hasType && hasIdentifier ? sql`AND` : sql``;
-
-    return sql`
-      WHERE ${containIdentifier} ${and} ${containType}
-    `;
-  }
-
   async getEventById(id: EventId) {
     const res = await this.sql`
-      SELECT * FROM ${this.streamNameWritableIdentifier} WHERE id = ${id} LIMIT 1;
+      SELECT * FROM ${this.streamNameIdentifier} WHERE id = ${id} LIMIT 1;
     `;
 
     const rawEvent = res[0];
@@ -333,7 +197,8 @@ export class SorciPostgres implements Sorci {
     };
   }
 
-  getInStatement(payload: {
+  // --- $Where to sql statements START
+  private getInStatement(payload: {
     sql: postgres.Sql;
     key: string;
     values: Array<string>;
@@ -342,20 +207,26 @@ export class SorciPostgres implements Sorci {
     return sql`${this.sql(key)} = ANY ( ${values}::text[] )`;
   }
 
-  getEqStatement(payload: { sql: postgres.Sql; key: string; value: string }) {
+  private getEqStatement(payload: {
+    sql: postgres.Sql;
+    key: string;
+    value: string;
+  }) {
     const { sql, key, value } = payload;
 
     if (key === "type") {
       return sql`${sql(key)} = ${value}`;
     }
 
+    //TODO user @> '{"listId": "uuid"}'
+    // beter performance with GIN index
     return sql`identifier->>${key} = ${value}`;
   }
 
-  getPropertySatetment(payload: {
+  private getPropertySatetment(payload: {
     sql: postgres.Sql;
     key: string;
-    property: QueryV2Property;
+    property: QueryProperty;
   }) {
     const { sql, key, property } = payload;
 
@@ -365,9 +236,9 @@ export class SorciPostgres implements Sorci {
     return this.getEqStatement({ sql, key, value: property.$eq! });
   }
 
-  getPropertiesAndStatement(payload: {
+  private getPropertiesAndStatement(payload: {
     sql: postgres.Sql;
-    data: Record<string, QueryV2Property>;
+    data: Record<string, QueryProperty>;
   }) {
     const { sql, data } = payload;
     const statements = Object.keys(data).map((key) => {
@@ -387,7 +258,7 @@ export class SorciPostgres implements Sorci {
     return sql`(${res})`;
   }
 
-  getOrStatement(payload: { sql: postgres.Sql; data: QueryV2Or }) {
+  private getOrStatement(payload: { sql: postgres.Sql; data: QueryOr }) {
     const { sql, data } = payload;
 
     const statements = data.map((item) => {
@@ -402,251 +273,29 @@ export class SorciPostgres implements Sorci {
     });
   }
 
-  getWhereStatementV2(where: QueryV2["$where"], sql: postgres.Sql) {
+  private getWhereStatement(where: Query["$where"], sql: postgres.Sql) {
     const keys = Object.keys(where);
+
     const hasOr = keys.includes("$or");
     const hasAnd = keys.includes("$and");
 
     if (!hasOr && !hasAnd) {
       return this.getPropertiesAndStatement({
         sql,
-        data: where as Record<string, QueryV2Property>
+        data: where as Record<string, QueryProperty>
       });
     }
 
     if (hasOr) {
       return this.getOrStatement({
         sql,
-        data: (where as { $or: QueryV2Or }).$or!
+        data: (where as { $or: QueryOr }).$or!
       });
     }
   }
+  // --- $Where to sql statements END
 
-  async getEventsByQueryV2(query: QueryV2, sql = this.sql) {
-    const whereStatement = this.getWhereStatementV2(query.$where, sql);
-
-    const rows = await sql`
-      SELECT * FROM ${this.streamNameWritableIdentifier}
-      WHERE ${whereStatement} 
-      ORDER BY id ASC;
-    `;
-    return rows;
-  }
-
-  async getEventsByQuery(query: Query) {
-    const whereStatement = this.getWhereStatement(this.sql, query);
-
-    const rows = await this.sql`
-      SELECT * FROM ${this.streamNameWritableIdentifier}
-      ${whereStatement}
-      ORDER BY id ASC;
-    `;
-
-    if (!rows?.length) return [];
-
-    //TODO: check if map is really needed
-    return rows.map((rawEvent: any) => {
-      return {
-        id: rawEvent.id,
-        type: rawEvent.type,
-        data: rawEvent.data,
-        identifier: rawEvent.identifier,
-        timestamp: rawEvent.timestamp
-      };
-    });
-  }
-
-  async appendEvent(
-    payload:
-      | {
-          sourcingEvent: ToPersistEvent;
-        }
-      | {
-          sourcingEvent: ToPersistEvent;
-          query: Query;
-          eventIdentifier: string;
-        }
-  ) {
-    //@ts-expect-error typing issue
-    if (!payload.query) {
-      const eventId = await this.appendEventWithoutQuery(payload.sourcingEvent);
-      return eventId;
-    }
-
-    const id = await this.appendEventWithQuery(
-      payload as {
-        sourcingEvent: ToPersistEvent;
-        query: Query;
-        eventIdentifier: string;
-      }
-    );
-
-    return id;
-  }
-
-  private async appendEventWithQuery(payload: {
-    sourcingEvent: ToPersistEvent;
-    query: Query;
-    eventIdentifier: string;
-  }) {
-    const eventPersistedId = await this.sql.begin(async (sql) => {
-      await sql`
-        LOCK TABLE ${this.streamNameWritableIdentifier} IN SHARE ROW EXCLUSIVE MODE;
-      `;
-
-      // TODO: rename in a way that remove the "aggregate" word
-      const lastEventIdentifierRaw = await sql`
-          SELECT id as last_event_identifier
-          FROM ${this.streamNameWritableIdentifier}
-          ${this.getWhereStatement(sql, payload.query)}
-          ORDER BY id DESC 
-          LIMIT 1
-        `;
-
-      if (
-        !lastEventIdentifierRaw.length ||
-        !lastEventIdentifierRaw[0].last_event_identifier
-      ) {
-        throw new Error("Aggregate not found");
-      }
-
-      const lastEventIdentifier =
-        lastEventIdentifierRaw[lastEventIdentifierRaw.length - 1]
-          .last_event_identifier;
-
-      if (lastEventIdentifier === payload.eventIdentifier) {
-        const res = await sql`
-          INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier)
-          VALUES (${payload.sourcingEvent.id}, ${payload.sourcingEvent.type}, ${payload.sourcingEvent.data}, ${payload.sourcingEvent.identifier})
-          RETURNING *
-        `;
-
-        return res[0].id as string;
-      } else {
-        throw new Error(
-          `Event Identifier mismatch, given: ${payload.eventIdentifier}, found: ${lastEventIdentifier}`
-        );
-      }
-    });
-    return eventPersistedId;
-  }
-
-  private async appendEventWithoutQuery(sourcingEvent: ToPersistEvent) {
-    const id = await this.sql.begin(async (sql) => {
-      await sql`
-          LOCK TABLE ${this.streamNameWritableIdentifier} IN SHARE ROW EXCLUSIVE MODE;
-        `;
-
-      const res = await sql`
-          INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier)
-          VALUES (${sourcingEvent.id}, ${sourcingEvent.type}, ${sourcingEvent.data}, ${sourcingEvent.identifier})
-          RETURNING *
-        `;
-
-      return res[0].id;
-    });
-    return id as string;
-  }
-
-  async appendEventV2(payload: AppendEventPayloadV2) {
-    if (!("queryV2" in payload)) {
-      return this.appendEventWithoutQuery(payload.sourcingEvent);
-    }
-
-    return this.appendEventWithQueryV2(payload);
-  }
-
-  private async appendEventWithQueryV2(payload: {
-    sourcingEvent: ToPersistEvent;
-    queryV2: QueryV2;
-    lastKnownEventId: EventId;
-    _testOnlyOnLockAcquired?: () => Promise<void> | void;
-  }) {
-    const queryIdentifiers = this.extractIdentifiers(payload.queryV2.$where);
-    const eventIdentifier = payload.sourcingEvent.identifier;
-    const allIdentifiers = { ...queryIdentifiers, ...eventIdentifier };
-
-    const queryEventTypes = this.extractEventTypesForLocking(
-      payload.queryV2.$where
-    );
-
-    const allEventTypes = [
-      ...new Set([...queryEventTypes, payload.sourcingEvent.type])
-    ];
-
-    const locks: Array<{ key: string; hash: number }> = [];
-    for (const [idKey, idValue] of Object.entries(allIdentifiers)) {
-      for (const eventType of allEventTypes) {
-        const lockKey = `${idKey}:${idValue}:${eventType}`;
-        locks.push({
-          key: lockKey,
-          hash: this.hashString(lockKey)
-        });
-      }
-    }
-
-    locks.sort((a, b) => a.key.localeCompare(b.key));
-
-    return await this.sql.begin(async (sql) => {
-      for (const lock of locks) {
-        // if (payload._testOnlyOnLockAcquired) {
-        //   console.log(
-        //     `[${new Date().toISOString()}][${
-        //       payload.sourcingEvent.type
-        //     }] Acquiring lock ${lock.key}`
-        //   );
-        // }
-
-        await sql`
-          SELECT pg_advisory_xact_lock(${lock.hash})
-        `;
-      }
-
-      if (payload._testOnlyOnLockAcquired) {
-        // console.log(
-        //   `[${new Date().toISOString()}][${
-        //     payload.sourcingEvent.type
-        //   }] Lock acquired`
-        // );
-        await payload._testOnlyOnLockAcquired();
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        // console.log(
-        //   `[${new Date().toISOString()}][${
-        //     payload.sourcingEvent.type
-        //   }] Starting transaction`
-        // );
-      }
-
-      const whereStatement = this.getWhereStatementV2(
-        payload.queryV2.$where,
-        sql
-      );
-
-      const conflictingEvents = await sql`
-        SELECT id FROM ${this.streamNameWritableIdentifier}
-        WHERE ${whereStatement}
-        AND id > ${payload.lastKnownEventId}
-        ORDER BY id DESC
-        LIMIT 1
-      `;
-
-      if (conflictingEvents.length > 0) {
-        const conflictingEventId = conflictingEvents[0].id;
-        throw new Error(
-          `Concurrency conflict detected: found new event ${conflictingEventId} after lastKnownEventId ${payload.lastKnownEventId}`
-        );
-      }
-
-      const result = await sql`
-        INSERT INTO ${this.streamNameWritableIdentifier} (id, type, data, identifier)
-        VALUES (${payload.sourcingEvent.id}, ${payload.sourcingEvent.type}, ${payload.sourcingEvent.data}, ${payload.sourcingEvent.identifier})
-        RETURNING id
-      `;
-
-      return result[0].id as string;
-    });
-  }
-
+  // --- Lock information helpers START
   private extractIdentifiers(data: any): Record<string, string> {
     const identifiers: Record<string, string> = {};
 
@@ -745,5 +394,129 @@ export class SorciPostgres implements Sorci {
       hash = hash & hash;
     }
     return Math.abs(hash);
+  }
+
+  async getEventsByQuery(query: Query, sql = this.sql) {
+    const whereStatement = this.getWhereStatement(query.$where, sql);
+
+    const rows = await sql`
+      SELECT * FROM ${this.streamNameIdentifier}
+      WHERE ${whereStatement} 
+      ORDER BY id ASC;
+    `;
+    return rows;
+  }
+  // --- Lock information helpers END
+
+  // TODO: add the advisory lock
+  private async appendEventWithoutQuery(sourcingEvent: ToPersistEvent) {
+    const id = await this.sql.begin(async (sql) => {
+      await sql`
+          LOCK TABLE ${this.streamNameIdentifier} IN SHARE ROW EXCLUSIVE MODE;
+        `;
+
+      const res = await sql`
+          INSERT INTO ${this.streamNameIdentifier} (id, type, data, identifier)
+          VALUES (${sourcingEvent.id}, ${sourcingEvent.type}, ${sourcingEvent.data}, ${sourcingEvent.identifier})
+          RETURNING *
+        `;
+
+      return res[0].id;
+    });
+    return id as string;
+  }
+
+  private async appendEventWithQuery(payload: {
+    sourcingEvent: ToPersistEvent;
+    query: Query;
+    lastKnownEventId: EventId;
+    _testOnlyOnLockAcquired?: () => Promise<void> | void;
+  }) {
+    const { query, sourcingEvent, lastKnownEventId, _testOnlyOnLockAcquired } =
+      payload;
+    const queryIdentifiers = this.extractIdentifiers(query.$where);
+    const eventIdentifier = sourcingEvent.identifier;
+    const allIdentifiers = { ...queryIdentifiers, ...eventIdentifier };
+
+    const queryEventTypes = this.extractEventTypesForLocking(query.$where);
+
+    const allEventTypes = [
+      ...new Set([...queryEventTypes, sourcingEvent.type])
+    ];
+
+    const locks: Array<{ key: string; hash: number }> = [];
+    for (const [idKey, idValue] of Object.entries(allIdentifiers)) {
+      for (const eventType of allEventTypes) {
+        const lockKey = `${idKey}:${idValue}:${eventType}`;
+        locks.push({
+          key: lockKey,
+          hash: this.hashString(lockKey)
+        });
+      }
+    }
+
+    locks.sort((a, b) => a.key.localeCompare(b.key));
+
+    return await this.sql.begin(async (sql) => {
+      for (const lock of locks) {
+        // if (payload._testOnlyOnLockAcquired) {
+        //   console.log(
+        //     `[${new Date().toISOString()}][${
+        //       payload.sourcingEvent.type
+        //     }] Acquiring lock ${lock.key}`
+        //   );
+        // }
+
+        await sql`
+          SELECT pg_advisory_xact_lock(${lock.hash})
+        `;
+      }
+
+      if (payload._testOnlyOnLockAcquired) {
+        // console.log(
+        //   `[${new Date().toISOString()}][${
+        //     payload.sourcingEvent.type
+        //   }] Lock acquired`
+        // );
+        await payload._testOnlyOnLockAcquired();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        // console.log(
+        //   `[${new Date().toISOString()}][${
+        //     payload.sourcingEvent.type
+        //   }] Starting transaction`
+        // );
+      }
+
+      const whereStatement = this.getWhereStatement(query.$where, sql);
+
+      const [lastEvent] = await sql`
+        SELECT id FROM ${this.streamNameIdentifier}
+        WHERE ${whereStatement}
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+
+      if (lastEvent?.id !== lastKnownEventId) {
+        throw new Error(
+          `Concurrency conflict detected: lastKnownEventId "${lastKnownEventId}" differs from the last event "${lastEvent.id}"`
+        );
+      }
+
+      const result = await sql`
+        INSERT INTO ${this.streamNameIdentifier} (id, type, data, identifier)
+        VALUES (${sourcingEvent.id}, ${sourcingEvent.type}, ${sourcingEvent.data}, ${sourcingEvent.identifier})
+        RETURNING id
+      `;
+
+      return result[0].id as string;
+    });
+  }
+
+  async appendEvent(payload: AppendEventPayload) {
+    if (!("query" in payload)) {
+      return this.appendEventWithoutQuery(payload.sourcingEvent);
+    }
+
+    return this.appendEventWithQuery(payload);
   }
 }

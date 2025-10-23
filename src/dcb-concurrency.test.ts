@@ -61,13 +61,13 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
       .with(aTodoListItem().withInitialTitle("Item 9"))
       .build();
 
-    const itemEvents = await sorci.getEventsByQueryV2({
+    const itemEvents = await sorci.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-created" },
         todoListId: { $eq: todoListId }
       }
     });
-    const itemEvents2 = await sorci.getEventsByQueryV2({
+    const itemEvents2 = await sorci.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-item-created" },
         todoListItemId: { $eq: itemToRenameId }
@@ -94,9 +94,9 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     });
 
     const concurrentPromises = [
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: todoListRenamedEvent,
-        queryV2: {
+        query: {
           $where: {
             type: { $eq: "todo-list-created" },
             todoListId: { $eq: todoListId }
@@ -104,9 +104,9 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         },
         lastKnownEventId: todoListLastId
       }),
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: todoListItemRenamedEvent,
-        queryV2: {
+        query: {
           $where: {
             type: { $eq: "todo-list-item-created" },
             todoListItemId: { $eq: itemToRenameId }
@@ -132,14 +132,14 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     const todoListLastId = events[events.length - 1].id;
 
     const concurrentPromises = [
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-deleted",
           data: {
             todoListId
           }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $in: ["todo-list-created", "todo-list-deleted"],
@@ -150,14 +150,14 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         },
         lastKnownEventId: todoListLastId
       }),
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-deleted",
           data: {
             todoListId
           }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $in: ["todo-list-created", "todo-list-deleted"],
@@ -168,14 +168,14 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         },
         lastKnownEventId: todoListLastId
       }),
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-deleted",
           data: {
             todoListId
           }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $in: ["todo-list-created", "todo-list-deleted"],
@@ -186,14 +186,14 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         },
         lastKnownEventId: todoListLastId
       }),
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-deleted",
           data: {
             todoListId
           }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $in: ["todo-list-created", "todo-list-deleted"],
@@ -204,14 +204,14 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         },
         lastKnownEventId: todoListLastId
       }),
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-deleted",
           data: {
             todoListId
           }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $in: ["todo-list-created", "todo-list-deleted"],
@@ -245,7 +245,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
       .withInitialTitle("Shopping list")
       .build();
 
-    const itemEvents = await sorci.getEventsByQueryV2({
+    const itemEvents = await sorci.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-created" },
         todoListId: { $eq: todoListId }
@@ -258,7 +258,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
       deleteHasLock = resolve;
     });
 
-    const deletePromise = sorci.appendEventV2({
+    const deletePromise = sorci.appendEvent({
       sourcingEvent: SorciEvent.create({
         type: "todo-list-deleted",
         data: {
@@ -266,7 +266,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
           todoListId
         }
       }),
-      queryV2: {
+      query: {
         $where: {
           type: {
             $in: ["todo-list-created", "todo-list-deleted"],
@@ -281,7 +281,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
 
     await deleteLockAcquired;
 
-    const renamePromise = sorci.appendEventV2({
+    const renamePromise = sorci.appendEvent({
       sourcingEvent: SorciEvent.create({
         type: "todo-list-renamed",
         data: {
@@ -289,7 +289,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
           todoListId
         }
       }),
-      queryV2: {
+      query: {
         $where: {
           type: {
             $in: [
@@ -319,7 +319,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
       .withInitialTitle("Shopping list")
       .build();
 
-    const itemEvents = await sorci.getEventsByQueryV2({
+    const itemEvents = await sorci.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-created" },
         todoListId: { $eq: todoListId }
@@ -332,7 +332,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
       renameHasLock = resolve;
     });
 
-    const renamePromise = sorci.appendEventV2({
+    const renamePromise = sorci.appendEvent({
       sourcingEvent: SorciEvent.create({
         type: "todo-list-renamed",
         data: {
@@ -340,7 +340,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
           todoListId
         }
       }),
-      queryV2: {
+      query: {
         $where: {
           type: {
             $in: [
@@ -359,7 +359,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
 
     await renameLockAcquired;
 
-    const deletePromise = sorci.appendEventV2({
+    const deletePromise = sorci.appendEvent({
       sourcingEvent: SorciEvent.create({
         type: "todo-list-deleted",
         data: {
@@ -367,7 +367,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
           todoListId
         }
       }),
-      queryV2: {
+      query: {
         $where: {
           type: {
             $in: ["todo-list-created", "todo-list-deleted"],
@@ -397,7 +397,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
       type: "todo-list-created"
     });
 
-    const eventId = await sorci.appendEventV2({
+    const eventId = await sorci.appendEvent({
       sourcingEvent: event
     });
 
@@ -415,12 +415,12 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     const todoListLastId = events[events.length - 1].id;
 
     const concurrentPromises = [
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-archived",
           data: { todoListId }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $eq: "todo-list-created",
@@ -431,12 +431,12 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         },
         lastKnownEventId: todoListLastId
       }),
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-published",
           data: { todoListId }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $eq: "todo-list-created",
@@ -462,12 +462,12 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     const todoListLastId = events[events.length - 1].id;
 
     const concurrentPromises = [
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-deleted",
           data: { todoListId }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $in: ["todo-list-created", "todo-list-deleted"],
@@ -478,12 +478,12 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         },
         lastKnownEventId: todoListLastId
       }),
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-deleted",
           data: { todoListId }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $in: ["todo-list-created", "todo-list-deleted"],
@@ -505,6 +505,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     expect(rejectedCount).toBe(1);
   });
 
+  //TODO: undeterministic test, should rework it, maybe rething this [] business
   test("empty $skipLockOn should behave same as no skip", async () => {
     const todoListId = createId();
 
@@ -512,12 +513,12 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     const todoListLastId = events[events.length - 1].id;
 
     const concurrentPromises = [
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-deleted",
           data: { todoListId }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: { $eq: "todo-list-created", $skipLockOn: [] },
             todoListId: { $eq: todoListId }
@@ -525,12 +526,12 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         },
         lastKnownEventId: todoListLastId
       }),
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-renamed",
           data: { title: "New title", todoListId }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: {
               $in: ["todo-list-created", "todo-list-deleted"],
@@ -559,12 +560,12 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     const todoListLastId = events[events.length - 1].id;
 
     const concurrentPromises = [
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-deleted",
           data: { todoListId }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: { $eq: "todo-list-created" },
             todoListId: { $eq: todoListId }
@@ -572,12 +573,12 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         },
         lastKnownEventId: todoListLastId
       }),
-      sorci.appendEventV2({
+      sorci.appendEvent({
         sourcingEvent: SorciEvent.create({
           type: "todo-list-renamed",
           data: { title: "New title", todoListId }
         }),
-        queryV2: {
+        query: {
           $where: {
             type: { $in: ["todo-list-created", "todo-list-deleted"] },
             todoListId: { $eq: todoListId }

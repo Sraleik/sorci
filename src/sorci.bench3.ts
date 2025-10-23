@@ -97,7 +97,7 @@ bench
   .add(
     "Append with no conflict, no query",
     async () => {
-      await sorci.appendEventV2({ sourcingEvent: eventToPersist });
+      await sorci.appendEvent({ sourcingEvent: eventToPersist });
     },
     {
       beforeAll: async () => {
@@ -111,7 +111,7 @@ bench
   .add(
     "Append with query: types",
     async () => {
-      await sorci.appendEventV2({
+      await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         queryV2: {
           $where: {
@@ -133,7 +133,7 @@ bench
   .add(
     "Append with query: identifiers",
     async () => {
-      await sorci.appendEventV2({
+      await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         queryV2: {
           $where: {
@@ -155,7 +155,7 @@ bench
   .add(
     "Append complex, with query: types & identifiers",
     async () => {
-      await sorci.appendEventV2({
+      await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         queryV2: {
           $where: {
@@ -239,7 +239,7 @@ bench
 
       await Promise.all(
         events.map((event) =>
-          sorci.appendEventV2({
+          sorci.appendEvent({
             sourcingEvent: event
           })
         )
@@ -270,7 +270,7 @@ bench
 
       await Promise.all(
         renameEvents.map((item) =>
-          sorci.appendEventV2({
+          sorci.appendEvent({
             sourcingEvent: item.event,
             queryV2: {
               $where: {
