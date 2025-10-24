@@ -18,6 +18,7 @@ type SorciConstructorPayload = {
   password: string;
   databaseName: string;
   streamName: string;
+  buildAdvisoryLocks?: typeof buildAdvisoryLocks;
 };
 
 function isSorciConstructorPayload(
@@ -34,19 +35,231 @@ function isSorciConstructorPayload(
   );
 }
 
+export function hashString(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
+
+function extractIdentifiers(data: any): {
+  identifiers: Record<string, string>;
+  skipLockOn: string[];
+} {
+  const identifiers: Record<string, string> = {};
+  let skipLockOn: string[] = [];
+
+  if (!data || typeof data !== "object") {
+    return { identifiers, skipLockOn };
+  }
+
+  if (data.identifiers && typeof data.identifiers === "object") {
+    if (Array.isArray(data.identifiers.$skipLockOn)) {
+      skipLockOn = data.identifiers.$skipLockOn;
+    }
+
+    for (const [key, value] of Object.entries(data.identifiers)) {
+      if (key === "$skipLockOn") continue;
+
+      if (value && typeof value === "object" && "$eq" in value) {
+        const eqValue = (value as any).$eq;
+        if (typeof eqValue === "string") {
+          identifiers[key] = eqValue;
+        }
+      } else if (typeof value === "string") {
+        identifiers[key] = value;
+      }
+    }
+  }
+
+  return { identifiers, skipLockOn };
+}
+
+function extractEventTypes(typeCondition: any): string[] {
+  if (!typeCondition) {
+    return [];
+  }
+
+  if (typeof typeCondition === "object") {
+    if ("$eq" in typeCondition) {
+      return [typeCondition.$eq];
+    }
+    if ("$in" in typeCondition) {
+      return typeCondition.$in;
+    }
+  }
+
+  if (typeof typeCondition === "string") {
+    return [typeCondition];
+  }
+
+  return [];
+}
+
+function extractEventTypesForLocking(whereClause: any): string[] {
+  if (whereClause.$or) {
+    const allTypes: string[] = [];
+    for (const condition of whereClause.$or) {
+      const typeCondition = condition.type;
+      if (typeCondition) {
+        const types = extractEventTypes(typeCondition);
+        const skipLockOn =
+          typeof typeCondition === "object" && typeCondition.$skipLockOn
+            ? typeCondition.$skipLockOn
+            : [];
+        allTypes.push(...types.filter((t) => !skipLockOn.includes(t)));
+      }
+    }
+    return allTypes;
+  }
+
+  if (whereClause.$and) {
+    const allTypes: string[] = [];
+    for (const condition of whereClause.$and) {
+      const typeCondition = condition.type;
+      if (typeCondition) {
+        const types = extractEventTypes(typeCondition);
+        const skipLockOn =
+          typeof typeCondition === "object" && typeCondition.$skipLockOn
+            ? typeCondition.$skipLockOn
+            : [];
+        allTypes.push(...types.filter((t) => !skipLockOn.includes(t)));
+      }
+    }
+    return allTypes;
+  }
+
+  const typeCondition = whereClause.type;
+  if (!typeCondition) return [];
+
+  const types = extractEventTypes(typeCondition);
+  const skipLockOn =
+    typeof typeCondition === "object" && typeCondition.$skipLockOn
+      ? typeCondition.$skipLockOn
+      : [];
+
+  return types.filter((t) => !skipLockOn.includes(t));
+}
+
+export function buildAdvisoryLocks(payload: {
+  query: Query;
+}): Array<{ key: string; hash: number }> {
+  const { query } = payload;
+
+  const locks: Array<{ key: string; hash: number }> = [];
+
+  if ("$or" in query.$where && query.$where.$or) {
+    const topLevelExtracted = extractIdentifiers(query.$where);
+    const topLevelIdentifiers = topLevelExtracted.identifiers;
+
+    for (const orCondition of query.$where.$or) {
+      const branchExtracted = extractIdentifiers({
+        identifiers: orCondition.identifiers
+      });
+      const branchIdentifiers = branchExtracted.identifiers;
+      const skipLockOn = branchExtracted.skipLockOn;
+
+      const identifiers = { ...topLevelIdentifiers, ...branchIdentifiers };
+
+      const filteredIdentifiers: Record<string, string> = {};
+      for (const [key, value] of Object.entries(identifiers)) {
+        if (!skipLockOn.includes(key)) {
+          filteredIdentifiers[key] = value;
+        }
+      }
+
+      const typeCondition = orCondition.type;
+      const eventTypes = extractEventTypes(typeCondition);
+      const typeSkipLockOn =
+        typeof typeCondition === "object" && typeCondition.$skipLockOn
+          ? typeCondition.$skipLockOn
+          : [];
+      const filteredEventTypes = eventTypes.filter(
+        (t) => !typeSkipLockOn.includes(t)
+      );
+      const uniqueEventTypes = [...new Set(filteredEventTypes)];
+
+      const sortedIdentifierEntries = Object.entries(filteredIdentifiers).sort(
+        ([keyA], [keyB]) => keyA.localeCompare(keyB)
+      );
+      const identifiersPart = sortedIdentifierEntries
+        .map(([key, value]) => `${key}:${value}`)
+        .join(":");
+
+      for (const eventType of uniqueEventTypes) {
+        const lockKey = identifiersPart
+          ? `${identifiersPart}:${eventType}`
+          : eventType;
+        locks.push({
+          key: lockKey,
+          hash: hashString(lockKey)
+        });
+      }
+    }
+  } else {
+    const extracted = extractIdentifiers(query.$where);
+    const allIdentifiers = extracted.identifiers;
+    const skipLockOn = extracted.skipLockOn;
+
+    const filteredIdentifiers: Record<string, string> = {};
+    for (const [key, value] of Object.entries(allIdentifiers)) {
+      if (!skipLockOn.includes(key)) {
+        filteredIdentifiers[key] = value;
+      }
+    }
+
+    const queryEventTypes = extractEventTypesForLocking(query.$where);
+    const allEventTypes = [...new Set(queryEventTypes)];
+
+    const sortedIdentifierEntries = Object.entries(filteredIdentifiers).sort(
+      ([keyA], [keyB]) => keyA.localeCompare(keyB)
+    );
+    const identifiersPart = sortedIdentifierEntries
+      .map(([key, value]) => `${key}:${value}`)
+      .join(":");
+
+    for (const eventType of allEventTypes) {
+      const lockKey = identifiersPart
+        ? `${identifiersPart}:${eventType}`
+        : eventType;
+      locks.push({
+        key: lockKey,
+        hash: hashString(lockKey)
+      });
+    }
+  }
+
+  locks.sort((a, b) => a.key.localeCompare(b.key));
+
+  return locks;
+}
+
 export class SorciPostgres implements Sorci {
   //TODO put the type, resolving the issue will fix/avoid issue
   private _sql; //: postgres.Sql;
   private _streamName: string;
+  private _buildAdvisoryLocks: typeof buildAdvisoryLocks;
 
   constructor(payload: SorciConstructorPayload);
-  constructor(payload: { connectionString: string; streamName: string });
+  constructor(payload: {
+    connectionString: string;
+    streamName: string;
+    buildAdvisoryLocks?: typeof buildAdvisoryLocks;
+  });
   constructor(
     payload:
-      | { connectionString: string; streamName: string }
+      | {
+          connectionString: string;
+          streamName: string;
+          buildAdvisoryLocks?: typeof buildAdvisoryLocks;
+        }
       | SorciConstructorPayload
   ) {
     this._streamName = payload.streamName;
+    this._buildAdvisoryLocks = payload.buildAdvisoryLocks ?? buildAdvisoryLocks;
 
     if (isSorciConstructorPayload(payload)) {
       const { host, port, user, password, databaseName } = payload;
@@ -320,106 +533,6 @@ export class SorciPostgres implements Sorci {
   }
   // --- $Where to sql statements END
 
-  // --- Lock information helpers START
-  private extractIdentifiers(data: any): Record<string, string> {
-    const identifiers: Record<string, string> = {};
-
-    if (!data || typeof data !== "object") {
-      return identifiers;
-    }
-
-    if (data.identifiers && typeof data.identifiers === "object") {
-      for (const [key, value] of Object.entries(data.identifiers)) {
-        if (value && typeof value === "object" && "$eq" in value) {
-          const eqValue = (value as any).$eq;
-          if (typeof eqValue === "string") {
-            identifiers[key] = eqValue;
-          }
-        } else if (typeof value === "string") {
-          identifiers[key] = value;
-        }
-      }
-    }
-
-    return identifiers;
-  }
-
-  private extractEventTypes(typeCondition: any): string[] {
-    if (!typeCondition) {
-      return [];
-    }
-
-    if (typeof typeCondition === "object") {
-      if ("$eq" in typeCondition) {
-        return [typeCondition.$eq];
-      }
-      if ("$in" in typeCondition) {
-        return typeCondition.$in;
-      }
-    }
-
-    if (typeof typeCondition === "string") {
-      return [typeCondition];
-    }
-
-    return [];
-  }
-
-  private extractEventTypesForLocking(whereClause: any): string[] {
-    if (whereClause.$or) {
-      const allTypes: string[] = [];
-      for (const condition of whereClause.$or) {
-        const typeCondition = condition.type;
-        if (typeCondition) {
-          const types = this.extractEventTypes(typeCondition);
-          const skipLockOn =
-            typeof typeCondition === "object" && typeCondition.$skipLockOn
-              ? typeCondition.$skipLockOn
-              : [];
-          allTypes.push(...types.filter((t) => !skipLockOn.includes(t)));
-        }
-      }
-      return allTypes;
-    }
-
-    if (whereClause.$and) {
-      const allTypes: string[] = [];
-      for (const condition of whereClause.$and) {
-        const typeCondition = condition.type;
-        if (typeCondition) {
-          const types = this.extractEventTypes(typeCondition);
-          const skipLockOn =
-            typeof typeCondition === "object" && typeCondition.$skipLockOn
-              ? typeCondition.$skipLockOn
-              : [];
-          allTypes.push(...types.filter((t) => !skipLockOn.includes(t)));
-        }
-      }
-      return allTypes;
-    }
-
-    const typeCondition = whereClause.type;
-    if (!typeCondition) return [];
-
-    const types = this.extractEventTypes(typeCondition);
-    const skipLockOn =
-      typeof typeCondition === "object" && typeCondition.$skipLockOn
-        ? typeCondition.$skipLockOn
-        : [];
-
-    return types.filter((t) => !skipLockOn.includes(t));
-  }
-
-  private hashString(input: string): number {
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash;
-    }
-    return Math.abs(hash);
-  }
-
   async getEventsByQuery(query: Query, sql = this.sql) {
     const whereStatement = this.getWhereStatement(query.$where, sql);
 
@@ -430,7 +543,6 @@ export class SorciPostgres implements Sorci {
     `;
     return rows;
   }
-  // --- Lock information helpers END
 
   // TODO: add the advisory lock
   private async appendEventWithoutQuery(sourcingEvent: ToPersistEvent) {
@@ -458,35 +570,15 @@ export class SorciPostgres implements Sorci {
   }) {
     const { query, sourcingEvent, lastKnownEventId, _testOnlyOnLockAcquired } =
       payload;
-    const queryIdentifiers = this.extractIdentifiers(query.$where);
-    const eventIdentifier = sourcingEvent.identifier;
-    const allIdentifiers = { ...queryIdentifiers, ...eventIdentifier };
 
-    const queryEventTypes = this.extractEventTypesForLocking(query.$where);
-
-    const allEventTypes = [
-      ...new Set([...queryEventTypes, sourcingEvent.type])
-    ];
-
-    const locks: Array<{ key: string; hash: number }> = [];
-    for (const [idKey, idValue] of Object.entries(allIdentifiers)) {
-      for (const eventType of allEventTypes) {
-        const lockKey = `${idKey}:${idValue}:${eventType}`;
-        locks.push({
-          key: lockKey,
-          hash: this.hashString(lockKey)
-        });
-      }
-    }
-
-    locks.sort((a, b) => a.key.localeCompare(b.key));
+    const locks = this._buildAdvisoryLocks({ query });
 
     return await this.sql.begin(async (sql) => {
       for (const lock of locks) {
-        // if (payload._testOnlyOnLockAcquired) {
+        // if (_testOnlyOnLockAcquired) {
         //   console.log(
         //     `[${new Date().toISOString()}][${
-        //       payload.sourcingEvent.type
+        //       sourcingEvent.type
         //     }] Acquiring lock ${lock.key}`
         //   );
         // }
@@ -496,17 +588,17 @@ export class SorciPostgres implements Sorci {
         `;
       }
 
-      if (payload._testOnlyOnLockAcquired) {
+      if (_testOnlyOnLockAcquired) {
         // console.log(
         //   `[${new Date().toISOString()}][${
-        //     payload.sourcingEvent.type
+        //     sourcingEvent.type
         //   }] Lock acquired`
         // );
-        await payload._testOnlyOnLockAcquired();
+        await _testOnlyOnLockAcquired();
         await new Promise((resolve) => setTimeout(resolve, 100));
         // console.log(
         //   `[${new Date().toISOString()}][${
-        //     payload.sourcingEvent.type
+        //     sourcingEvent.type
         //   }] Starting transaction`
         // );
       }
