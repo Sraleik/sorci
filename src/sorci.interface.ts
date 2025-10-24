@@ -12,7 +12,10 @@ export type QueryAble = {
   // id?: QueryProperty; //TODO
   type?: QueryProperty;
   // data?: Record<string, QueryProperty>; //TODO
-  identifiers?: Record<string, string>;
+  identifiers?: {
+    [key: string]: string | Array<string> | undefined;
+    $skipLockOn?: Array<string>;
+  };
   // timestamp?: QueryProperty; //TODO
 };
 

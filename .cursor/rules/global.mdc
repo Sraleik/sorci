@@ -2,6 +2,11 @@
 description: "Global rules for the project"
 ---
 
+# Project
+
+DCB stands for: Dynamic Consistency Boundary
+It's a new approach to concurrency control in event sourcing.
+
 # Package Manager
 
 - Always use `yarn` instead of `npm` for package management operations

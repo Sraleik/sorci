@@ -4,13 +4,16 @@ import {
 } from "testcontainers";
 import { createId } from "./common/utils";
 import { Sorci } from "./sorci.interface";
+import * as sorciPostgres from "./sorci.postgres";
 import { SorciPostgres } from "./sorci.postgres";
 import { TodoListBuilder } from "./builder/todo-list.builder";
 import { TodoListItemBuilder } from "./builder/todo-list-item.builer";
 import { SorciEvent } from "./sorci-event";
+import { vi } from "vitest";
 
 let pgInstance: StartedPostgreSqlContainer;
 let sorci: Sorci;
+let buildAdvisoryLocksSpy: any;
 
 let aTodoList: () => TodoListBuilder;
 let aTodoListItem: () => TodoListItemBuilder;
@@ -24,13 +27,16 @@ beforeAll(async () => {
   const password = pgInstance.getPassword();
   const databaseName = pgInstance.getDatabase();
 
+  buildAdvisoryLocksSpy = vi.spyOn(sorciPostgres, "buildAdvisoryLocks");
+
   sorci = new SorciPostgres({
     host,
     port,
     user,
     password,
     databaseName,
-    streamName: "useless_stream_name"
+    streamName: "useless_stream_name",
+    buildAdvisoryLocks: buildAdvisoryLocksSpy
   });
 
   await sorci.setupTestStream();
@@ -457,144 +463,101 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
   });
 
   test("$in with partial $skipLockOn should have mixed locking behavior", async () => {
+    buildAdvisoryLocksSpy.mockClear();
     const todoListId = createId();
 
     const { events } = await aTodoList().withId(todoListId).build();
     const todoListLastId = events[events.length - 1].id;
 
-    const concurrentPromises = [
-      sorci.appendEvent({
-        sourcingEvent: SorciEvent.create({
-          type: "todo-list-deleted",
-          data: { todoListId }
-        }),
-        query: {
-          $where: {
-            type: {
-              $in: ["todo-list-created", "todo-list-deleted"],
-              $skipLockOn: ["todo-list-created"]
-            },
-            identifiers: { todoListId: todoListId }
-          }
-        },
-        lastKnownEventId: todoListLastId
+    await sorci.appendEvent({
+      sourcingEvent: SorciEvent.create({
+        type: "todo-list-deleted",
+        data: { todoListId }
       }),
-      sorci.appendEvent({
-        sourcingEvent: SorciEvent.create({
-          type: "todo-list-deleted",
-          data: { todoListId }
-        }),
-        query: {
-          $where: {
-            type: {
-              $in: ["todo-list-created", "todo-list-deleted"],
-              $skipLockOn: ["todo-list-created"]
-            },
-            identifiers: { todoListId: todoListId }
-          }
-        },
-        lastKnownEventId: todoListLastId
-      })
-    ];
+      query: {
+        $where: {
+          type: {
+            $in: ["todo-list-created", "todo-list-deleted"],
+            $skipLockOn: ["todo-list-created"]
+          },
+          identifiers: { todoListId: todoListId }
+        }
+      },
+      lastKnownEventId: todoListLastId
+    });
 
-    const results = await Promise.allSettled(concurrentPromises);
-    const statusArray = results.map((result) => result.status);
-    const fulfilledCount = statusArray.filter((s) => s === "fulfilled").length;
-    const rejectedCount = statusArray.filter((s) => s === "rejected").length;
+    expect(buildAdvisoryLocksSpy).toHaveBeenCalledTimes(1);
+    const returnedLocks = buildAdvisoryLocksSpy.mock.results[0].value;
 
-    expect(fulfilledCount).toBe(1);
-    expect(rejectedCount).toBe(1);
+    expect(returnedLocks).toHaveLength(1);
+    expect(returnedLocks[0]).toEqual({
+      key: `todoListId:${todoListId}:todo-list-deleted`,
+      hash: expect.any(Number)
+    });
   });
 
-  //TODO: undeterministic test, should rework it, maybe rething this [] business
-  test("empty $skipLockOn should behave same as no skip", async () => {
+  test("empty lock when every event type is skipped", async () => {
+    buildAdvisoryLocksSpy.mockClear();
     const todoListId = createId();
 
     const { events } = await aTodoList().withId(todoListId).build();
     const todoListLastId = events[events.length - 1].id;
 
-    const concurrentPromises = [
-      sorci.appendEvent({
-        sourcingEvent: SorciEvent.create({
-          type: "todo-list-deleted",
-          data: { todoListId }
-        }),
-        query: {
-          $where: {
-            type: { $eq: "todo-list-created", $skipLockOn: [] },
-            identifiers: { todoListId: todoListId }
-          }
-        },
-        lastKnownEventId: todoListLastId
+    await sorci.appendEvent({
+      sourcingEvent: SorciEvent.create({
+        type: "todo-list-renamed",
+        data: { title: "New title", todoListId }
       }),
-      sorci.appendEvent({
-        sourcingEvent: SorciEvent.create({
-          type: "todo-list-renamed",
-          data: { title: "New title", todoListId }
-        }),
-        query: {
-          $where: {
-            type: {
-              $in: ["todo-list-created", "todo-list-deleted"],
-              $skipLockOn: []
-            },
-            identifiers: { todoListId: todoListId }
-          }
-        },
-        lastKnownEventId: todoListLastId
-      })
-    ];
+      query: {
+        $where: {
+          type: {
+            $in: ["todo-list-created", "todo-list-deleted"],
+            $skipLockOn: ["todo-list-created", "todo-list-deleted"]
+          },
+          identifiers: { todoListId: todoListId }
+        }
+      },
+      lastKnownEventId: todoListLastId
+    });
 
-    const results = await Promise.allSettled(concurrentPromises);
-    const statusArray = results.map((result) => result.status);
-    const fulfilledCount = statusArray.filter((s) => s === "fulfilled").length;
-    const rejectedCount = statusArray.filter((s) => s === "rejected").length;
+    expect(buildAdvisoryLocksSpy).toHaveBeenCalledTimes(1);
+    const returnedLocks = buildAdvisoryLocksSpy.mock.results[0].value;
 
-    expect(fulfilledCount).toBe(1);
-    expect(rejectedCount).toBe(1);
+    expect(returnedLocks).toHaveLength(0);
   });
 
   test("default behavior without $skipLockOn should include all types in locks", async () => {
+    buildAdvisoryLocksSpy.mockClear();
     const todoListId = createId();
 
     const { events } = await aTodoList().withId(todoListId).build();
     const todoListLastId = events[events.length - 1].id;
 
-    const concurrentPromises = [
-      sorci.appendEvent({
-        sourcingEvent: SorciEvent.create({
-          type: "todo-list-deleted",
-          data: { todoListId }
-        }),
-        query: {
-          $where: {
-            type: { $eq: "todo-list-created" },
-            identifiers: { todoListId: todoListId }
-          }
-        },
-        lastKnownEventId: todoListLastId
+    await sorci.appendEvent({
+      sourcingEvent: SorciEvent.create({
+        type: "todo-list-deleted",
+        data: { todoListId }
       }),
-      sorci.appendEvent({
-        sourcingEvent: SorciEvent.create({
-          type: "todo-list-renamed",
-          data: { title: "New title", todoListId }
-        }),
-        query: {
-          $where: {
-            type: { $in: ["todo-list-created", "todo-list-deleted"] },
-            identifiers: { todoListId: todoListId }
-          }
-        },
-        lastKnownEventId: todoListLastId
-      })
-    ];
+      query: {
+        $where: {
+          type: { $in: ["todo-list-created", "todo-list-deleted"] },
+          identifiers: { todoListId: todoListId }
+        }
+      },
+      lastKnownEventId: todoListLastId
+    });
 
-    const results = await Promise.allSettled(concurrentPromises);
-    const statusArray = results.map((result) => result.status);
-    const fulfilledCount = statusArray.filter((s) => s === "fulfilled").length;
-    const rejectedCount = statusArray.filter((s) => s === "rejected").length;
+    expect(buildAdvisoryLocksSpy).toHaveBeenCalledTimes(1);
+    const returnedLocks = buildAdvisoryLocksSpy.mock.results[0].value;
 
-    expect(fulfilledCount).toBe(1);
-    expect(rejectedCount).toBe(1);
+    expect(returnedLocks).toHaveLength(2);
+    expect(returnedLocks[0]).toEqual({
+      key: `todoListId:${todoListId}:todo-list-created`,
+      hash: expect.any(Number)
+    });
+    expect(returnedLocks[1]).toEqual({
+      key: `todoListId:${todoListId}:todo-list-deleted`,
+      hash: expect.any(Number)
+    });
   });
 });
