@@ -126,7 +126,7 @@ describe("Test on todo list", async () => {
   test("Get events by specific aggregateid using $eq", async () => {
     const eventsPersisted = await sorci.getEventsByQuery({
       $where: {
-        identifiers: { todoListId: { $eq: groceryListId } }
+        identifiers: { todoListId: groceryListId }
       }
     });
 
@@ -139,7 +139,7 @@ describe("Test on todo list", async () => {
     const eventsPersisted = await sorci.getEventsByQuery({
       $where: {
         type: { $in: ["todo-list-created", "todo-list-deleted"] },
-        identifiers: { todoListId: { $eq: groceryListId } }
+        identifiers: { todoListId: groceryListId }
       }
     });
 
