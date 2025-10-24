@@ -99,10 +99,12 @@ export class SorciPostgres implements Sorci {
           id char(26) PRIMARY KEY,
           type text NOT NULL,
           data JSONB NOT NULL,
-          identifier JSONB NOT NULL,
+          identifier JSONB NOT NULL, 
           timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
         );
       `;
+
+      //TODO: identifier should be identifiers with an S
 
       await sql`
         CREATE INDEX IF NOT EXISTS ${sql(`${tableName}_type_index`)} 
@@ -265,15 +267,7 @@ export class SorciPostgres implements Sorci {
     }
 
     if (data.identifiers) {
-      Object.keys(data.identifiers).forEach((identifierKey) => {
-        statements.push(
-          this.getPropertySatetment({
-            sql: this.sql,
-            key: identifierKey,
-            property: data.identifiers![identifierKey]
-          })
-        );
-      });
+      statements.push(sql`identifier @> ${sql.json(data.identifiers)}`);
     }
 
     if (statements.length === 0) {
