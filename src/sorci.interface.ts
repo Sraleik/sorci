@@ -3,9 +3,19 @@ export type EventId = string;
 
 export type QueryProperty =
   | { $eq: string; $in?: never; $skipLockOn?: string[] }
-  | { $in: Array<string>; $eq?: never; $skipLockOn?: string[] };
-export type QueryOr = Array<Record<string, QueryProperty>>;
-export type QueryAnd = Array<Record<string, QueryProperty>>;
+  | { $in: Array<string>; $eq?: never; $skipLockOn?: string[] }
+  | string;
+export type QueryOr = Array<QueryAble>;
+export type QueryAnd = Array<QueryAble>;
+
+export type QueryAble = {
+  // id?: QueryProperty; //TODO
+  type?: QueryProperty;
+  // data?: Record<string, QueryProperty>; //TODO
+  identifiers?: Record<string, QueryProperty>;
+  // timestamp?: QueryProperty; //TODO
+};
+
 export type Query = {
   $where:
     | {
@@ -14,9 +24,7 @@ export type Query = {
     | {
         $and: QueryAnd;
       }
-    | {
-        [key: string]: QueryProperty;
-      };
+    | QueryAble;
   $limit?: number;
   $offset?: number;
   $order?: "ASC" | "DESC";
@@ -125,6 +133,13 @@ export interface Sorci {
    * @category Tooling
    */
   dropAllTestStream(payload?: { excludeCurrentStream: boolean }): Promise<void>;
+
+  /**
+   * Will close all database connections
+   * Usefull to cleanup after tests
+   * @category Tooling
+   */
+  close(): Promise<void>;
 
   // Commands
 

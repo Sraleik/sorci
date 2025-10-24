@@ -1,0 +1,22 @@
+---
+description: "Global rules for the project"
+---
+
+# Package Manager
+
+- Always use `yarn` instead of `npm` for package management operations
+- Use `yarn add` instead of `npm install` when adding dependencies
+- Use `yarn add -D` instead of `npm install --save-dev` for dev dependencies
+
+# Testing
+
+- When running tests, use `yarn test`
+- Always run tests WITHOUT watch mode - tests should exit after completion
+- Do not add `--watch` or similar flags when running tests
+- The test command should quit automatically after running
+
+# Code Style
+
+- Don't comment obvious lines, since variables, functions, and classes are already properly named
+- Comments are for rare occasions when a block really needs explanation
+- Don't abbreviate variables, even in simple arrow functions
