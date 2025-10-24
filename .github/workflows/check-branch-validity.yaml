@@ -13,7 +13,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -22,7 +22,7 @@ jobs:
         id: yarn-cache-dir-path
         run: |
           echo "YARN_CACHE_FOLDER=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
-          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" 
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)"
 
       - name: Cache node modules
         id: cache-yarn
@@ -32,8 +32,7 @@ jobs:
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: 
-            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+          restore-keys: ${{ runner.os }}-yarn-${{ env.cache-name }}-
             ${{ runner.os }}-yarn-
             ${{ runner.os }}-
 
@@ -55,7 +54,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -64,7 +63,7 @@ jobs:
         id: yarn-cache-dir-path
         run: |
           echo "YARN_CACHE_FOLDER=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
-          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" 
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)"
 
       - name: Cache node modules
         id: cache-yarn
@@ -74,8 +73,7 @@ jobs:
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: 
-            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+          restore-keys: ${{ runner.os }}-yarn-${{ env.cache-name }}-
             ${{ runner.os }}-yarn-
             ${{ runner.os }}-
 
@@ -87,8 +85,8 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Run Lint 
-        run: yarn run lint 
+      - name: Run Lint
+        run: yarn run lint
 
   benchmark:
     runs-on: ubuntu-latest
@@ -97,7 +95,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -106,7 +104,7 @@ jobs:
         id: yarn-cache-dir-path
         run: |
           echo "YARN_CACHE_FOLDER=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
-          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" 
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)"
 
       - name: Cache node modules
         id: cache-yarn
@@ -116,8 +114,7 @@ jobs:
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: 
-            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+          restore-keys: ${{ runner.os }}-yarn-${{ env.cache-name }}-
             ${{ runner.os }}-yarn-
             ${{ runner.os }}-
 
@@ -136,7 +133,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -145,7 +142,7 @@ jobs:
         id: yarn-cache-dir-path
         run: |
           echo "YARN_CACHE_FOLDER=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
-          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" 
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)"
 
       - name: Cache node modules
         id: cache-yarn
@@ -155,8 +152,7 @@ jobs:
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: 
-            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+          restore-keys: ${{ runner.os }}-yarn-${{ env.cache-name }}-
             ${{ runner.os }}-yarn-
             ${{ runner.os }}-
 
@@ -174,16 +170,16 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: |
           echo "YARN_CACHE_FOLDER=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
-          echo "YARN_CACHE_FOLDER=$(yarn cache dir)" 
+          echo "YARN_CACHE_FOLDER=$(yarn cache dir)"
 
       - name: Cache node modules
         id: cache-yarn
@@ -193,8 +189,7 @@ jobs:
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.YARN_CACHE_FOLDER }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: 
-            ${{ runner.os }}-yarn-${{ env.cache-name }}-
+          restore-keys: ${{ runner.os }}-yarn-${{ env.cache-name }}-
             ${{ runner.os }}-yarn-
             ${{ runner.os }}-
 

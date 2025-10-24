@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { createId } from "../common/utils";
 import { SorciEvent } from "../sorci-event";
 import { Sorci } from "../sorci.interface";
@@ -17,7 +18,7 @@ export class TodoListBuilder {
     this._events.push(
       SorciEvent.create({
         data: {
-          title: "Weekly groceries",
+          title: faker.lorem.sentence(),
           todoListId: this.aggregateId
         },
         type: "todo-list-created"
@@ -52,14 +53,15 @@ export class TodoListBuilder {
     return this;
   }
 
-  renamed(name: string) {
+  renamed(name?: string) {
+    const title = name || faker.lorem.sentence();
     this._events.push(
       SorciEvent.create({
+        type: "todo-list-renamed",
         data: {
-          title: name,
+          title,
           todoListId: this.aggregateId
-        },
-        type: "todo-list-renamed"
+        }
       })
     );
     return this;
@@ -68,10 +70,10 @@ export class TodoListBuilder {
   deleted() {
     this._events.push(
       SorciEvent.create({
+        type: "todo-list-deleted",
         data: {
           todoListId: this.aggregateId
-        },
-        type: "todo-list-deleted"
+        }
       })
     );
     return this;

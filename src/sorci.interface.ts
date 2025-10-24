@@ -12,7 +12,7 @@ export type QueryAble = {
   // id?: QueryProperty; //TODO
   type?: QueryProperty;
   // data?: Record<string, QueryProperty>; //TODO
-  identifiers?: Record<string, QueryProperty>;
+  identifiers?: Record<string, string>;
   // timestamp?: QueryProperty; //TODO
 };
 
