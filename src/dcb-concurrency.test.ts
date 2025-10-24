@@ -39,6 +39,7 @@ beforeAll(async () => {
 }, 30000);
 
 afterAll(async () => {
+  await sorci.close();
   await pgInstance.stop();
 });
 
@@ -64,13 +65,13 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     const itemEvents = await sorci.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-created" },
-        todoListId: { $eq: todoListId }
+        identifiers: { todoListId: { $eq: todoListId } }
       }
     });
     const itemEvents2 = await sorci.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-item-created" },
-        todoListItemId: { $eq: itemToRenameId }
+        identifiers: { todoListItemId: { $eq: itemToRenameId } }
       }
     });
     const todoListLastId = itemEvents[itemEvents.length - 1].id;
@@ -99,7 +100,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         query: {
           $where: {
             type: { $eq: "todo-list-created" },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -109,7 +110,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         query: {
           $where: {
             type: { $eq: "todo-list-item-created" },
-            todoListItemId: { $eq: itemToRenameId }
+            identifiers: { todoListItemId: { $eq: itemToRenameId } }
           }
         },
         lastKnownEventId: todoListItemLastId
@@ -145,7 +146,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $in: ["todo-list-created", "todo-list-deleted"],
               $skipLockOn: ["todo-list-created"]
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -163,7 +164,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $in: ["todo-list-created", "todo-list-deleted"],
               $skipLockOn: ["todo-list-created"]
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -181,7 +182,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $in: ["todo-list-created", "todo-list-deleted"],
               $skipLockOn: ["todo-list-created"]
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -199,7 +200,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $in: ["todo-list-created", "todo-list-deleted"],
               $skipLockOn: ["todo-list-created"]
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -217,7 +218,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $in: ["todo-list-created", "todo-list-deleted"],
               $skipLockOn: ["todo-list-created"]
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -248,7 +249,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     const itemEvents = await sorci.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-created" },
-        todoListId: { $eq: todoListId }
+        identifiers: { todoListId: { $eq: todoListId } }
       }
     });
     const todoListLastId = itemEvents[itemEvents.length - 1].id;
@@ -272,7 +273,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
             $in: ["todo-list-created", "todo-list-deleted"],
             $skipLockOn: ["todo-list-created"]
           },
-          todoListId: { $eq: todoListId }
+          identifiers: { todoListId: { $eq: todoListId } }
         }
       },
       lastKnownEventId: todoListLastId,
@@ -299,7 +300,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
             ],
             $skipLockOn: ["todo-list-created"]
           },
-          todoListId: { $eq: todoListId }
+          identifiers: { todoListId: { $eq: todoListId } }
         }
       },
       lastKnownEventId: todoListLastId,
@@ -322,7 +323,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
     const itemEvents = await sorci.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-created" },
-        todoListId: { $eq: todoListId }
+        identifiers: { todoListId: { $eq: todoListId } }
       }
     });
     const todoListLastId = itemEvents[itemEvents.length - 1].id;
@@ -350,7 +351,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
             ],
             $skipLockOn: ["todo-list-created"]
           },
-          todoListId: { $eq: todoListId }
+          identifiers: { todoListId: { $eq: todoListId } }
         }
       },
       lastKnownEventId: todoListLastId,
@@ -373,7 +374,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
             $in: ["todo-list-created", "todo-list-deleted"],
             $skipLockOn: ["todo-list-created"]
           },
-          todoListId: { $eq: todoListId }
+          identifiers: { todoListId: { $eq: todoListId } }
         }
       },
       lastKnownEventId: todoListLastId,
@@ -426,7 +427,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $eq: "todo-list-created",
               $skipLockOn: ["todo-list-created"]
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -442,7 +443,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $eq: "todo-list-created",
               $skipLockOn: ["todo-list-created"]
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -473,7 +474,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $in: ["todo-list-created", "todo-list-deleted"],
               $skipLockOn: ["todo-list-created"]
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -489,7 +490,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $in: ["todo-list-created", "todo-list-deleted"],
               $skipLockOn: ["todo-list-created"]
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -521,7 +522,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         query: {
           $where: {
             type: { $eq: "todo-list-created", $skipLockOn: [] },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -537,7 +538,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
               $in: ["todo-list-created", "todo-list-deleted"],
               $skipLockOn: []
             },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -568,7 +569,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         query: {
           $where: {
             type: { $eq: "todo-list-created" },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId
@@ -581,7 +582,7 @@ describe("Dynamic Consistency Boundary (DCB) - Optimistic Concurrency Control", 
         query: {
           $where: {
             type: { $in: ["todo-list-created", "todo-list-deleted"] },
-            todoListId: { $eq: todoListId }
+            identifiers: { todoListId: { $eq: todoListId } }
           }
         },
         lastKnownEventId: todoListLastId

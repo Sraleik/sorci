@@ -50,7 +50,8 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  // await sorci.dropAllTestStream({ excludeCurrentStream: true });
+  await sorci.close();
+  await new Promise((resolve) => setTimeout(resolve, 100));
   await pgInstance.stop();
 });
 

@@ -45,7 +45,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  // await sorci.dropAllTestStream({ excludeCurrentStream: true });
+  await sorci.close();
   await pgInstance.stop();
 });
 
@@ -152,7 +152,7 @@ describe("Given a populated stream", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-capacity-changed"] },
-            courseId: { $eq: course1Id }
+            identifiers: { courseId: { $eq: course1Id } }
           }
         },
         lastKnownEventId: course1CapacityChanged.id
@@ -181,7 +181,7 @@ describe("Given a populated stream", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-capacity-changed"] },
-            courseId: { $eq: course1Id }
+            identifiers: { courseId: { $eq: course1Id } }
           }
         },
         lastKnownEventId: createId() // Wrong identifier on purpose
@@ -205,7 +205,7 @@ describe("Given a populated stream", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-capacity-changed"] },
-            courseId: { $eq: course1Id }
+            identifiers: { courseId: { $eq: course1Id } }
           }
         },
         lastKnownEventId: createId() // Wrong identifier on purpose
@@ -256,7 +256,7 @@ describe("Given a populated stream", async () => {
         sourcingEvent: course1CapacityChangedAgain,
         query: {
           $where: {
-            courseId: { $eq: course1Id }
+            identifiers: { courseId: { $eq: course1Id } }
           }
         },
         lastKnownEventId: course1Renamed.id
@@ -289,7 +289,7 @@ describe("Given a populated stream", async () => {
           type: {
             $in: ["course-created", "course-capacity-changed", "course-renamed"]
           },
-          courseId: { $eq: course1Id }
+          identifiers: { courseId: { $eq: course1Id } }
         }
       });
 
@@ -341,7 +341,7 @@ describe("Concurrency", async () => {
       query: {
         $where: {
           type: { $in: ["course-created", "course-capacity-changed"] },
-          courseId: { $eq: course1Id }
+          identifiers: { courseId: { $eq: course1Id } }
         }
       },
       lastKnownEventId: course1CapacityChanged.id
@@ -374,7 +374,7 @@ describe("Concurrency", async () => {
           query: {
             $where: {
               type: { $in: ["course-created", "course-renamed"] },
-              courseId: { $eq: course1Id }
+              identifiers: { courseId: { $eq: course1Id } }
             }
           },
           lastKnownEventId: course1Renamed.id
@@ -450,7 +450,7 @@ describe("Concurrency", async () => {
       query: {
         $where: {
           type: { $in: ["course-created", "course-capacity-changed"] },
-          courseId: { $eq: course1Id }
+          identifiers: { courseId: { $eq: course1Id } }
         }
       },
       lastKnownEventId: course1CapacityChanged.id
@@ -461,7 +461,7 @@ describe("Concurrency", async () => {
       query: {
         $where: {
           type: { $in: ["course-created", "course-renamed"] },
-          courseId: { $eq: course1Id }
+          identifiers: { courseId: { $eq: course1Id } }
         }
       },
       lastKnownEventId: course1Renamed.id
@@ -493,7 +493,7 @@ describe("Concurrency", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-renamed"] },
-            courseId: { $eq: course1Id }
+            identifiers: { courseId: { $eq: course1Id } }
           }
         },
         lastKnownEventId: course1Renamed.id
@@ -507,7 +507,7 @@ describe("Concurrency", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-renamed"] },
-            courseId: { $eq: course1Id }
+            identifiers: { courseId: { $eq: course1Id } }
           }
         },
         lastKnownEventId: course1Renamed.id

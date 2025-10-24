@@ -9,7 +9,8 @@
     "build:docs": "typedoc && cp -r ./image ./docs/image",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "test:unit": "vitest --config ./vitest.config.ts --single-thread",
+    "test": "vitest --config ./vitest.config.ts --single-thread --run",
+    "test:watch": "vitest --config ./vitest.config.ts --single-thread",
     "bench": "tsx ./src/sorci.bench.ts",
     "bench:watch": "tsx watch ./src/sorci.bench.ts"
   },

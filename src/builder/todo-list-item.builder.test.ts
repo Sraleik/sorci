@@ -49,7 +49,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  // await sorci.dropAllTestStream({ excludeCurrentStream: true });
+  await sorci.close();
   await pgInstance.stop();
 });
 
@@ -67,13 +67,13 @@ describe("Test on todo list item", async () => {
 
     const todoListItemEvents = await sorci.getEventsByQuery({
       $where: {
-        todoListItemId: { $eq: todoListItem.aggregateId }
+        identifiers: { todoListItemId: { $eq: todoListItem.aggregateId } }
       }
     });
 
     const todoListEvents = await sorci.getEventsByQuery({
       $where: {
-        todoListId: { $eq: todoListItem.todoListId }
+        identifiers: { todoListId: { $eq: todoListItem.todoListId } }
       }
     });
 

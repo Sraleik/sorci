@@ -51,7 +51,7 @@ beforeAll(async () => {
 // });
 
 afterAll(async () => {
-  // await sorci.dropAllTestStream({ excludeCurrentStream: true });
+  await sorci.close();
   await pgInstance.stop();
 });
 
@@ -97,10 +97,36 @@ describe("Test on todo list", async () => {
     });
   });
 
+  test("Get events by specific type using string shorthand", async () => {
+    const eventsPersisted = await sorci.getEventsByQuery({
+      $where: {
+        type: "todo-list-created"
+      }
+    });
+
+    expect(eventsPersisted.length).toBeGreaterThanOrEqual(2);
+    eventsPersisted.forEach((event) => {
+      expect(event.type).toEqual("todo-list-created");
+    });
+  });
+
   test("Get events by specific aggregateid", async () => {
     const eventsPersisted = await sorci.getEventsByQuery({
       $where: {
-        todoListId: { $eq: groceryListId }
+        identifiers: { todoListId: groceryListId }
+      }
+    });
+
+    expect(eventsPersisted.length).toBeGreaterThanOrEqual(7);
+    eventsPersisted.forEach((event) => {
+      expect(event.data.todoListId).toEqual(groceryListId);
+    });
+  });
+
+  test("Get events by specific aggregateid using $eq", async () => {
+    const eventsPersisted = await sorci.getEventsByQuery({
+      $where: {
+        identifiers: { todoListId: { $eq: groceryListId } }
       }
     });
 
@@ -113,7 +139,22 @@ describe("Test on todo list", async () => {
     const eventsPersisted = await sorci.getEventsByQuery({
       $where: {
         type: { $in: ["todo-list-created", "todo-list-deleted"] },
-        todoListId: { $eq: groceryListId }
+        identifiers: { todoListId: { $eq: groceryListId } }
+      }
+    });
+
+    expect(eventsPersisted.length).toBeGreaterThanOrEqual(2);
+    eventsPersisted.forEach((event) => {
+      expect(["todo-list-created", "todo-list-deleted"]).toContain(event.type);
+      expect(event.data.todoListId).toEqual(groceryListId);
+    });
+  });
+
+  test("Get events by specific types and aggregateId using mixed syntax", async () => {
+    const eventsPersisted = await sorci.getEventsByQuery({
+      $where: {
+        type: { $in: ["todo-list-created", "todo-list-deleted"] },
+        identifiers: { todoListId: groceryListId }
       }
     });
 
@@ -132,11 +173,11 @@ describe("Test on todo list", async () => {
             type: {
               $in: ["todo-list-created", "todo-list-deleted"]
             },
-            todoListId: { $eq: groceryListId }
+            identifiers: { todoListId: groceryListId }
           },
           {
             type: { $in: ["todo-list-item-created", "todo-list-item-deleted"] },
-            todoListId: { $eq: groceryListId }
+            identifiers: { todoListId: groceryListId }
           }
         ]
       }

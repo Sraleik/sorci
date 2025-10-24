@@ -6,7 +6,8 @@ import {
   ToPersistEvent,
   QueryOr,
   AppendEventPayload,
-  QueryProperty
+  QueryProperty,
+  QueryAble
 } from "./sorci.interface";
 import { shortId } from "./common/utils";
 
@@ -171,6 +172,12 @@ export class SorciPostgres implements Sorci {
       `;
   }
 
+  async close() {
+    return this.sql.end({ timeout: 5 }).catch((error) => {
+      console.error("Error closing postgres connection:", error);
+    });
+  }
+
   async insertEvents(events: Array<ToPersistEvent>) {
     const res = (await this.sql`
       INSERT INTO ${this.streamNameIdentifier} ${this.sql(events)}
@@ -230,6 +237,10 @@ export class SorciPostgres implements Sorci {
   }) {
     const { sql, key, property } = payload;
 
+    if (typeof property === "string") {
+      return this.getEqStatement({ sql, key, value: property });
+    }
+
     if ("$in" in property) {
       return this.getInStatement({ sql, key, values: property.$in! });
     }
@@ -238,16 +249,36 @@ export class SorciPostgres implements Sorci {
 
   private getPropertiesAndStatement(payload: {
     sql: postgres.Sql;
-    data: Record<string, QueryProperty>;
+    data: QueryAble;
   }) {
     const { sql, data } = payload;
-    const statements = Object.keys(data).map((key) => {
-      return this.getPropertySatetment({
-        sql: this.sql,
-        key,
-        property: data[key]
+    const statements: any[] = [];
+
+    if (data.type) {
+      statements.push(
+        this.getPropertySatetment({
+          sql: this.sql,
+          key: "type",
+          property: data.type
+        })
+      );
+    }
+
+    if (data.identifiers) {
+      Object.keys(data.identifiers).forEach((identifierKey) => {
+        statements.push(
+          this.getPropertySatetment({
+            sql: this.sql,
+            key: identifierKey,
+            property: data.identifiers![identifierKey]
+          })
+        );
       });
-    });
+    }
+
+    if (statements.length === 0) {
+      return sql`TRUE`;
+    }
 
     const res = statements.reduce((acc, statement, index) => {
       if (index === 0) {
@@ -282,7 +313,7 @@ export class SorciPostgres implements Sorci {
     if (!hasOr && !hasAnd) {
       return this.getPropertiesAndStatement({
         sql,
-        data: where as Record<string, QueryProperty>
+        data: where as QueryAble
       });
     }
 
@@ -303,17 +334,16 @@ export class SorciPostgres implements Sorci {
       return identifiers;
     }
 
-    for (const [key, value] of Object.entries(data)) {
-      if (key === "type") continue;
-      if (!key.endsWith("Id")) continue;
-
-      if (value && typeof value === "object" && "$eq" in value) {
-        const eqValue = (value as any).$eq;
-        if (typeof eqValue === "string") {
-          identifiers[key] = eqValue;
+    if (data.identifiers && typeof data.identifiers === "object") {
+      for (const [key, value] of Object.entries(data.identifiers)) {
+        if (value && typeof value === "object" && "$eq" in value) {
+          const eqValue = (value as any).$eq;
+          if (typeof eqValue === "string") {
+            identifiers[key] = eqValue;
+          }
+        } else if (typeof value === "string") {
+          identifiers[key] = value;
         }
-      } else if (typeof value === "string") {
-        identifiers[key] = value;
       }
     }
 
