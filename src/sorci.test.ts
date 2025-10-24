@@ -8,7 +8,8 @@ import { SorciPostgres } from "./sorci.postgres";
 import {
   createCourseCreated,
   createCourseCapacityChanged,
-  createCourseRenamed
+  createCourseRenamed,
+  createTodoListFullLife
 } from "./test-helpers";
 
 let pgInstance: StartedPostgreSqlContainer;
@@ -152,7 +153,7 @@ describe("Given a populated stream", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-capacity-changed"] },
-            identifiers: { courseId: { $eq: course1Id } }
+            identifiers: { courseId: course1Id }
           }
         },
         lastKnownEventId: course1CapacityChanged.id
@@ -181,7 +182,7 @@ describe("Given a populated stream", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-capacity-changed"] },
-            identifiers: { courseId: { $eq: course1Id } }
+            identifiers: { courseId: course1Id }
           }
         },
         lastKnownEventId: createId() // Wrong identifier on purpose
@@ -205,7 +206,7 @@ describe("Given a populated stream", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-capacity-changed"] },
-            identifiers: { courseId: { $eq: course1Id } }
+            identifiers: { courseId: course1Id }
           }
         },
         lastKnownEventId: createId() // Wrong identifier on purpose
@@ -256,7 +257,7 @@ describe("Given a populated stream", async () => {
         sourcingEvent: course1CapacityChangedAgain,
         query: {
           $where: {
-            identifiers: { courseId: { $eq: course1Id } }
+            identifiers: { courseId: course1Id }
           }
         },
         lastKnownEventId: course1Renamed.id
@@ -289,11 +290,196 @@ describe("Given a populated stream", async () => {
           type: {
             $in: ["course-created", "course-capacity-changed", "course-renamed"]
           },
-          identifiers: { courseId: { $eq: course1Id } }
+          identifiers: { courseId: course1Id }
         }
       });
 
       expect(events).toHaveLength(3);
+    });
+  });
+});
+
+describe("Given a stream with todo list events (multiple identifiers)", async () => {
+  const todoListId = createId();
+  const todoListItemId = createId();
+  const todoListEvents = createTodoListFullLife({ todoListId, todoListItemId });
+
+  beforeEach(async () => {
+    await sorci.insertEvents(todoListEvents);
+  });
+
+  describe("When querying events with multiple identifiers", async () => {
+    test.only("Then only events matching both identifiers are returned", async () => {
+      const events = await sorci.getEventsByQuery({
+        $where: {
+          identifiers: {
+            todoListId: todoListId,
+            todoListItemId: todoListItemId
+          }
+        }
+      });
+
+      expect(events.length).toBeGreaterThan(0);
+      events.forEach((event) => {
+        expect(event.identifier.todoListId).toEqual(todoListId);
+        expect(event.identifier.todoListItemId).toEqual(todoListItemId);
+      });
+    });
+
+    test("Then events matching only todoListId are returned when querying by single identifier", async () => {
+      const events = await sorci.getEventsByQuery({
+        $where: {
+          identifiers: { todoListId: todoListId }
+        }
+      });
+
+      expect(events.length).toBeGreaterThan(0);
+      events.forEach((event) => {
+        expect(event.identifier.todoListId).toEqual(todoListId);
+      });
+    });
+  });
+
+  describe("When appending an event with multiple identifiers in query", async () => {
+    test("Then the event is persisted when using correct lastKnownEventId", async () => {
+      const lastEventWithBothIds = todoListEvents
+        .filter(
+          (event) =>
+            event.identifier.todoListId === todoListId &&
+            event.identifier.todoListItemId === todoListItemId
+        )
+        .reverse()[0];
+
+      const newTodoListItemEvent = {
+        id: createId(),
+        type: "todo-list-item-renamed",
+        data: {
+          title: "New title",
+          todoListId,
+          todoListItemId
+        },
+        identifier: {
+          todoListId,
+          todoListItemId
+        }
+      };
+
+      const eventId = await sorci.appendEvent({
+        sourcingEvent: newTodoListItemEvent,
+        query: {
+          $where: {
+            type: { $in: ["todo-list-item-created", "todo-list-item-renamed"] },
+            identifiers: {
+              todoListId: todoListId,
+              todoListItemId: todoListItemId
+            }
+          }
+        },
+        lastKnownEventId: lastEventWithBothIds.id
+      });
+
+      expect(eventId).toEqual(newTodoListItemEvent.id);
+
+      const persistedEvent = await sorci.getEventById(eventId);
+      expect(persistedEvent?.id).toEqual(newTodoListItemEvent.id);
+      expect(persistedEvent?.type).toEqual(newTodoListItemEvent.type);
+      expect(persistedEvent?.identifier.todoListId).toEqual(todoListId);
+      expect(persistedEvent?.identifier.todoListItemId).toEqual(todoListItemId);
+    });
+
+    test("Then the event is not persisted when using wrong lastKnownEventId", async () => {
+      const wrongEventId = createId();
+
+      const newTodoListItemEvent = {
+        id: createId(),
+        type: "todo-list-item-renamed",
+        data: {
+          title: "New title",
+          todoListId,
+          todoListItemId
+        },
+        identifier: {
+          todoListId,
+          todoListItemId
+        }
+      };
+
+      const promise = sorci.appendEvent({
+        sourcingEvent: newTodoListItemEvent,
+        query: {
+          $where: {
+            type: { $in: ["todo-list-item-created", "todo-list-item-renamed"] },
+            identifiers: {
+              todoListId: todoListId,
+              todoListItemId: todoListItemId
+            }
+          }
+        },
+        lastKnownEventId: wrongEventId
+      });
+
+      await expect(promise).rejects.toThrow(/Concurrency conflict detected/);
+      const event = await sorci.getEventById(newTodoListItemEvent.id);
+      expect(event).toBeFalsy();
+    });
+  });
+
+  describe("When verifying persistence of multiple identifier queries", async () => {
+    test("Then the queried events persist correctly across multiple operations", async () => {
+      const eventsBeforeAppend = await sorci.getEventsByQuery({
+        $where: {
+          identifiers: {
+            todoListId: todoListId,
+            todoListItemId: todoListItemId
+          }
+        }
+      });
+
+      const countBefore = eventsBeforeAppend.length;
+
+      const lastEvent = eventsBeforeAppend[eventsBeforeAppend.length - 1];
+
+      const newEvent = {
+        id: createId(),
+        type: "todo-list-item-renamed",
+        data: {
+          title: "Persisted title",
+          todoListId,
+          todoListItemId
+        },
+        identifier: {
+          todoListId,
+          todoListItemId
+        }
+      };
+
+      await sorci.appendEvent({
+        sourcingEvent: newEvent,
+        query: {
+          $where: {
+            type: { $in: ["todo-list-item-created", "todo-list-item-renamed"] },
+            identifiers: {
+              todoListId: todoListId,
+              todoListItemId: todoListItemId
+            }
+          }
+        },
+        lastKnownEventId: lastEvent.id
+      });
+
+      const eventsAfterAppend = await sorci.getEventsByQuery({
+        $where: {
+          identifiers: {
+            todoListId: todoListId,
+            todoListItemId: todoListItemId
+          }
+        }
+      });
+
+      expect(eventsAfterAppend.length).toBe(countBefore + 1);
+      expect(eventsAfterAppend[eventsAfterAppend.length - 1].id).toEqual(
+        newEvent.id
+      );
     });
   });
 });
@@ -341,7 +527,7 @@ describe("Concurrency", async () => {
       query: {
         $where: {
           type: { $in: ["course-created", "course-capacity-changed"] },
-          identifiers: { courseId: { $eq: course1Id } }
+          identifiers: { courseId: course1Id }
         }
       },
       lastKnownEventId: course1CapacityChanged.id
@@ -374,7 +560,7 @@ describe("Concurrency", async () => {
           query: {
             $where: {
               type: { $in: ["course-created", "course-renamed"] },
-              identifiers: { courseId: { $eq: course1Id } }
+              identifiers: { courseId: course1Id }
             }
           },
           lastKnownEventId: course1Renamed.id
@@ -450,7 +636,7 @@ describe("Concurrency", async () => {
       query: {
         $where: {
           type: { $in: ["course-created", "course-capacity-changed"] },
-          identifiers: { courseId: { $eq: course1Id } }
+          identifiers: { courseId: course1Id }
         }
       },
       lastKnownEventId: course1CapacityChanged.id
@@ -461,7 +647,7 @@ describe("Concurrency", async () => {
       query: {
         $where: {
           type: { $in: ["course-created", "course-renamed"] },
-          identifiers: { courseId: { $eq: course1Id } }
+          identifiers: { courseId: course1Id }
         }
       },
       lastKnownEventId: course1Renamed.id
@@ -493,7 +679,7 @@ describe("Concurrency", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-renamed"] },
-            identifiers: { courseId: { $eq: course1Id } }
+            identifiers: { courseId: course1Id }
           }
         },
         lastKnownEventId: course1Renamed.id
@@ -507,7 +693,7 @@ describe("Concurrency", async () => {
         query: {
           $where: {
             type: { $in: ["course-created", "course-renamed"] },
-            identifiers: { courseId: { $eq: course1Id } }
+            identifiers: { courseId: course1Id }
           }
         },
         lastKnownEventId: course1Renamed.id

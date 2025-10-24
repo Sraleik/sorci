@@ -67,13 +67,13 @@ describe("Test on todo list item", async () => {
 
     const todoListItemEvents = await sorci.getEventsByQuery({
       $where: {
-        identifiers: { todoListItemId: { $eq: todoListItem.aggregateId } }
+        identifiers: { todoListItemId: todoListItem.aggregateId }
       }
     });
 
     const todoListEvents = await sorci.getEventsByQuery({
       $where: {
-        identifiers: { todoListId: { $eq: todoListItem.todoListId } }
+        identifiers: { todoListId: todoListItem.todoListId }
       }
     });
 
