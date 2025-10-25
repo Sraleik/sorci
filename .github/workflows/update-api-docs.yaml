@@ -30,12 +30,12 @@ jobs:
 
     steps:
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -45,7 +45,7 @@ jobs:
 
       - name: Cache node modules
         id: cache-yarn
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: cache-node-modules
         with:
@@ -79,11 +79,11 @@ jobs:
 
       - name: Setup Pages
         if: steps.commit-doc-change.outputs.NEED_DEPLOYMENT == 'true'
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         if: steps.commit-doc-change.outputs.NEED_DEPLOYMENT == 'true'
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
           path: "./docs"
@@ -91,4 +91,4 @@ jobs:
       - name: Deploy to GitHub Pages
         if: steps.commit-doc-change.outputs.NEED_DEPLOYMENT == 'true'
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
