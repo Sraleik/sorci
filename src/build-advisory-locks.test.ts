@@ -295,6 +295,44 @@ describe("buildAdvisoryLocks", () => {
     expect(locks[0].key).toBe("aKey:a-value:zKey:z-value:EventZ");
   });
 
+  it("should return no locks when skipping all event types", () => {
+    const query: Query = {
+      $where: {
+        identifiers: {
+          todoListId: "list-123",
+          companyId: "company-123"
+        },
+        type: {
+          $in: ["TodoItemAdded", "TodoItemDeleted"],
+          $skipLockOn: ["TodoItemAdded", "TodoItemDeleted"]
+        }
+      }
+    };
+
+    const locks = buildAdvisoryLocks({ query });
+
+    expect(locks).toHaveLength(0);
+  });
+
+  it("should return no locks when skipping all identifiers", () => {
+    const query: Query = {
+      $where: {
+        identifiers: {
+          todoListId: "list-123",
+          companyId: "company-123",
+          $skipLockOn: ["todoListId", "companyId"]
+        },
+        type: {
+          $in: ["TodoItemAdded", "TodoItemDeleted"]
+        }
+      }
+    };
+
+    const locks = buildAdvisoryLocks({ query });
+
+    expect(locks).toHaveLength(2);
+  });
+
   it("should deduplicate event types", () => {
     const query: Query = {
       $where: {
@@ -311,6 +349,7 @@ describe("buildAdvisoryLocks", () => {
     expect(locks[0].key).toBe("todoListId:list-123:TodoItemAdded");
   });
 
+  //Maybe not allow identifier with top lever $or / $and ?
   it("should handle $or queries with multiple event types and top-level identifiers", () => {
     const query: Query = {
       $where: {
