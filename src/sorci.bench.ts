@@ -1,7 +1,10 @@
 import { Bench } from "tinybench";
 import { PostgreSqlContainer } from "testcontainers";
 import { SorciPostgres } from "./sorci.postgres";
-import { createCourseCreated, createCourseFullLife } from "./test-helpers";
+import { createTodoListFullLife } from "./test-helpers";
+import { TodoListBuilder } from "./builder/todo-list.builder";
+import { TodoListItemBuilder } from "./builder/todo-list-item.builer";
+import { SorciEvent } from "./sorci-event";
 
 const bench = new Bench({ time: 5000 });
 
@@ -28,15 +31,18 @@ const sorci = new SorciPostgres({
   streamName: "useless_stream_name"
 });
 
+const aTodoList = () => new TodoListBuilder({ sorci });
+const aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
+
 const FULL_LIST_MULTIPLICATOR = 50;
 const FULL_LIST_ON_INSERT_COUNT = 1000;
-const FULL_LIST_EVENT_COUNT = createCourseFullLife().length;
+const FULL_LIST_EVENT_COUNT = createTodoListFullLife().length;
 
 const prepareBigStream = async () => {
   let stream: Array<any> = [];
   for (let i = 0; i < FULL_LIST_MULTIPLICATOR; i++) {
     for (let i = 0; i < FULL_LIST_ON_INSERT_COUNT; i++) {
-      stream.push(...createCourseFullLife());
+      stream.push(...createTodoListFullLife());
     }
 
     await sorci.insertEvents(stream);
@@ -48,24 +54,30 @@ await sorci.setupTestStream();
 console.log("stream setup", sorci.streamName);
 console.log("Start loading data");
 
-const course1Id = "345796fd-c56c-4a9b-8dd5-22763b7d4997";
-const fullCourse1 = createCourseFullLife({ courseId: course1Id });
-const eventIdentifierList1 = fullCourse1[fullCourse1.length - 1].id;
-await sorci.insertEvents(fullCourse1);
-const courseCreated = createCourseCreated();
-await sorci.insertEvents([courseCreated]);
+const todoList1Id = "345796fd-c56c-4a9b-8dd5-22763b7d4997";
+const fullTodoList1 = createTodoListFullLife({ todoListId: todoList1Id });
+let eventIdentifierList1 = fullTodoList1[fullTodoList1.length - 1].id;
+await sorci.insertEvents(fullTodoList1);
+
+const singleEventForGetById = aTodoListItem().events[0];
+await sorci.insertEvents([singleEventForGetById]);
 
 await prepareBigStream();
 
-const fullCourse2 = createCourseFullLife({
-  courseId: "f863ae13-0a8d-4e61-b3a4-1d8f40f340d1"
+const todoListItemId2 = "f863ae13-0a8d-4e61-b3a4-1d8f40f340d1";
+const fullTodoList2 = createTodoListFullLife({
+  todoListItemId: todoListItemId2
 });
-const eventIdentifierList2 = fullCourse2[0].id;
-await sorci.insertEvents(fullCourse2);
+const eventIdentifierList2 = fullTodoList2[0].id;
+await sorci.insertEvents(fullTodoList2);
 
 console.log("Data loaded");
 
-let eventToPersist = createCourseCreated();
+let eventToPersist = aTodoListItem().events[0];
+let selectedTodoListsForConcurrency: Array<{
+  todoListId: string;
+  lastEventId: string;
+}> = [];
 
 bench
   .add(
@@ -78,7 +90,7 @@ bench
         console.log("Running - Simple insert");
       },
       beforeEach: () => {
-        eventToPersist = createCourseCreated();
+        eventToPersist = aTodoListItem().events[0];
       }
     }
   )
@@ -92,7 +104,7 @@ bench
         console.log("Running - Append with no conflict, no query");
       },
       beforeEach: () => {
-        eventToPersist = createCourseCreated();
+        eventToPersist = aTodoListItem().events[0];
       }
     }
   )
@@ -102,9 +114,11 @@ bench
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         query: {
-          types: ["course-created"]
+          $where: {
+            type: "todo-list-created"
+          }
         },
-        eventIdentifier: eventIdentifierList2
+        lastKnownEventId: eventIdentifierList2
       });
     },
     {
@@ -112,7 +126,7 @@ bench
         console.log("Running - Append complex, with query : types ");
       },
       beforeEach: () => {
-        eventToPersist = createCourseCreated();
+        eventToPersist = aTodoListItem().events[0];
       }
     }
   )
@@ -122,9 +136,11 @@ bench
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         query: {
-          identifiers: [{ courseId: course1Id }]
+          $where: {
+            identifiers: { todoListId: todoList1Id }
+          }
         },
-        eventIdentifier: eventIdentifierList1
+        lastKnownEventId: eventIdentifierList1
       });
     },
     {
@@ -132,7 +148,7 @@ bench
         console.log("Running - Append complex, with query : identifiers");
       },
       beforeEach: () => {
-        eventToPersist = createCourseCreated();
+        eventToPersist = aTodoListItem().events[0];
       }
     }
   )
@@ -142,18 +158,32 @@ bench
       await sorci.appendEvent({
         sourcingEvent: eventToPersist,
         query: {
-          types: ["course-created", "student-subscribed-to-course"],
-          identifiers: [{ courseId: course1Id }]
+          $where: {
+            type: { $in: ["todo-list-created", "todo-list-item-created"] },
+            identifiers: { todoListId: todoList1Id }
+          }
         },
-        eventIdentifier: eventIdentifierList1
+        lastKnownEventId: eventIdentifierList1
       });
     },
     {
       beforeAll: async () => {
         console.log("Running - Append with query: types & identifiers");
       },
-      beforeEach: () => {
-        eventToPersist = createCourseCreated();
+      beforeEach: async () => {
+        eventToPersist = aTodoListItem()
+          .withId(todoList1Id)
+          .renamed("osef")
+          .events.at(-1)!;
+
+        const events = await sorci.getEventsByQuery({
+          $where: {
+            type: { $in: ["todo-list-created", "todo-list-item-created"] },
+            identifiers: { todoListId: todoList1Id }
+          }
+        });
+
+        eventIdentifierList1 = events.at(-1)!.id;
       }
     }
   )
@@ -161,7 +191,9 @@ bench
     "Get by Query, types",
     async () => {
       await sorci.getEventsByQuery({
-        types: ["student-created"]
+        $where: {
+          type: "todo-list-item-created"
+        }
       });
     },
     {
@@ -174,7 +206,9 @@ bench
     "Get by Query, identifiers",
     async () => {
       await sorci.getEventsByQuery({
-        identifiers: [{ courseId: course1Id }]
+        $where: {
+          identifiers: { todoListId: todoList1Id }
+        }
       });
     },
     {
@@ -187,8 +221,10 @@ bench
     "Get by Query, types & identifiers",
     async () => {
       await sorci.getEventsByQuery({
-        types: ["course-created", "course-renamed"],
-        identifiers: [{ courseId: course1Id }]
+        $where: {
+          type: { $in: ["todo-list-created", "todo-list-renamed"] },
+          identifiers: { todoListId: todoList1Id }
+        }
       });
     },
     {
@@ -200,11 +236,103 @@ bench
   .add(
     "Get by EventId",
     async () => {
-      await sorci.getEventById(courseCreated.id);
+      await sorci.getEventById(singleEventForGetById.id);
     },
     {
       beforeAll: async () => {
         console.log("Running - Get by EventId");
+      }
+    }
+  )
+  .add(
+    "Concurrent append on separate aggregates (5 concurrent)",
+    async () => {
+      const events = [
+        aTodoListItem().events[0],
+        aTodoListItem().events[0],
+        aTodoListItem().events[0],
+        aTodoListItem().events[0],
+        aTodoListItem().events[0]
+      ];
+
+      await Promise.all(
+        events.map((event) =>
+          sorci.appendEvent({
+            sourcingEvent: event
+          })
+        )
+      );
+    },
+    {
+      beforeAll: async () => {
+        console.log(
+          "Running - Concurrent append on separate aggregates (5 concurrent)"
+        );
+      }
+    }
+  )
+  .add(
+    "Concurrent append with query on separate aggregates (10 concurrent)",
+    async () => {
+      const renameEvents = selectedTodoListsForConcurrency.map((todoList) => ({
+        event: SorciEvent.create({
+          type: "todo-list-renamed",
+          data: {
+            title: "Concurrent rename",
+            todoListId: todoList.todoListId
+          }
+        }),
+        todoListId: todoList.todoListId,
+        lastEventId: todoList.lastEventId
+      }));
+
+      await Promise.all(
+        renameEvents.map((item) =>
+          sorci.appendEvent({
+            sourcingEvent: item.event,
+            query: {
+              $where: {
+                type: { $in: ["todo-list-created", "todo-list-deleted"] },
+                identifiers: { todoListId: item.todoListId }
+              }
+            },
+            lastKnownEventId: item.lastEventId
+          })
+        )
+      );
+    },
+    {
+      beforeAll: async () => {
+        console.log(
+          "Running - Concurrent append with query on separate aggregates (10 concurrent)"
+        );
+
+        const allTodoListEvents = await sorci.getEventsByQuery({
+          $where: {
+            type: "todo-list-created"
+          }
+        });
+
+        const randomIndices = Array.from({ length: 50 }, () =>
+          Math.floor(Math.random() * allTodoListEvents.length)
+        );
+
+        selectedTodoListsForConcurrency = await Promise.all(
+          randomIndices.map(async (index) => {
+            const todoListId = allTodoListEvents[index].data
+              .todoListId as string;
+            const events = await sorci.getEventsByQuery({
+              $where: {
+                identifiers: { todoListId },
+                type: { $in: ["todo-list-created", "todo-list-deleted"] }
+              }
+            });
+            return {
+              todoListId,
+              lastEventId: events[events.length - 1].id
+            };
+          })
+        );
       }
     }
   );

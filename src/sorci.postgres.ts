@@ -7,7 +7,8 @@ import {
   QueryOr,
   AppendEventPayload,
   QueryProperty,
-  QueryAble
+  QueryAble,
+  PersistedEvent
 } from "./sorci.interface";
 import { shortId } from "./common/utils";
 
@@ -541,7 +542,8 @@ export class SorciPostgres implements Sorci {
       WHERE ${whereStatement} 
       ORDER BY id ASC;
     `;
-    return rows;
+
+    return rows as PersistedEvent[];
   }
 
   // TODO: add the advisory lock
