@@ -309,7 +309,7 @@ describe("Given a stream with todo list events (multiple identifiers)", async ()
   });
 
   describe("When querying events with multiple identifiers", async () => {
-    test.only("Then only events matching both identifiers are returned", async () => {
+    test("Then only events matching both identifiers are returned", async () => {
       const events = await sorci.getEventsByQuery({
         $where: {
           identifiers: {
@@ -346,7 +346,9 @@ describe("Given a stream with todo list events (multiple identifiers)", async ()
         .filter(
           (event) =>
             event.identifier.todoListId === todoListId &&
-            event.identifier.todoListItemId === todoListItemId
+            event.identifier.todoListItemId === todoListItemId &&
+            (event.type === "todo-list-item-created" ||
+              event.type === "todo-list-item-renamed")
         )
         .reverse()[0];
 
@@ -457,7 +459,6 @@ describe("Given a stream with todo list events (multiple identifiers)", async ()
         sourcingEvent: newEvent,
         query: {
           $where: {
-            type: { $in: ["todo-list-item-created", "todo-list-item-renamed"] },
             identifiers: {
               todoListId: todoListId,
               todoListItemId: todoListItemId
