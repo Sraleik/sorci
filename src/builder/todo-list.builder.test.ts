@@ -1,25 +1,13 @@
 import {
-  test,
-  expect,
-  describe,
-  beforeAll,
-  beforeEach,
-  afterEach,
-  afterAll
-} from "vitest";
-import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer
-} from "testcontainers";
+} from "@testcontainers/postgresql";
 import { createId } from "../common/utils";
-import { PersistedEvent, Sorci } from "../sorci.interface";
+import { Sorci } from "../sorci.interface";
 import { SorciPostgres } from "../sorci.postgres";
 import { TodoListBuilder } from "./todo-list.builder";
 import { TodoListItemBuilder } from "./todo-list-item.builer";
 import { UserBuilder } from "./user.builder";
-import { SorciEvent } from "../sorci-event";
-
-// Concurency issue, not new event added between decision and persistance
 
 let pgInstance: StartedPostgreSqlContainer;
 let sorci: Sorci;

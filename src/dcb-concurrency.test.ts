@@ -1,7 +1,8 @@
+import { vi } from "vitest";
 import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer
-} from "testcontainers";
+} from "@testcontainers/postgresql";
 import { createId } from "./common/utils";
 import { Sorci } from "./sorci.interface";
 import * as sorciPostgres from "./sorci.postgres";
@@ -9,7 +10,6 @@ import { SorciPostgres } from "./sorci.postgres";
 import { TodoListBuilder } from "./builder/todo-list.builder";
 import { TodoListItemBuilder } from "./builder/todo-list-item.builer";
 import { SorciEvent } from "./sorci-event";
-import { vi } from "vitest";
 import { UserBuilder } from "./builder/user.builder";
 
 let pgInstance: StartedPostgreSqlContainer;

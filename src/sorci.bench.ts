@@ -1,5 +1,5 @@
 import { Bench } from "tinybench";
-import { PostgreSqlContainer } from "testcontainers";
+import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { SorciPostgres } from "./sorci.postgres";
 import { createTodoListFullLife } from "./test-helpers";
 import { TodoListBuilder } from "./builder/todo-list.builder";

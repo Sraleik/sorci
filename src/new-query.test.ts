@@ -1,7 +1,7 @@
 import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer
-} from "testcontainers";
+} from "@testcontainers/postgresql";
 import { createId } from "./common/utils";
 import { Sorci } from "./sorci.interface";
 import { SorciPostgres } from "./sorci.postgres";
