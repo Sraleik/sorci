@@ -19,7 +19,7 @@ let aTodoList: () => TodoListBuilder;
 let aTodoListItem: () => TodoListItemBuilder;
 
 beforeAll(async () => {
-  const pgInstanceNotReady = new PostgreSqlContainer("postgres:15.3-alpine");
+  const pgInstanceNotReady = new PostgreSqlContainer("postgres:18-alpine");
   pgInstance = await pgInstanceNotReady
     // .withExposedPorts({ container: 5432, host: 42420 }) // Usefull for debugging
     // .withReuse() // The docker won't be removed after the test

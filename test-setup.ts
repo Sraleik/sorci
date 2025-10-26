@@ -4,6 +4,7 @@ import { type Sorci } from "./src/sorci.interface";
 import { TodoListBuilder } from "./src/builder/todo-list.builder";
 import { TodoListItemBuilder } from "./src/builder/todo-list-item.builer";
 import { UserBuilder } from "./src/builder/user.builder";
+import { CompanyBuilder } from "./src/builder/company.builder";
 import * as sorciPostgres from "./src/sorci.postgres";
 import "./test-matchers";
 
@@ -32,6 +33,7 @@ beforeAll(async () => {
   await sorci.setupTestStream();
 
   const aUser = () => new UserBuilder({ sorci });
+  const aCompany = () => new CompanyBuilder({ sorci });
   const aTodoList = () => new TodoListBuilder({ sorci, aUser });
   const aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
 
@@ -39,6 +41,7 @@ beforeAll(async () => {
   globalThis.aUser = aUser;
   globalThis.aTodoList = aTodoList;
   globalThis.aTodoListItem = aTodoListItem;
+  globalThis.aCompany = aCompany;
   globalThis.buildAdvisoryLocksSpy = buildAdvisoryLocksSpy;
 }, 60_000);
 

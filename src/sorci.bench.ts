@@ -9,7 +9,7 @@ import { UserBuilder } from "./builder/user.builder";
 
 const bench = new Bench({ time: 5000 });
 
-const pgInstance = await new PostgreSqlContainer("postgres:15.3-alpine")
+const pgInstance = await new PostgreSqlContainer("postgres:18-alpine")
   .withExposedPorts({
     container: 5432,
     host: 42420

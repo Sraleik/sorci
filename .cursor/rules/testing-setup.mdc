@@ -1,0 +1,83 @@
+---
+description: Describe the project testing setup
+alwaysApply: false
+---
+
+# Testing Setup Architecture
+
+## Overview
+
+This project uses Vitest with a sophisticated multi-layer setup that enables concurrent test execution while maintaining proper isolation through unique database streams per test file.
+
+## Architecture Layers
+
+### 1. Global Setup (Once per Test Run)
+
+**File:** `test-global-setup.ts`
+
+- Starts a PostgreSQL testcontainer (postgres:18-alpine)
+- Container is reused across test runs for performance
+- Provides database connection details via `inject()` to all test files:
+  - `host`, `port`, `user`, `password`, `databaseName`
+
+### 2. Per-File Setup (Once per Test File)
+
+**File:** `test-setup.ts`
+
+- Runs in each test file's worker thread
+- Creates a unique `SorciPostgres` instance per file
+- Calls `setupTestStream()` which generates a **unique stream name** (e.g., `test_abc123`)
+- This ensures concurrent test files are isolated - each has its own database table/stream
+
+### 3. Global Variables Available in Tests
+
+Defined in `vitest.d.ts`, set in `test-setup.ts`:
+
+- `sorciTestClient`: The Sorci instance for the test file
+- `aUser`: Builder function for User entities
+- `aTodoList`: Builder function for TodoList entities
+- `aTodoListItem`: Builder function for TodoListItem entities
+- `buildAdvisoryLocksSpy`: Vitest spy for tracking advisory lock calls
+
+### 4. Custom Matchers
+
+**File:** `test-matchers.ts`
+
+- `toBeUlid()`: Validates that a value is a valid ULID format
+
+## Key Concepts
+
+### Concurrency Safety
+
+✅ **Files run concurrently by default** - This is safe because:
+
+- Each file gets its own `setupTestStream()` call → unique stream/table
+- Database is shared but streams are isolated
+- No cross-contamination between test files
+
+### Stream Lifecycle
+
+```typescript
+beforeAll: setupTestStream() → Creates test_<uniqueId> stream
+tests run...
+afterAll: dropCurrentStream() → Cleans up the stream
+```
+
+### Why This Design?
+
+- **Performance**: Testcontainer starts once (slow operation)
+- **Isolation**: Each file has its own database table
+- **Parallelism**: Files can run concurrently without conflicts
+- **Cleanup**: Each file cleans its own stream
+
+## Type Declarations Structure
+
+- `vitest.d.ts`: Global type declarations (ProvidedContext, global vars)
+- `test-matchers.ts`: Custom matcher types + implementations (co-located)
+
+## Important Notes
+
+- The `streamName: "useless_stream_name"` in constructor is a placeholder, overwritten by `setupTestStream()`
+- `setupFiles` runs per-file, not globally once
+- `globalThis` variables are isolated per worker thread
+- The buildAdvisoryLocksSpy is per-file, allowing independent verification
