@@ -667,13 +667,6 @@
     "@types/node" "*"
     "@types/ssh2" "*"
 
-"@types/dotenv@^8.2.0":
-  version "8.2.3"
-  resolved "https://registry.yarnpkg.com/@types/dotenv/-/dotenv-8.2.3.tgz#c97b3c5b2e97ff3873793a000999e86cd66ff354"
-  integrity sha512-g2FXjlDX/cYuc5CiQvyU/6kkbP1JtmGzh0obW50zD7OKeILVL0NSpPWLXVfqoAGQjom2/SLLx9zHq0KXvD6mbw==
-  dependencies:
-    dotenv "*"
-
 "@types/estree@1.0.8", "@types/estree@^1.0.0":
   version "1.0.8"
   resolved "https://registry.yarnpkg.com/@types/estree/-/estree-1.0.8.tgz#958b91c991b1867ced318bedea0e215ee050726e"
@@ -1283,11 +1276,6 @@ doctrine@^3.0.0:
   integrity sha512-yS+Q5i3hBf7GBkd4KG8a7eBNNWNGLTaEwwYWUijIYM7zrlYDM0BFXHjjPWlWZ1Rg7UaddZeIDmi9jF3HmqiQ2w==
   dependencies:
     esutils "^2.0.2"
-
-dotenv@*:
-  version "17.2.3"
-  resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-17.2.3.tgz#ad995d6997f639b11065f419a22fabf567cdb9a2"
-  integrity sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==
 
 end-of-stream@^1.1.0, end-of-stream@^1.4.1:
   version "1.4.5"
@@ -2194,7 +2182,7 @@ postcss@^8.4.27, postcss@^8.5.6:
     picocolors "^1.1.1"
     source-map-js "^1.2.1"
 
-postgres@^3.3.4:
+postgres@^3.4.7:
   version "3.4.7"
   resolved "https://registry.yarnpkg.com/postgres/-/postgres-3.4.7.tgz#122f460a808fe300cae53f592108b9906e625345"
   integrity sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw==
@@ -2651,11 +2639,6 @@ ts-api-utils@^1.0.1:
   resolved "https://registry.yarnpkg.com/ts-api-utils/-/ts-api-utils-1.4.3.tgz#bfc2215fe6528fecab2b0fba570a2e8a4263b064"
   integrity sha512-i3eMG77UTMD0hZhgRS562pv83RC6ukSAC2GMNWc+9dieh/+jDM5u5YG+NHX6VNDRHQcHwmsTHctP9LhbC3WxVw==
 
-ts-essentials@>=10.0.0:
-  version "10.1.1"
-  resolved "https://registry.yarnpkg.com/ts-essentials/-/ts-essentials-10.1.1.tgz#4e1d29b7c9b33c1a2744482376634c4fafba5210"
-  integrity sha512-4aTB7KLHKmUvkjNj8V+EdnmuVTiECzn3K+zIbRthumvHu+j44x3w63xpfs0JL3NGIzGXqoQ7AV591xHO+XrOTw==
-
 ts-morph@18.0.0:
   version "18.0.0"
   resolved "https://registry.yarnpkg.com/ts-morph/-/ts-morph-18.0.0.tgz#b9e7a898ea115064585a8a775d86da6edc9c5b4e"
@@ -2712,7 +2695,7 @@ typescript@^5.1.3:
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-5.9.3.tgz#5b4f59e15310ab17a216f5d6cf53ee476ede670f"
   integrity sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==
 
-ulidx@^2.0.0:
+ulidx@^2.4.1:
   version "2.4.1"
   resolved "https://registry.yarnpkg.com/ulidx/-/ulidx-2.4.1.tgz#c0f60f0552f84d115d42fd52a306033f13404c55"
   integrity sha512-xY7c8LPyzvhvew0Fn+Ek3wBC9STZAuDI/Y5andCKi9AX6/jvfaX45PhsDX8oxgPL0YFp0Jhr8qWMbS/p9375Xg==
@@ -2806,13 +2789,6 @@ vite@^4.3.9:
     tinyglobby "^0.2.15"
   optionalDependencies:
     fsevents "~2.3.3"
-
-vitest-mock-extended@^3.1.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/vitest-mock-extended/-/vitest-mock-extended-3.1.0.tgz#d4e23f4bbc18d07c4ab928b861e74414c942c974"
-  integrity sha512-vCM0VkuocOUBwwqwV7JB7YStw07pqeKvEIrZnR8l3PtwYi6rAAJAyJACeC1UYNfbQWi85nz7EdiXWBFI5hll2g==
-  dependencies:
-    ts-essentials ">=10.0.0"
 
 vitest@^4.0.3:
   version "4.0.3"
