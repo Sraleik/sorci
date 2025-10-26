@@ -1,99 +1,171 @@
 import { createId } from "../common/utils";
+import { PersistedEvent } from "../sorci.interface";
 
-describe("Test on user", async () => {
-  test("Create a simple user", async () => {
-    const { events } = await aUser().build();
-    const userId = events[0].data.userId;
+describe("Given a User Builder", async () => {
+  describe("When building a simple user", async () => {
+    let events: PersistedEvent[];
+    let userId: string;
 
-    expect(userId).toBeUlid();
-    expect(events).toHaveLength(1);
+    beforeAll(async () => {
+      const result = await aUser().build();
+      events = result.events;
+      userId = events[0].data.userId;
+    });
+
+    test("Then the user is created with a ulid id", async () => {
+      expect(userId).toBeUlid();
+    });
+
+    test("Then a single event is created", async () => {
+      expect(events).toHaveLength(1);
+    });
   });
 
-  test("Create a user with a custom email, name and id", async () => {
-    const userId = createId();
-    const userEmail = "john.doe@example.com";
-    const userName = "John Doe";
-    const { events } = await aUser()
-      .withInitialEmail(userEmail)
-      .withInitialName(userName)
-      .withId(userId)
-      .build();
+  describe("When creating a user with custom email, name and id", async () => {
+    const customUserId = createId();
+    const customUserEmail = "john.doe@example.com";
+    const customUserName = "John Doe";
+    let events: PersistedEvent[];
+    let createdEvent: PersistedEvent;
 
-    const createdEvent = events[0];
-    const userPersistedEmail = createdEvent.data.email;
-    const userPersistedName = createdEvent.data.name;
-    const userPersistedId = createdEvent.identifier.userId;
+    beforeAll(async () => {
+      const result = await aUser()
+        .withInitialEmail(customUserEmail)
+        .withInitialName(customUserName)
+        .withId(customUserId)
+        .build();
+      events = result.events;
+      createdEvent = events[0];
+    });
 
-    expect(userPersistedId).toEqual(userId);
-    expect(userPersistedEmail).toEqual(userEmail);
-    expect(userPersistedName).toEqual(userName);
-    expect(events).toHaveLength(1);
+    test("Then the user has the custom id", async () => {
+      const userPersistedId = createdEvent.identifier.userId;
+      expect(userPersistedId).toEqual(customUserId);
+    });
+
+    test("Then the user has the custom email", async () => {
+      const userPersistedEmail = createdEvent.data.email;
+      expect(userPersistedEmail).toEqual(customUserEmail);
+    });
+
+    test("Then the user has the custom name", async () => {
+      const userPersistedName = createdEvent.data.name;
+      expect(userPersistedName).toEqual(customUserName);
+    });
+
+    test("Then a single event is created", async () => {
+      expect(events).toHaveLength(1);
+    });
   });
 
-  test("Change user email", async () => {
-    const { events } = await aUser()
-      .withInitialEmail("john.doe@example.com")
-      .emailChanged("john.newemail@example.com")
-      .build();
+  describe("When changing user email", async () => {
+    let events: PersistedEvent[];
+    let userEmail: string | undefined;
 
-    const userEmail = events.reverse().find((event) => event.data.email)
-      ?.data.email;
+    beforeAll(async () => {
+      const result = await aUser()
+        .withInitialEmail("john.doe@example.com")
+        .emailChanged("john.newemail@example.com")
+        .build();
+      events = result.events;
+      userEmail = [...events].reverse().find((event) => event.data.email)
+        ?.data.email;
+    });
 
-    expect(events).toHaveLength(2);
-    expect(userEmail).toEqual("john.newemail@example.com");
+    test("Then two events are created", async () => {
+      expect(events).toHaveLength(2);
+    });
+
+    test("Then the user has the new email", async () => {
+      expect(userEmail).toEqual("john.newemail@example.com");
+    });
   });
 
-  test("Rename a user", async () => {
-    const { events } = await aUser()
-      .withInitialName("John Doe")
-      .renamed("Jane Doe")
-      .build();
+  describe("When renaming a user", async () => {
+    let events: PersistedEvent[];
+    let userName: string | undefined;
 
-    const userName = events.reverse().find((event) => event.data.name)
-      ?.data.name;
+    beforeAll(async () => {
+      const result = await aUser()
+        .withInitialName("John Doe")
+        .renamed("Jane Doe")
+        .build();
+      events = result.events;
+      userName = [...events].reverse().find((event) => event.data.name)
+        ?.data.name;
+    });
 
-    expect(events).toHaveLength(2);
-    expect(userName).toEqual("Jane Doe");
+    test("Then two events are created", async () => {
+      expect(events).toHaveLength(2);
+    });
+
+    test("Then the user has the new name", async () => {
+      expect(userName).toEqual("Jane Doe");
+    });
   });
 
-  test("Delete a user", async () => {
-    const { events } = await aUser()
-      .withInitialEmail("john.doe@example.com")
-      .withInitialName("John Doe")
-      .renamed("Jane Doe")
-      .emailChanged("jane.doe@example.com")
-      .deleted()
-      .build();
+  describe("When deleting a user after multiple changes", async () => {
+    let events: PersistedEvent[];
+    let userName: string | undefined;
+    let userEmail: string | undefined;
 
-    const reversedEvents = [...events].reverse();
+    beforeAll(async () => {
+      const result = await aUser()
+        .withInitialEmail("john.doe@example.com")
+        .withInitialName("John Doe")
+        .renamed("Jane Doe")
+        .emailChanged("jane.doe@example.com")
+        .deleted()
+        .build();
+      events = result.events;
+      const reversedEvents = [...events].reverse();
+      userName = reversedEvents.find((event) => event.data.name)?.data.name;
+      userEmail = reversedEvents.find((event) => event.data.email)?.data.email;
+    });
 
-    const userName = reversedEvents.find((event) => event.data.name)?.data.name;
-    const userEmail = reversedEvents.find((event) => event.data.email)?.data
-      .email;
+    test("Then four events are created", async () => {
+      expect(events).toHaveLength(4);
+    });
 
-    expect(events).toHaveLength(4);
-    expect(userName).toEqual("Jane Doe");
-    expect(userEmail).toEqual("jane.doe@example.com");
+    test("Then the user has the final name", async () => {
+      expect(userName).toEqual("Jane Doe");
+    });
+
+    test("Then the user has the final email", async () => {
+      expect(userEmail).toEqual("jane.doe@example.com");
+    });
   });
 
-  test("User with multiple changes", async () => {
-    const { events } = await aUser()
-      .withInitialEmail("initial@example.com")
-      .withInitialName("Initial Name")
-      .emailChanged("second@example.com")
-      .renamed("Second Name")
-      .emailChanged("third@example.com")
-      .renamed("Third Name")
-      .build();
+  describe("When applying multiple changes to a user", async () => {
+    let events: PersistedEvent[];
+    let userName: string | undefined;
+    let userEmail: string | undefined;
 
-    const reversedEvents = [...events].reverse();
+    beforeAll(async () => {
+      const result = await aUser()
+        .withInitialEmail("initial@example.com")
+        .withInitialName("Initial Name")
+        .emailChanged("second@example.com")
+        .renamed("Second Name")
+        .emailChanged("third@example.com")
+        .renamed("Third Name")
+        .build();
+      events = result.events;
+      const reversedEvents = [...events].reverse();
+      userName = reversedEvents.find((event) => event.data.name)?.data.name;
+      userEmail = reversedEvents.find((event) => event.data.email)?.data.email;
+    });
 
-    const userName = reversedEvents.find((event) => event.data.name)?.data.name;
-    const userEmail = reversedEvents.find((event) => event.data.email)?.data
-      .email;
+    test("Then five events are created", async () => {
+      expect(events).toHaveLength(5);
+    });
 
-    expect(events).toHaveLength(5);
-    expect(userName).toEqual("Third Name");
-    expect(userEmail).toEqual("third@example.com");
+    test("Then the user has the final name", async () => {
+      expect(userName).toEqual("Third Name");
+    });
+
+    test("Then the user has the final email", async () => {
+      expect(userEmail).toEqual("third@example.com");
+    });
   });
 });
