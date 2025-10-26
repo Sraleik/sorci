@@ -168,4 +168,31 @@ describe("Given a User Builder", async () => {
       expect(userEmail).toEqual("third@example.com");
     });
   });
+  describe.only("When assigning a user to a company", async () => {
+    let userEvents: PersistedEvent[];
+    let companyEvents: PersistedEvent[];
+    let companyId: string | undefined;
+
+    beforeAll(async () => {
+      const { events } = await aUser()
+        .withInitialEmail("john.doe@example.com")
+        .withInitialName("John Doe")
+        .with(aCompany())
+        .build();
+      userEvents = events;
+      companyId = events[1].data.companyId;
+
+      companyEvents = await sorciTestClient.getEventsByQuery({
+        $where: {
+          identifiers: { companyId }
+        }
+      });
+    });
+
+    test("Then the user is assigned to the company", async () => {
+      expect(companyId).toBeUlid();
+      expect(companyEvents.length).toBeGreaterThanOrEqual(2);
+      expect(userEvents.length).toBeGreaterThanOrEqual(2);
+    });
+  });
 });

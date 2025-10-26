@@ -7,7 +7,11 @@ import { UserBuilder } from "./user.builder";
 
 export class TodoListItemBuilder {
   private sorci: Sorci;
-  private _events: SorciEvent[] = [];
+  private _events: {
+    data: Record<string, any>;
+    identifier?: Record<string, any>;
+    type: string;
+  }[] = [];
   private todoListBuilderOrTodoListId: BuilderOrId<TodoListBuilder>;
   private userBuilderOrUserId: BuilderOrId<UserBuilder>;
 
@@ -23,35 +27,37 @@ export class TodoListItemBuilder {
     this.todoListBuilderOrTodoListId = { builder: aTodoList() };
     this.userBuilderOrUserId = { builder: aUser() };
 
-    this._events.push(
-      SorciEvent.create({
-        data: {
-          title: "Buy milk",
-          todoListId: this.todoListId,
-          todoListItemId: initialAggregateId,
-          createdByUserId: this.userBuilderOrUserId.builder.aggregateId
-        },
-        identifier: {
-          userId: this.userBuilderOrUserId.builder.aggregateId,
-          todoListId: this.todoListId,
-          todoListItemId: initialAggregateId
-        },
-        type: "todo-list-item-created"
-      })
-    );
+    this._events.push({
+      data: {
+        title: "Buy milk",
+        todoListId: this.todoListId,
+        todoListItemId: initialAggregateId,
+        createdByUserId: this.userBuilderOrUserId.builder.aggregateId
+      },
+      identifier: {
+        userId: this.userBuilderOrUserId.builder.aggregateId,
+        todoListId: this.todoListId,
+        todoListItemId: initialAggregateId
+      },
+      type: "todo-list-item-created"
+    });
   }
 
   private setAggregateId(id: string) {
     this._events.forEach((event) => {
       event.data.todoListItemId = id;
-      event.identifier.todoListItemId = id;
+      if (event.identifier) {
+        event.identifier.todoListItemId = id;
+      }
     });
   }
 
   private setTodoListId(id: string) {
     this._events.forEach((event) => {
       event.data.todoListId = id;
-      event.identifier.todoListId = id;
+      if (event.identifier) {
+        event.identifier.todoListId = id;
+      }
     });
   }
 
@@ -102,29 +108,25 @@ export class TodoListItemBuilder {
   }
 
   renamed(name: string) {
-    this._events.push(
-      SorciEvent.create({
-        data: {
-          title: name,
-          todoListId: this.todoListId,
-          todoListItemId: this.aggregateId
-        },
-        type: "todo-list-item-renamed"
-      })
-    );
+    this._events.push({
+      data: {
+        title: name,
+        todoListId: this.todoListId,
+        todoListItemId: this.aggregateId
+      },
+      type: "todo-list-item-renamed"
+    });
     return this;
   }
 
   deleted() {
-    this._events.push(
-      SorciEvent.create({
-        data: {
-          todoListId: this.todoListId,
-          todoListItemId: this.aggregateId
-        },
-        type: "todo-list-item-deleted"
-      })
-    );
+    this._events.push({
+      data: {
+        todoListId: this.todoListId,
+        todoListItemId: this.aggregateId
+      },
+      type: "todo-list-item-deleted"
+    });
     return this;
   }
 
@@ -152,7 +154,9 @@ export class TodoListItemBuilder {
     await this.buildUserAndGetId();
     await this.buildAndGetTodoListId();
 
-    await this.sorci.insertEvents(this._events);
+    await this.sorci.insertEvents(
+      this._events.map((event) => SorciEvent.create(event))
+    );
 
     const events = await this.sorci.getEventsByQuery({
       $where: {

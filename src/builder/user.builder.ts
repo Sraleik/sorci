@@ -2,27 +2,32 @@ import { faker } from "@faker-js/faker";
 import { createId } from "../common/utils";
 import { SorciEvent } from "../sorci-event";
 import { Sorci } from "../sorci.interface";
+import { CompanyBuilder } from "./company.builder";
+import { BuilderOrId } from "../type";
 
 export class UserBuilder {
   private sorci: Sorci;
   private _aggregateId: string;
-  private _events: SorciEvent[] = [];
+  private _events: {
+    data: Record<string, any>;
+    identifier?: Record<string, any>;
+    type: string;
+  }[] = [];
+  private companyBuilderOrCompanyId?: BuilderOrId<CompanyBuilder>;
 
   constructor(payload: { sorci: Sorci }) {
     const { sorci } = payload;
     this.sorci = sorci;
     this._aggregateId = createId();
 
-    this._events.push(
-      SorciEvent.create({
-        data: {
-          email: faker.internet.email(),
-          name: faker.person.fullName(),
-          userId: this.aggregateId
-        },
-        type: "user-created"
-      })
-    );
+    this._events.push({
+      data: {
+        email: faker.internet.email(),
+        name: faker.person.fullName(),
+        userId: this.aggregateId
+      },
+      type: "user-created"
+    });
   }
 
   get aggregateId() {
@@ -47,7 +52,6 @@ export class UserBuilder {
     this._aggregateId = id;
     this._events.forEach((event) => {
       event.data.userId = id;
-      event.identifier.userId = id;
     });
     return this;
   }
@@ -62,48 +66,67 @@ export class UserBuilder {
     return this;
   }
 
+  with(builder: CompanyBuilder) {
+    this.companyBuilderOrCompanyId = { builder };
+    this._events.push({
+      type: "user-company-assigned",
+      data: {
+        companyId: builder.aggregateId,
+        userId: this.aggregateId
+      }
+    });
+    return this;
+  }
+
   emailChanged(email?: string) {
     const newEmail = email || faker.internet.email();
-    this._events.push(
-      SorciEvent.create({
-        type: "user-email-changed",
-        data: {
-          email: newEmail,
-          userId: this.aggregateId
-        }
-      })
-    );
+    this._events.push({
+      type: "user-email-changed",
+      data: {
+        email: newEmail,
+        userId: this.aggregateId
+      }
+    });
     return this;
   }
 
   renamed(name?: string) {
     const newName = name || faker.person.fullName();
-    this._events.push(
-      SorciEvent.create({
-        type: "user-renamed",
-        data: {
-          name: newName,
-          userId: this.aggregateId
-        }
-      })
-    );
+    this._events.push({
+      type: "user-renamed",
+      data: {
+        name: newName,
+        userId: this.aggregateId
+      }
+    });
     return this;
   }
 
   deleted() {
-    this._events.push(
-      SorciEvent.create({
-        type: "user-deleted",
-        data: {
-          userId: this.aggregateId
-        }
-      })
-    );
+    this._events.push({
+      type: "user-deleted",
+      data: {
+        userId: this.aggregateId
+      }
+    });
     return this;
   }
 
+  private async buildCompanyAndGetId() {
+    if (this.companyBuilderOrCompanyId?.builder) {
+      const { companyBuilder } =
+        await this.companyBuilderOrCompanyId.builder.build();
+      this.companyBuilderOrCompanyId = { id: companyBuilder.aggregateId };
+      return companyBuilder.aggregateId;
+    }
+    return this.companyBuilderOrCompanyId?.id;
+  }
+
   async build() {
-    await this.sorci.insertEvents(this._events);
+    await this.buildCompanyAndGetId();
+    await this.sorci.insertEvents(
+      this._events.map((event) => SorciEvent.create(event))
+    );
 
     const events = await this.sorci.getEventsByQuery({
       $where: {

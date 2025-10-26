@@ -602,3 +602,220 @@ describe("Given Dynamic Consistency Boundary (DCB) with Optimistic Concurrency C
     });
   });
 });
+
+describe("Given a todo list created by a user in a company", async () => {
+  const companyId = createId();
+  const todoListId = createId();
+  const userId = createId();
+  beforeAll(async () => {
+    await aTodoList()
+      .withId(todoListId)
+      .from(aUser().withId(userId).with(aCompany().withId(companyId)))
+      .build();
+  });
+
+  describe("When assigning the user to another company and Renaming a todo list at the same time", async () => {
+    beforeAll(async () => {
+      const reasigningUserQuery = {
+        $where: {
+          $or: [
+            {
+              type: {
+                $in: ["company-created", "company-deleted"],
+                $skipLockOn: ["company-created"]
+              },
+              identifiers: { companyId }
+            },
+            {
+              type: {
+                $in: ["user-created", "user-company-assigned", "user-deleted"],
+                $skipLockOn: ["user-created"]
+              },
+              identifiers: { userId }
+            }
+          ]
+        }
+      };
+
+      const renameTodoListQuery = {
+        $where: {
+          $or: [
+            {
+              type: {
+                $in: ["company-created", "company-deleted"],
+                $skipLockOn: ["company-created"]
+              },
+              identifiers: { companyId }
+            },
+            {
+              type: {
+                $in: [
+                  "todo-list-created",
+                  "todo-list-renamed",
+                  "todo-list-deleted"
+                ],
+                $skipLockOn: ["todo-list-created"]
+              },
+              identifiers: { todoListId }
+            },
+            {
+              type: {
+                $in: ["user-created", "user-company-assigned", "user-deleted"],
+                $skipLockOn: ["user-created"]
+              },
+              identifiers: { userId }
+            }
+          ]
+        }
+      };
+      const companyEvents =
+        await sorciTestClient.getEventsByQuery(reasigningUserQuery);
+      const todoListEvents =
+        await sorciTestClient.getEventsByQuery(renameTodoListQuery);
+
+      let reassignHasLock: () => void;
+      const reassignLockAcquired = new Promise<void>((resolve) => {
+        reassignHasLock = resolve;
+      });
+
+      const reassignPromise = sorciTestClient.appendEvent({
+        sourcingEvent: SorciEvent.create({
+          type: "user-company-assigned",
+          data: { companyId: createId(), userId }
+        }),
+        query: reasigningUserQuery,
+        lastKnownEventId: companyEvents[companyEvents.length - 1].id,
+        _testOnlyOnLockAcquired: () => reassignHasLock()
+      });
+
+      await reassignLockAcquired;
+
+      const renamePromise = sorciTestClient.appendEvent({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-renamed",
+          data: { title: "New title", todoListId }
+        }),
+        query: renameTodoListQuery,
+        lastKnownEventId: todoListEvents[todoListEvents.length - 1].id
+      });
+
+      await Promise.allSettled([reassignPromise, renamePromise]);
+    });
+
+    test("Then the user is reassigned to another company", async () => {
+      const events = await sorciTestClient.getEventsByQuery({
+        $where: {
+          type: { $eq: "user-company-assigned" },
+          identifiers: { userId }
+        }
+      });
+      expect(events[events.length - 1].type).toBe("user-company-assigned");
+      expect(events[events.length - 1].data.companyId).not.toBe(companyId);
+    });
+    test("Then the todo list is NOT renamed", async () => {
+      const events = await sorciTestClient.getEventsByQuery({
+        $where: {
+          type: { $eq: "todo-list-renamed" },
+          identifiers: { todoListId }
+        }
+      });
+      expect(events).toHaveLength(0);
+    });
+  });
+  describe("When Deleting the company and Renaming a todo list at the same time", async () => {
+    beforeAll(async () => {
+      const renameTodoListQuery = {
+        $where: {
+          $or: [
+            {
+              type: {
+                $in: ["company-created", "company-deleted"],
+                $skipLockOn: ["company-created"]
+              },
+              identifiers: { companyId }
+            },
+            {
+              type: {
+                $in: [
+                  "todo-list-created",
+                  "todo-list-renamed",
+                  "todo-list-deleted"
+                ],
+                $skipLockOn: ["todo-list-created"]
+              },
+              identifiers: { todoListId }
+            },
+            {
+              type: {
+                $in: ["user-created", "user-company-assigned", "user-deleted"],
+                $skipLockOn: ["user-created"]
+              },
+              identifiers: { userId }
+            }
+          ]
+        }
+      };
+      const deleteCompanyQuery = {
+        $where: {
+          type: {
+            $in: ["company-created", "company-deleted"],
+            $skipLockOn: ["company-created"]
+          },
+          identifiers: { companyId }
+        }
+      };
+      const companyEvents =
+        await sorciTestClient.getEventsByQuery(deleteCompanyQuery);
+      const todoListEvents =
+        await sorciTestClient.getEventsByQuery(renameTodoListQuery);
+
+      let deleteHasLock: () => void;
+      const deleteLockAcquired = new Promise<void>((resolve) => {
+        deleteHasLock = resolve;
+      });
+
+      const deletePromise = sorciTestClient.appendEvent({
+        sourcingEvent: SorciEvent.create({
+          type: "company-deleted",
+          data: { companyId }
+        }),
+        query: deleteCompanyQuery,
+        lastKnownEventId: companyEvents[companyEvents.length - 1].id,
+        _testOnlyOnLockAcquired: () => deleteHasLock()
+      });
+
+      await deleteLockAcquired;
+
+      const renamePromise = sorciTestClient.appendEvent({
+        sourcingEvent: SorciEvent.create({
+          type: "todo-list-renamed",
+          data: { title: "New title", todoListId }
+        }),
+        query: renameTodoListQuery,
+        lastKnownEventId: todoListEvents[todoListEvents.length - 1].id
+      });
+
+      await Promise.allSettled([deletePromise, renamePromise]);
+    });
+
+    test("Then the company is deleted", async () => {
+      const events = await sorciTestClient.getEventsByQuery({
+        $where: {
+          type: { $eq: "company-deleted" },
+          identifiers: { companyId }
+        }
+      });
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("company-deleted");
+    });
+    test("Then the todo list is NOT renamed", async () => {
+      const events = await sorciTestClient.getEventsByQuery({
+        $where: {
+          type: { $eq: "todo-list-renamed" },
+          identifiers: { todoListId }
+        }
+      });
+      expect(events).toHaveLength(0);
+    });
+  });
+});

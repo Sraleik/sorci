@@ -32,13 +32,13 @@ describe("Given aTodoList Builder", async () => {
     });
 
     test("Then the todo list has a createdByUserId", async () => {
-      const createdByUserId = createdEvent.data.createdByUserId;
+      const createdByUserId = createdEvent.data.createdBy.userId;
 
       expect(createdByUserId).toBeUlid();
     });
 
     test("Then the todo list has the same userId and createdByUserId", async () => {
-      const createdByUserId = createdEvent.data.createdByUserId;
+      const createdByUserId = createdEvent.data.createdBy.userId;
       const userId = createdEvent.identifier.userId;
 
       expect(createdByUserId).toEqual(userId);

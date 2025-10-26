@@ -6,24 +6,26 @@ import { Sorci } from "../sorci.interface";
 export class CompanyBuilder {
   private sorci: Sorci;
   private _aggregateId: string;
-  private _events: SorciEvent[] = [];
+  private _events: {
+    data: Record<string, any>;
+    identifier?: Record<string, any>;
+    type: string;
+  }[] = [];
 
   constructor(payload: { sorci: Sorci }) {
     const { sorci } = payload;
     this.sorci = sorci;
     this._aggregateId = createId();
 
-    this._events.push(
-      SorciEvent.create({
-        data: {
-          companyId: this.aggregateId,
-          name: faker.company.name(),
-          email: faker.internet.email(),
-          address: faker.location.streetAddress()
-        },
-        type: "company-created"
-      })
-    );
+    this._events.push({
+      data: {
+        companyId: this.aggregateId,
+        name: faker.company.name(),
+        email: faker.internet.email(),
+        address: faker.location.streetAddress()
+      },
+      type: "company-created"
+    });
   }
 
   get aggregateId() {
@@ -51,7 +53,6 @@ export class CompanyBuilder {
     this._aggregateId = id;
     this._events.forEach((event) => {
       event.data.companyId = id;
-      event.identifier.companyId = id;
     });
     return this;
   }
@@ -126,7 +127,9 @@ export class CompanyBuilder {
   }
 
   async build() {
-    await this.sorci.insertEvents(this._events);
+    await this.sorci.insertEvents(
+      this._events.map((event) => SorciEvent.create(event))
+    );
 
     const events = await this.sorci.getEventsByQuery({
       $where: {
