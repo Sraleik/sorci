@@ -21,6 +21,12 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": false
   },
-  "include": ["src", "vitest.setup.ts"],
+  "include": [
+    "src",
+    "test-setup.ts",
+    "test-global-setup.ts",
+    "test-matchers.ts",
+    "vitest.d.ts"
+  ],
   "exclude": ["src/**/*.bench.ts"]
 }

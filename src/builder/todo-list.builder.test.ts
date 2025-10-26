@@ -1,60 +1,4 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer
-} from "@testcontainers/postgresql";
 import { createId } from "../common/utils";
-import { Sorci } from "../sorci.interface";
-import { SorciPostgres } from "../sorci.postgres";
-import { TodoListBuilder } from "./todo-list.builder";
-import { TodoListItemBuilder } from "./todo-list-item.builer";
-import { UserBuilder } from "./user.builder";
-
-let pgInstance: StartedPostgreSqlContainer;
-let sorci: Sorci;
-
-let aTodoList: () => TodoListBuilder;
-let aTodoListItem: () => TodoListItemBuilder;
-let aUser: () => UserBuilder;
-
-beforeAll(async () => {
-  const pgInstanceNotReady = new PostgreSqlContainer("postgres:15.3-alpine");
-  pgInstance = await pgInstanceNotReady
-    // .withExposedPorts({ container: 5432, host: 42420 }) // Usefull for debugging
-    // .withReuse() // The docker won't be removed after the test
-    .start();
-  const host = pgInstance.getHost();
-  const port = pgInstance.getPort();
-  const user = pgInstance.getUsername();
-  const password = pgInstance.getPassword();
-  const databaseName = pgInstance.getDatabase();
-
-  sorci = new SorciPostgres({
-    host,
-    port,
-    user,
-    password,
-    databaseName,
-    streamName: "useless_stream_name"
-  });
-
-  aUser = () => new UserBuilder({ sorci });
-  aTodoList = () => new TodoListBuilder({ sorci, aUser });
-  aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
-}, 30000);
-
-beforeEach(async () => {
-  await sorci.setupTestStream();
-});
-
-afterEach(async () => {
-  await sorci.dropCurrentStream();
-});
-
-afterAll(async () => {
-  await sorci.close();
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  await pgInstance.stop();
-});
 
 describe("Given aTodoList Builder", async () => {
   test("Create a simple todo list", async () => {
@@ -62,7 +6,7 @@ describe("Given aTodoList Builder", async () => {
     const todoListId = events[0].data.todoListId;
     const createdByUserId = events[0].data.createdByUserId;
 
-    const userEvents = await sorci.getEventsByQuery({
+    const userEvents = await sorciTestClient.getEventsByQuery({
       $where: {
         identifiers: { userId: createdByUserId }
       }
@@ -120,7 +64,6 @@ describe("Given aTodoList Builder", async () => {
 
   test("Add a few todo items to a todo list", async () => {
     const { events } = await aTodoList()
-      .withId("01K7WH8S6FMW2911Q1Y6EV7N05")
       .withInitialTitle("Morning routine")
       .with(aTodoListItem().withInitialTitle("Buy milk"))
       .with(aTodoListItem().withInitialTitle("Buy bread"))
@@ -132,7 +75,6 @@ describe("Given aTodoList Builder", async () => {
 
   test("Add a few todo items to a todo list", async () => {
     const { events } = await aTodoList()
-      .withId("01K7WH8S6FMW2911Q1Y6EV7N05")
       .withInitialTitle("Morning routine")
       .with(aTodoListItem().withInitialTitle("Buy milk"))
       .with(aTodoListItem().withInitialTitle("Buy bread"))

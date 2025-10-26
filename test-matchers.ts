@@ -1,8 +1,14 @@
 import { expect } from "vitest";
 
+declare module "vitest" {
+  interface Assertion<T = any> {
+    toBeUlid(): T;
+  }
+}
+
 expect.extend({
   toBeUlid(received) {
-    const ulidRegex = /^[\dA-HJKMNP-TV-Z]{26}$/i;
+    const ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/;
     const pass = typeof received === "string" && ulidRegex.test(received);
 
     if (pass) {
@@ -18,12 +24,3 @@ expect.extend({
     }
   }
 });
-
-interface CustomMatchers<R = unknown> {
-  toBeUlid(): R;
-}
-
-declare module "vitest" {
-  interface Assertion<T = any> extends CustomMatchers<T> {}
-  interface AsymmetricMatchersContaining extends CustomMatchers {}
-}
