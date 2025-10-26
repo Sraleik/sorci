@@ -1,62 +1,4 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer
-} from "@testcontainers/postgresql";
 import { createId } from "./common/utils";
-import { Sorci } from "./sorci.interface";
-import { SorciPostgres } from "./sorci.postgres";
-import { TodoListBuilder } from "./builder/todo-list.builder";
-import { TodoListItemBuilder } from "./builder/todo-list-item.builer";
-import { UserBuilder } from "./builder/user.builder";
-
-// Concurency issue, not new event added between decision and persistance
-
-let pgInstance: StartedPostgreSqlContainer;
-let sorci: Sorci;
-
-let aUser: () => UserBuilder;
-let aTodoList: () => TodoListBuilder;
-let aTodoListItem: () => TodoListItemBuilder;
-
-beforeAll(async () => {
-  const pgInstanceNotReady = new PostgreSqlContainer("postgres:18-alpine");
-  pgInstance = await pgInstanceNotReady
-    // .withExposedPorts({ container: 5432, host: 42420 }) // Usefull for debugging
-    // .withReuse() // The docker won't be removed after the test
-    .start();
-  const host = pgInstance.getHost();
-  const port = pgInstance.getPort();
-  const user = pgInstance.getUsername();
-  const password = pgInstance.getPassword();
-  const databaseName = pgInstance.getDatabase();
-
-  sorci = new SorciPostgres({
-    host,
-    port,
-    user,
-    password,
-    databaseName,
-    streamName: "useless_stream_name"
-  });
-
-  await sorci.setupTestStream();
-  aUser = () => new UserBuilder({ sorci });
-  aTodoList = () => new TodoListBuilder({ sorci, aUser });
-  aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
-}, 30000);
-
-// beforeEach(async () => {
-//   await sorci.setupTestStream();
-// });
-
-// afterEach(async () => {
-//   await sorci.dropCurrentStream();
-// });
-
-afterAll(async () => {
-  await sorci.close();
-  await pgInstance.stop();
-});
 
 describe("Test on todo list", async () => {
   const morningRoutineId = createId();
@@ -88,7 +30,7 @@ describe("Test on todo list", async () => {
       .build();
   });
   test("Get events by specific type", async () => {
-    const eventsPersisted = await sorci.getEventsByQuery({
+    const eventsPersisted = await sorciTestClient.getEventsByQuery({
       $where: {
         type: { $eq: "todo-list-created" }
       }
@@ -101,7 +43,7 @@ describe("Test on todo list", async () => {
   });
 
   test("Get events by specific type using string shorthand", async () => {
-    const eventsPersisted = await sorci.getEventsByQuery({
+    const eventsPersisted = await sorciTestClient.getEventsByQuery({
       $where: {
         type: "todo-list-created"
       }
@@ -114,7 +56,7 @@ describe("Test on todo list", async () => {
   });
 
   test("Get events by specific aggregateid", async () => {
-    const eventsPersisted = await sorci.getEventsByQuery({
+    const eventsPersisted = await sorciTestClient.getEventsByQuery({
       $where: {
         identifiers: { todoListId: groceryListId }
       }
@@ -127,7 +69,7 @@ describe("Test on todo list", async () => {
   });
 
   test("Get events by specific aggregateid using $eq", async () => {
-    const eventsPersisted = await sorci.getEventsByQuery({
+    const eventsPersisted = await sorciTestClient.getEventsByQuery({
       $where: {
         identifiers: { todoListId: groceryListId }
       }
@@ -139,7 +81,7 @@ describe("Test on todo list", async () => {
     });
   });
   test("Get events by specific types and aggregateId", async () => {
-    const eventsPersisted = await sorci.getEventsByQuery({
+    const eventsPersisted = await sorciTestClient.getEventsByQuery({
       $where: {
         type: { $in: ["todo-list-created", "todo-list-deleted"] },
         identifiers: { todoListId: groceryListId }
@@ -154,7 +96,7 @@ describe("Test on todo list", async () => {
   });
 
   test("Get events by specific types and aggregateId using mixed syntax", async () => {
-    const eventsPersisted = await sorci.getEventsByQuery({
+    const eventsPersisted = await sorciTestClient.getEventsByQuery({
       $where: {
         type: { $in: ["todo-list-created", "todo-list-deleted"] },
         identifiers: { todoListId: groceryListId }
@@ -169,7 +111,7 @@ describe("Test on todo list", async () => {
   });
 
   test("Get a $where with $or", async () => {
-    const eventsPersisted = await sorci.getEventsByQuery({
+    const eventsPersisted = await sorciTestClient.getEventsByQuery({
       $where: {
         $or: [
           {

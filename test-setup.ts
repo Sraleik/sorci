@@ -35,7 +35,8 @@ beforeAll(async () => {
   const aUser = () => new UserBuilder({ sorci });
   const aCompany = () => new CompanyBuilder({ sorci });
   const aTodoList = () => new TodoListBuilder({ sorci, aUser });
-  const aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
+  const aTodoListItem = () =>
+    new TodoListItemBuilder({ sorci, aTodoList, aUser });
 
   globalThis.sorciTestClient = sorci;
   globalThis.aUser = aUser;

@@ -3,23 +3,36 @@ import { SorciEvent } from "../sorci-event";
 import { Sorci } from "../sorci.interface";
 import { TodoListBuilder } from "./todo-list.builder";
 import { BuilderOrId } from "../type";
+import { UserBuilder } from "./user.builder";
 
 export class TodoListItemBuilder {
   private sorci: Sorci;
   private _events: SorciEvent[] = [];
   private todoListBuilderOrTodoListId: BuilderOrId<TodoListBuilder>;
+  private userBuilderOrUserId: BuilderOrId<UserBuilder>;
 
-  constructor(payload: { sorci: Sorci; aTodoList: () => TodoListBuilder }) {
-    const { sorci, aTodoList } = payload;
+  constructor(payload: {
+    sorci: Sorci;
+    aTodoList: () => TodoListBuilder;
+    aUser: () => UserBuilder;
+  }) {
+    const { sorci, aTodoList, aUser } = payload;
     this.sorci = sorci;
     const initialAggregateId = createId();
 
     this.todoListBuilderOrTodoListId = { builder: aTodoList() };
+    this.userBuilderOrUserId = { builder: aUser() };
 
     this._events.push(
       SorciEvent.create({
         data: {
           title: "Buy milk",
+          todoListId: this.todoListId,
+          todoListItemId: initialAggregateId,
+          createdByUserId: this.userBuilderOrUserId.builder.aggregateId
+        },
+        identifier: {
+          userId: this.userBuilderOrUserId.builder.aggregateId,
           todoListId: this.todoListId,
           todoListItemId: initialAggregateId
         },
@@ -125,7 +138,18 @@ export class TodoListItemBuilder {
     return this.todoListBuilderOrTodoListId.id;
   }
 
+  private async buildUserAndGetId() {
+    if (this.userBuilderOrUserId.builder) {
+      const { userBuilder } = await this.userBuilderOrUserId.builder.build();
+      this.userBuilderOrUserId = { id: userBuilder.aggregateId };
+      return userBuilder.aggregateId;
+    }
+
+    return this.userBuilderOrUserId.id;
+  }
+
   async build() {
+    await this.buildUserAndGetId();
     await this.buildAndGetTodoListId();
 
     await this.sorci.insertEvents(this._events);

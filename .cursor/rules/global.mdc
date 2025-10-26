@@ -5,7 +5,29 @@ description: "Global rules for the project"
 # Project
 
 DCB stands for: Dynamic Consistency Boundary
-It's a new approach to concurrency control in event sourcing.
+It's a new approach to concurrency control in event sourcing implemented in Postgres.
+
+## What is DCB?
+
+DCB is an innovative concurrency control mechanism for event sourcing that uses Postgres advisory locks to manage consistency boundaries dynamically. Unlike traditional event sourcing approaches that enforce strict aggregate boundaries at the application level, DCB allows for more flexible and efficient concurrent operations.
+
+## How DCB differs from Classical Event Sourcing
+
+**Classical Event Sourcing:**
+
+- Uses optimistic concurrency control with version numbers or expected versions
+- Enforces strict aggregate boundaries where all changes must go through a single aggregate root
+- Concurrent modifications to the same aggregate result in version conflicts that require retry logic
+- Aggregates are the unit of consistency, which can be limiting
+
+**DCB (Dynamic Consistency Boundary):**
+
+- Uses Postgres advisory locks for pessimistic concurrency control
+- Allows dynamic definition of consistency boundaries based on the operation being performed
+- Multiple operations can work on related data concurrently if their consistency boundaries don't overlap
+- Provides fine-grained locking at the event stream level
+- Eliminates version conflicts and retry logic by acquiring locks before applying changes
+- More efficient for high-contention scenarios where multiple operations need to coordinate
 
 # Package Manager
 

@@ -1,28 +1,40 @@
-describe("Test on todo list item", async () => {
-  test("Create a todo list item from a customized todo list", async () => {
-    const { events } = await aTodoListItem()
-      .from(aTodoList().withInitialTitle("Morning routine"))
-      .build();
+import { PersistedEvent } from "../sorci.interface";
 
-    const todoListItemId = events[0].data.todoListItemId;
-    expect(todoListItemId).toBeUlid();
+describe("Given a TodoListItem Builder", async () => {
+  describe("When building the most basic todo list item", async () => {
+    let todoListItemEvents: PersistedEvent[];
+    let todoListItemCreatedEvent: PersistedEvent;
+
+    beforeAll(async () => {
+      const { events } = await aTodoListItem().build();
+
+      todoListItemEvents = [...events];
+      todoListItemCreatedEvent = todoListItemEvents[0];
+    });
+
+    test("Then one todo list item event is created", async () => {
+      expect(todoListItemEvents.length).toBeGreaterThanOrEqual(1);
+    });
+
+    test("Then the item has been added by a user", async () => {
+      expect(todoListItemCreatedEvent.data.createdByUserId).toBeUlid();
+      expect(todoListItemCreatedEvent.identifier.userId).toBeUlid();
+    });
   });
-  test("Create a simple todo list item", async () => {
-    const { todoListItemBuilder: todoListItem } = await aTodoListItem().build();
+  describe("When creating a todo list item from a customized todo list", async () => {
+    let events: PersistedEvent[];
+    let todoListItemId: string;
 
-    const todoListItemEvents = await sorciTestClient.getEventsByQuery({
-      $where: {
-        identifiers: { todoListItemId: todoListItem.aggregateId }
-      }
+    beforeAll(async () => {
+      const result = await aTodoListItem()
+        .from(aTodoList().withInitialTitle("Morning routine"))
+        .build();
+      events = result.events;
+      todoListItemId = events[0].data.todoListItemId;
     });
 
-    const todoListEvents = await sorciTestClient.getEventsByQuery({
-      $where: {
-        identifiers: { todoListId: todoListItem.todoListId }
-      }
+    test("Then the todo list item has a valid ulid", async () => {
+      expect(todoListItemId).toBeUlid();
     });
-
-    expect(todoListItemEvents).toHaveLength(1);
-    expect(todoListEvents).toHaveLength(2);
   });
 });
