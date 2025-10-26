@@ -10,11 +10,13 @@ import { TodoListBuilder } from "./builder/todo-list.builder";
 import { TodoListItemBuilder } from "./builder/todo-list-item.builer";
 import { SorciEvent } from "./sorci-event";
 import { vi } from "vitest";
+import { UserBuilder } from "./builder/user.builder";
 
 let pgInstance: StartedPostgreSqlContainer;
 let sorci: Sorci;
 let buildAdvisoryLocksSpy: any;
 
+let aUser: () => UserBuilder;
 let aTodoList: () => TodoListBuilder;
 let aTodoListItem: () => TodoListItemBuilder;
 
@@ -40,7 +42,8 @@ beforeAll(async () => {
   });
 
   await sorci.setupTestStream();
-  aTodoList = () => new TodoListBuilder({ sorci });
+  aUser = () => new UserBuilder({ sorci });
+  aTodoList = () => new TodoListBuilder({ sorci, aUser });
   aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
 }, 30000);
 

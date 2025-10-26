@@ -1,12 +1,23 @@
 import {
+  test,
+  expect,
+  describe,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  afterAll
+} from "vitest";
+import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer
 } from "testcontainers";
 import { createId } from "../common/utils";
-import { Sorci } from "../sorci.interface";
+import { PersistedEvent, Sorci } from "../sorci.interface";
 import { SorciPostgres } from "../sorci.postgres";
 import { TodoListBuilder } from "./todo-list.builder";
 import { TodoListItemBuilder } from "./todo-list-item.builer";
+import { UserBuilder } from "./user.builder";
+import { SorciEvent } from "../sorci-event";
 
 // Concurency issue, not new event added between decision and persistance
 
@@ -15,6 +26,7 @@ let sorci: Sorci;
 
 let aTodoList: () => TodoListBuilder;
 let aTodoListItem: () => TodoListItemBuilder;
+let aUser: () => UserBuilder;
 
 beforeAll(async () => {
   const pgInstanceNotReady = new PostgreSqlContainer("postgres:15.3-alpine");
@@ -37,7 +49,8 @@ beforeAll(async () => {
     streamName: "useless_stream_name"
   });
 
-  aTodoList = () => new TodoListBuilder({ sorci });
+  aUser = () => new UserBuilder({ sorci });
+  aTodoList = () => new TodoListBuilder({ sorci, aUser });
   aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
 }, 30000);
 
@@ -55,13 +68,21 @@ afterAll(async () => {
   await pgInstance.stop();
 });
 
-describe("Test on todo list", async () => {
+describe("Given aTodoList Builder", async () => {
   test("Create a simple todo list", async () => {
     const { events } = await aTodoList().build();
     const todoListId = events[0].data.todoListId;
+    const createdByUserId = events[0].data.createdByUserId;
+
+    const userEvents = await sorci.getEventsByQuery({
+      $where: {
+        identifiers: { userId: createdByUserId }
+      }
+    });
 
     expect(todoListId).toBeUlid();
     expect(events).toHaveLength(1);
+    expect(userEvents.length).toBeGreaterThanOrEqual(1);
   });
 
   test("Create a with a custom name and id", async () => {
@@ -107,6 +128,18 @@ describe("Test on todo list", async () => {
 
     expect(events).toHaveLength(4);
     expect(todoListTitle).toEqual("Nightroutine");
+  });
+
+  test("Add a few todo items to a todo list", async () => {
+    const { events } = await aTodoList()
+      .withId("01K7WH8S6FMW2911Q1Y6EV7N05")
+      .withInitialTitle("Morning routine")
+      .with(aTodoListItem().withInitialTitle("Buy milk"))
+      .with(aTodoListItem().withInitialTitle("Buy bread"))
+      .with(aTodoListItem().withInitialTitle("Buy eggs"))
+      .build();
+
+    expect(events).toHaveLength(4);
   });
 
   test("Add a few todo items to a todo list", async () => {

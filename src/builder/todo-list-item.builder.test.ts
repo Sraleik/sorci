@@ -1,4 +1,13 @@
 import {
+  test,
+  expect,
+  describe,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  afterAll
+} from "vitest";
+import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer
 } from "testcontainers";
@@ -6,12 +15,14 @@ import { Sorci } from "../sorci.interface";
 import { SorciPostgres } from "../sorci.postgres";
 import { TodoListBuilder } from "./todo-list.builder";
 import { TodoListItemBuilder } from "./todo-list-item.builer";
+import { UserBuilder } from "./user.builder";
 
 // Concurency issue, not new event added between decision and persistance
 
 let pgInstance: StartedPostgreSqlContainer;
 let sorci: Sorci;
 
+let aUser: () => UserBuilder;
 let aTodoList: () => TodoListBuilder;
 let aTodoListItem: () => TodoListItemBuilder;
 
@@ -36,7 +47,8 @@ beforeAll(async () => {
     streamName: "useless_stream_name"
   });
 
-  aTodoList = () => new TodoListBuilder({ sorci });
+  aUser = () => new UserBuilder({ sorci });
+  aTodoList = () => new TodoListBuilder({ sorci, aUser });
   aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
 }, 30000);
 

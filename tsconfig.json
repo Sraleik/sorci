@@ -22,10 +22,5 @@
     "noImplicitAny": false
   },
   "include": ["src", "vitest.setup.ts"],
-  "exclude": [
-    "src/**/*.test.ts",
-    "src/**/*.bench.ts",
-    "src/sandbox.ts",
-    "src/builder"
-  ]
+  "exclude": ["src/**/*.bench.ts"]
 }

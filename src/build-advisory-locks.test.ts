@@ -349,6 +349,22 @@ describe("buildAdvisoryLocks", () => {
     expect(locks[0].key).toBe("todoListId:list-123:TodoItemAdded");
   });
 
+  //TODO: Fix Maybe, be not, sur this is a good lock
+  it.skip("should create lock for top level identifiers only", () => {
+    const query: Query = {
+      $where: {
+        identifiers: {
+          todoListId: "list-123"
+        }
+      }
+    };
+
+    const locks = buildAdvisoryLocks({ query });
+
+    expect(locks).toHaveLength(1);
+    expect(locks[0].key).toBe("todoListId:list-123");
+  });
+
   //Maybe not allow identifier with top lever $or / $and ?
   it("should handle $or queries with multiple event types and top-level identifiers", () => {
     const query: Query = {

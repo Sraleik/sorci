@@ -5,6 +5,7 @@ import { createTodoListFullLife } from "./test-helpers";
 import { TodoListBuilder } from "./builder/todo-list.builder";
 import { TodoListItemBuilder } from "./builder/todo-list-item.builer";
 import { SorciEvent } from "./sorci-event";
+import { UserBuilder } from "./builder/user.builder";
 
 const bench = new Bench({ time: 5000 });
 
@@ -31,7 +32,8 @@ const sorci = new SorciPostgres({
   streamName: "useless_stream_name"
 });
 
-const aTodoList = () => new TodoListBuilder({ sorci });
+const aUser = () => new UserBuilder({ sorci });
+const aTodoList = () => new TodoListBuilder({ sorci, aUser });
 const aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
 
 const FULL_LIST_MULTIPLICATOR = 50;
