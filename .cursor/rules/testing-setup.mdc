@@ -45,6 +45,92 @@ Defined in `vitest.d.ts`, set in `test-setup.ts`:
 
 - `toBeUlid()`: Validates that a value is a valid ULID format
 
+## Test Structure Pattern
+
+### Given-When-Then Pattern
+
+All tests in this project follow the **Given-When-Then** pattern for consistency and readability:
+
+```typescript
+describe("Given a TodoList Builder", async () => {
+  describe("When building the most basic todo list", async () => {
+    let events: PersistedEvent[];
+    let createdEvent: PersistedEvent;
+
+    beforeAll(async () => {
+      const { events: todoListEvents } = await aTodoList().build();
+      events = todoListEvents;
+      createdEvent = events[0];
+    });
+
+    test("Then the todo list is created with an ulid id", async () => {
+      const todoListId = createdEvent.identifier.todoListId;
+      expect(todoListId).toBeUlid();
+    });
+
+    test("Then the todo list has a userId identifier", async () => {
+      const userId = createdEvent.identifier.userId;
+      expect(userId).toBeUlid();
+    });
+  });
+
+  describe("When renaming a todo list", async () => {
+    let events: PersistedEvent[];
+    let todoListTitle: string | undefined;
+
+    beforeAll(async () => {
+      const result = await aTodoList()
+        .withInitialTitle("Morning routine")
+        .renamed("Bedtime routine")
+        .build();
+      events = result.events;
+      todoListTitle = [...events].reverse().find((event) => event.data.title)
+        ?.data.title;
+    });
+
+    test("Then two events are created", async () => {
+      expect(events).toHaveLength(2);
+    });
+
+    test("Then the todo list has the new title", async () => {
+      expect(todoListTitle).toEqual("Bedtime routine");
+    });
+  });
+});
+```
+
+### Pattern Structure
+
+1. **Given** (outer `describe`): Sets the context/subject under test
+   - Example: "Given a TodoList Builder"
+   - Establishes what entity or system we're testing
+
+2. **When** (inner `describe`): Describes the action or scenario
+   - Example: "When building the most basic todo list"
+   - Uses `beforeAll` to set up test data once per scenario
+   - Declares variables to hold test data at the describe level
+
+3. **Then** (individual `test` blocks): Asserts expected outcomes
+   - Example: "Then the todo list is created with an ulid id"
+   - Each assertion gets its own test for better failure isolation
+   - Tests should be independent and self-explanatory
+
+### Benefits of This Pattern
+
+- **Readability**: Test intent is immediately clear
+- **Isolation**: Each assertion is a separate test case
+- **Performance**: `beforeAll` runs expensive setup once per scenario
+- **Debugging**: Failures pinpoint exact expectations that failed
+- **Consistency**: All tests follow the same structure
+
+### Important Guidelines
+
+- Use `beforeAll` for scenario setup to avoid repeating expensive operations
+- Declare all test data variables at the `describe` level for sharing across tests
+- When using `.reverse()` on arrays, use spread operator `[...events].reverse()` to avoid mutating the original array
+- Each `Then` test should verify one specific aspect of the outcome
+- Keep `Given` and `When` descriptions concise and action-oriented
+
 ## Key Concepts
 
 ### Concurrency Safety

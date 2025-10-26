@@ -1,86 +1,149 @@
 import { createId } from "../common/utils";
+import { PersistedEvent } from "../sorci.interface";
 
 describe("Given aTodoList Builder", async () => {
-  test("Create a simple todo list", async () => {
-    const { events } = await aTodoList().build();
-    const todoListId = events[0].data.todoListId;
-    const createdByUserId = events[0].data.createdByUserId;
+  describe("When building the most basic todo list", async () => {
+    let events: PersistedEvent[];
+    let userEvents: PersistedEvent[];
+    let createdEvent: PersistedEvent;
+    beforeAll(async () => {
+      const { events: todoListEvents } = await aTodoList().build();
+      events = todoListEvents;
+      createdEvent = events[0];
+      const createdByUserId = createdEvent.data.createdByUserId;
 
-    const userEvents = await sorciTestClient.getEventsByQuery({
-      $where: {
-        identifiers: { userId: createdByUserId }
-      }
+      userEvents = await sorciTestClient.getEventsByQuery({
+        $where: {
+          identifiers: { userId: createdByUserId }
+        }
+      });
     });
 
-    expect(todoListId).toBeUlid();
-    expect(events).toHaveLength(1);
-    expect(userEvents.length).toBeGreaterThanOrEqual(1);
+    test("Then the todo list is created with an ulid id", async () => {
+      const todoListId = createdEvent.identifier.todoListId;
+
+      expect(todoListId).toBeUlid();
+    });
+
+    test("Then the todo list has a userId identifier", async () => {
+      const userId = createdEvent.identifier.userId;
+
+      expect(userId).toBeUlid();
+    });
+
+    test("Then the todo list has a createdByUserId", async () => {
+      const createdByUserId = createdEvent.data.createdByUserId;
+
+      expect(createdByUserId).toBeUlid();
+    });
+
+    test("Then the todo list has the same userId and createdByUserId", async () => {
+      const createdByUserId = createdEvent.data.createdByUserId;
+      const userId = createdEvent.identifier.userId;
+
+      expect(createdByUserId).toEqual(userId);
+    });
+
+    test("Then the todo list does not have a createdByUserId identifier", async () => {
+      const createdByUserId = createdEvent.identifier.createdByUserId;
+
+      expect(createdByUserId).toBeUndefined();
+    });
+
+    test("Then the creator has been created too", async () => {
+      expect(userEvents.length).toBeGreaterThanOrEqual(1);
+    });
   });
 
-  test("Create a with a custom name and id", async () => {
+  describe("When creating a todo list with a custom name and id", async () => {
+    let events: PersistedEvent[];
+    let createdEvent: PersistedEvent;
     const todoListId = createId();
     const todoListName = "Morning routine";
-    const { events } = await aTodoList()
-      .withInitialTitle(todoListName)
-      .withId(todoListId)
-      .build();
 
-    const createdEvent = events[0];
-    const todoListPersistedTitle = createdEvent.data.title;
-    const todoListPersistedId = createdEvent.identifier.todoListId;
+    beforeAll(async () => {
+      const result = await aTodoList()
+        .withInitialTitle(todoListName)
+        .withId(todoListId)
+        .build();
+      events = result.events;
+      createdEvent = events[0];
+    });
 
-    expect(todoListPersistedId).toEqual(todoListId);
-    expect(todoListPersistedTitle).toEqual(todoListName);
-    expect(events).toHaveLength(1);
+    test("Then the todo list has the custom id", async () => {
+      const todoListPersistedId = createdEvent.identifier.todoListId;
+      expect(todoListPersistedId).toEqual(todoListId);
+    });
+
+    test("Then the todo list has the custom title", async () => {
+      const todoListPersistedTitle = createdEvent.data.title;
+      expect(todoListPersistedTitle).toEqual(todoListName);
+    });
   });
 
-  test("Rename a todo list", async () => {
-    const { events } = await aTodoList()
-      .withInitialTitle("Morning routine")
-      .renamed("Bedtimeroutine")
-      .build();
+  describe("When renaming a todo list", async () => {
+    let events: PersistedEvent[];
+    let todoListTitle: string | undefined;
 
-    const todoListTitle = events.reverse().find((event) => event.data.title)
-      ?.data.title;
+    beforeAll(async () => {
+      const result = await aTodoList()
+        .withInitialTitle("Morning routine")
+        .renamed("Bedtimeroutine")
+        .build();
+      events = result.events;
+      todoListTitle = [...events].reverse().find((event) => event.data.title)
+        ?.data.title;
+    });
 
-    expect(events).toHaveLength(2);
-    expect(todoListTitle).toEqual("Bedtimeroutine");
+    test("Then two events are created", async () => {
+      expect(events).toHaveLength(2);
+    });
+
+    test("Then the todo list has the new title", async () => {
+      expect(todoListTitle).toEqual("Bedtimeroutine");
+    });
   });
 
-  test("Delete a todo list", async () => {
-    const { events } = await aTodoList()
-      .withInitialTitle("Morning routine")
-      .renamed("Bedtimeroutine")
-      .renamed("Nightroutine")
-      .deleted()
-      .build();
+  describe("When deleting a todo list after multiple renames", async () => {
+    let events: PersistedEvent[];
+    let todoListTitle: string | undefined;
 
-    const todoListTitle = events.reverse().find((event) => event.data.title)
-      ?.data.title;
+    beforeAll(async () => {
+      const result = await aTodoList()
+        .withInitialTitle("Morning routine")
+        .renamed("Bedtimeroutine")
+        .renamed("Nightroutine")
+        .deleted()
+        .build();
+      events = result.events;
+      todoListTitle = events.reverse().find((event) => event.data.title)
+        ?.data.title;
+    });
 
-    expect(events).toHaveLength(4);
-    expect(todoListTitle).toEqual("Nightroutine");
+    test("Then four events are created", async () => {
+      expect(events).toHaveLength(4);
+    });
+
+    test("Then the todo list has the last renamed title", async () => {
+      expect(todoListTitle).toEqual("Nightroutine");
+    });
   });
 
-  test("Add a few todo items to a todo list", async () => {
-    const { events } = await aTodoList()
-      .withInitialTitle("Morning routine")
-      .with(aTodoListItem().withInitialTitle("Buy milk"))
-      .with(aTodoListItem().withInitialTitle("Buy bread"))
-      .with(aTodoListItem().withInitialTitle("Buy eggs"))
-      .build();
+  describe("When adding multiple todo items to a todo list", async () => {
+    let events: PersistedEvent[];
 
-    expect(events).toHaveLength(4);
-  });
+    beforeAll(async () => {
+      const result = await aTodoList()
+        .withInitialTitle("Morning routine")
+        .with(aTodoListItem().withInitialTitle("Buy milk"))
+        .with(aTodoListItem().withInitialTitle("Buy bread"))
+        .with(aTodoListItem().withInitialTitle("Buy eggs"))
+        .build();
+      events = result.events;
+    });
 
-  test("Add a few todo items to a todo list", async () => {
-    const { events } = await aTodoList()
-      .withInitialTitle("Morning routine")
-      .with(aTodoListItem().withInitialTitle("Buy milk"))
-      .with(aTodoListItem().withInitialTitle("Buy bread"))
-      .with(aTodoListItem().withInitialTitle("Buy eggs"))
-      .build();
-
-    expect(events).toHaveLength(4);
+    test("Then four events are created", async () => {
+      expect(events).toHaveLength(4);
+    });
   });
 });

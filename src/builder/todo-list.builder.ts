@@ -28,6 +28,10 @@ export class TodoListBuilder {
           todoListId: this.aggregateId,
           createdByUserId: userBuilder.aggregateId
         },
+        identifier: {
+          todoListId: this.aggregateId,
+          userId: userBuilder.aggregateId
+        },
         type: "todo-list-created"
       })
     );
