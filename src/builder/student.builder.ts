@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { createId } from "../common/utils";
 import { SorciEvent } from "../sorci-event";
-import { Sorci, PersistedEvent } from "../sorci.interface";
+import { Sorci } from "../sorci.interface";
 import { CourseBuilder } from "./course.builder";
 import { UserBuilder } from "./user.builder";
 import { BuilderOrId } from "../type";
@@ -148,10 +148,7 @@ export class StudentBuilder {
     return this.defaultActorBuilderOrId.id;
   }
 
-  async build(): Promise<{
-    studentBuilder: StudentBuilder;
-    events: PersistedEvent[];
-  }> {
+  async build() {
     await this.buildDefaultActorAndGetId();
     await this.buildCoursesAndGetIds();
 

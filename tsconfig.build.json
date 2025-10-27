@@ -5,6 +5,8 @@
     "src/**/*.test.ts",
     "src/**/*.bench.ts",
     "test-*.ts",
-    "vitest.d.ts"
+    "vitest.d.ts",
+    "**/sandbox**",
+    "**/test-**"
   ]
 }

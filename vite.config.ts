@@ -26,5 +26,9 @@ export default defineConfig({
       }
     }
   },
-  plugins: [dts({ exclude: ["src/builder/**"] })]
+  plugins: [
+    dts({
+      tsconfigPath: "./tsconfig.build.json"
+    })
+  ]
 });

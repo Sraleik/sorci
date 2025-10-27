@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { createId } from "../common/utils";
 import { SorciEvent } from "../sorci-event";
-import { Sorci, PersistedEvent } from "../sorci.interface";
+import { Sorci } from "../sorci.interface";
 import type { TodoListItemBuilder } from "./todo-list-item.builer";
 import type { UserBuilder } from "./user.builder";
 import { BuilderOrId } from "../type";
@@ -165,10 +165,7 @@ export class TodoListBuilder {
     return this.userBuilderOrUserId.id;
   }
 
-  async build(): Promise<{
-    todoListBuilder: TodoListBuilder;
-    events: PersistedEvent[];
-  }> {
+  async build() {
     const userId = await this.buildUserAndGetId();
     const userEvents = await this.sorci.getEventsByQuery({
       $where: { identifiers: { userId } }
