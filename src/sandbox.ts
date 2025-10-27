@@ -154,25 +154,30 @@ const mockEvents = [
   }
 ];
 
-// Mock getAggregate function
-async function getAggregate<TEventMap, TQuery extends Query>(
-  _query: TQuery,
-  reducer: (
-    state: UnionToIntersection<UnionData<TEventMap, ExtractTypes<TQuery>>>,
-    event: any
-  ) => UnionToIntersection<UnionData<TEventMap, ExtractTypes<TQuery>>>
-): Promise<UnionToIntersection<UnionData<TEventMap, ExtractTypes<TQuery>>>> {
-  // Filter events based on query (simplified for POC)
-  const events = mockEvents;
+// Factory function to create a typed getAggregate function
+function getAggregateByQueryFactory<TEventMap>() {
+  return async function getAggregate<TQuery extends Query>(
+    _query: TQuery,
+    reducer: (
+      state: UnionToIntersection<UnionData<TEventMap, ExtractTypes<TQuery>>>,
+      event: any
+    ) => UnionToIntersection<UnionData<TEventMap, ExtractTypes<TQuery>>>
+  ): Promise<UnionToIntersection<UnionData<TEventMap, ExtractTypes<TQuery>>>> {
+    // Filter events based on query (simplified for POC)
+    const events = mockEvents;
 
-  // Apply reducer to build aggregate
-  const initialState = {} as UnionToIntersection<
-    UnionData<TEventMap, ExtractTypes<TQuery>>
-  >;
-  return events.reduce((state, event) => {
-    return reducer(state, event);
-  }, initialState);
+    // Apply reducer to build aggregate
+    const initialState = {} as UnionToIntersection<
+      UnionData<TEventMap, ExtractTypes<TQuery>>
+    >;
+    return events.reduce((state, event) => {
+      return reducer(state, event);
+    }, initialState);
+  };
 }
+
+// Create a typed instance for TodoListEventMap
+const getTodoListByQuery = getAggregateByQueryFactory<TodoListEventMap>();
 
 // ============= Usage Example =============
 
@@ -182,25 +187,26 @@ async function exampleAutoInference() {
   const query = {
     $where: {
       type: {
-        $in: ["todo-list-created", "todo-list-renamed"] as const
+        $in: [
+          "todo-list-created",
+          "todo-list-renamed",
+          "todo-list-deleted"
+        ] as const
       }
     }
   };
 
-  // Call getAggregate with TodoListEventMap
-  const res = await getAggregate<TodoListEventMap, typeof query>(
-    query,
-    (state, event) => {
-      // Simple reducer that merges event data
-      if (event.type === "todo-list-created") {
-        return { ...state, ...event.data };
-      }
-      if (event.type === "todo-list-renamed") {
-        return { ...state, ...event.data };
-      }
-      return state;
+  // Call getAggregate - no type parameters needed!
+  const res = await getTodoListByQuery(query, (state, event) => {
+    // Simple reducer that merges event data
+    if (event.type === "todo-list-created") {
+      return { ...state, ...event.data };
     }
-  );
+    if (event.type === "todo-list-renamed") {
+      return { ...state, ...event.data };
+    }
+    return state;
+  });
 
   // res is automatically typed as:
   // { todoListId: string; title: string; renamedCount: number }
