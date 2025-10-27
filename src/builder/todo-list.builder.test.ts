@@ -10,11 +10,11 @@ describe("Given aTodoList Builder", async () => {
       const { events: todoListEvents } = await aTodoList().build();
       events = todoListEvents;
       createdEvent = events[0];
-      const createdByUserId = createdEvent.data.createdByUserId;
+      const actorId = createdEvent.data.actorId;
 
       userEvents = await sorciTestClient.getEventsByQuery({
         $where: {
-          identifiers: { userId: createdByUserId }
+          identifiers: { userId: actorId }
         }
       });
     });
@@ -25,29 +25,30 @@ describe("Given aTodoList Builder", async () => {
       expect(todoListId).toBeUlid();
     });
 
-    test("Then the todo list has a userId identifier", async () => {
-      const userId = createdEvent.identifier.userId;
+    test("Then the todo list has an actorId identifier", async () => {
+      const actorId = createdEvent.identifier.actorId;
 
-      expect(userId).toBeUlid();
+      expect(actorId).toBeUlid();
     });
 
-    test("Then the todo list has a createdByUserId", async () => {
-      const createdByUserId = createdEvent.data.createdBy.userId;
+    test("Then the todo list has an actorId", async () => {
+      const actorId = createdEvent.data.actorId;
 
-      expect(createdByUserId).toBeUlid();
+      expect(actorId).toBeUlid();
     });
 
-    test("Then the todo list has the same userId and createdByUserId", async () => {
-      const createdByUserId = createdEvent.data.createdBy.userId;
-      const userId = createdEvent.identifier.userId;
+    test("Then the todo list has the same actorId in data and identifier", async () => {
+      const dataActorId = createdEvent.data.actorId;
+      const identifierActorId = createdEvent.identifier.actorId;
 
-      expect(createdByUserId).toEqual(userId);
+      expect(dataActorId).toEqual(identifierActorId);
     });
 
-    test("Then the todo list does not have a createdByUserId identifier", async () => {
-      const createdByUserId = createdEvent.identifier.createdByUserId;
+    test("Then the actorId is in the identifier", async () => {
+      const actorId = createdEvent.identifier.actorId;
 
-      expect(createdByUserId).toBeUndefined();
+      expect(actorId).toBeDefined();
+      expect(actorId).toBeUlid();
     });
 
     test("Then the creator has been created too", async () => {
@@ -88,7 +89,7 @@ describe("Given aTodoList Builder", async () => {
     beforeAll(async () => {
       const result = await aTodoList()
         .withInitialTitle("Morning routine")
-        .renamed("Bedtimeroutine")
+        .renamed({ name: "Bedtimeroutine" })
         .build();
       events = result.events;
       todoListTitle = [...events].reverse().find((event) => event.data.title)
@@ -111,8 +112,8 @@ describe("Given aTodoList Builder", async () => {
     beforeAll(async () => {
       const result = await aTodoList()
         .withInitialTitle("Morning routine")
-        .renamed("Bedtimeroutine")
-        .renamed("Nightroutine")
+        .renamed({ name: "Bedtimeroutine" })
+        .renamed({ name: "Nightroutine" })
         .deleted()
         .build();
       events = result.events;

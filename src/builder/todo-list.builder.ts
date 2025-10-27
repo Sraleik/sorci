@@ -29,13 +29,11 @@ export class TodoListBuilder {
       data: {
         title: faker.lorem.sentence(),
         todoListId: this.aggregateId,
-        createdBy: {
-          userId: userBuilder.aggregateId
-        }
+        actorId: userBuilder.aggregateId
       },
       identifier: {
         todoListId: this.aggregateId,
-        userId: userBuilder.aggregateId
+        actorId: userBuilder.aggregateId
       },
       type: "todo-list-created"
     });
@@ -54,6 +52,14 @@ export class TodoListBuilder {
     return [...this._events];
   }
 
+  private getActorId(providedActorId?: string): string {
+    if (providedActorId) {
+      return providedActorId;
+    }
+    return this.userBuilderOrUserId.builder?.aggregateId || 
+           this.userBuilderOrUserId.id!;
+  }
+
   withId(id: string) {
     this._aggregateId = id;
     this._events.forEach((event) => {
@@ -70,34 +76,55 @@ export class TodoListBuilder {
     return this;
   }
 
-  renamed(name?: string) {
-    const title = name || faker.lorem.sentence();
+  renamed(payload?: { name?: string; actorId?: string }) {
+    const title = payload?.name || faker.lorem.sentence();
+    const actorId = this.getActorId(payload?.actorId);
+    
     this._events.push({
       type: "todo-list-renamed",
       data: {
         title,
-        todoListId: this.aggregateId
+        todoListId: this.aggregateId,
+        actorId
+      },
+      identifier: {
+        todoListId: this.aggregateId,
+        actorId
       }
     });
     return this;
   }
 
-  propertyChangedTo(builder: UserBuilder) {
+  propertyChangedTo(builder: UserBuilder, payload?: { actorId?: string }) {
+    const actorId = this.getActorId(payload?.actorId);
+    
     this._events.push({
       type: "todo-list-property-changed",
       data: {
         todoListId: this.aggregateId,
-        userId: builder.aggregateId
+        userId: builder.aggregateId,
+        actorId
+      },
+      identifier: {
+        todoListId: this.aggregateId,
+        actorId
       }
     });
     return this;
   }
 
-  deleted() {
+  deleted(payload?: { actorId?: string }) {
+    const actorId = this.getActorId(payload?.actorId);
+    
     this._events.push({
       type: "todo-list-deleted",
       data: {
-        todoListId: this.aggregateId
+        todoListId: this.aggregateId,
+        actorId
+      },
+      identifier: {
+        todoListId: this.aggregateId,
+        actorId
       }
     });
     return this;
@@ -111,9 +138,9 @@ export class TodoListBuilder {
 
   from(builder: UserBuilder) {
     this.userBuilderOrUserId = { builder };
-    this._events[0].data.userId = builder.aggregateId;
+    this._events[0].data.actorId = builder.aggregateId;
     if (this._events[0].identifier) {
-      this._events[0].identifier.userId = builder.aggregateId;
+      this._events[0].identifier.actorId = builder.aggregateId;
     }
     return this;
   }
@@ -146,7 +173,7 @@ export class TodoListBuilder {
       .find((event) => event.type === "user-company-assigned")?.data.companyId;
 
     if (companyId) {
-      this._events[0].data.createdBy.companyId = companyId;
+      this._events[0].data.companyId = companyId;
       this._events[0].identifier!.companyId = companyId;
     }
 

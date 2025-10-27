@@ -38,7 +38,7 @@ describe("Test on company", async () => {
   test("Rename a company", async () => {
     const { events } = await aCompany()
       .withInitialName("ACME Corporation")
-      .renamed("ACME International")
+      .renamed({ name: "ACME International" })
       .build();
 
     const companyName = events.reverse().find((event) => event.data.name)
@@ -51,7 +51,7 @@ describe("Test on company", async () => {
   test("Change company email", async () => {
     const { events } = await aCompany()
       .withInitialEmail("old@acme.com")
-      .emailChanged("new@acme.com")
+      .emailChanged({ email: "new@acme.com" })
       .build();
 
     const companyEmail = events.reverse().find((event) => event.data.email)
@@ -64,7 +64,7 @@ describe("Test on company", async () => {
   test("Change company address", async () => {
     const { events } = await aCompany()
       .withInitialAddress("123 Old Street")
-      .addressChanged("456 New Avenue")
+      .addressChanged({ address: "456 New Avenue" })
       .build();
 
     const companyAddress = events.reverse().find((event) => event.data.address)
@@ -78,8 +78,8 @@ describe("Test on company", async () => {
     const { events } = await aCompany()
       .withInitialName("ACME Corporation")
       .withInitialEmail("contact@acme.com")
-      .renamed("ACME International")
-      .emailChanged("info@acme-intl.com")
+      .renamed({ name: "ACME International" })
+      .emailChanged({ email: "info@acme-intl.com" })
       .deleted()
       .build();
 
@@ -100,12 +100,12 @@ describe("Test on company", async () => {
       .withInitialName("Initial Corp")
       .withInitialEmail("initial@corp.com")
       .withInitialAddress("100 Initial St")
-      .renamed("Second Corp")
-      .emailChanged("second@corp.com")
-      .addressChanged("200 Second Ave")
-      .renamed("Third Corp")
-      .emailChanged("third@corp.com")
-      .addressChanged("300 Third Blvd")
+      .renamed({ name: "Second Corp" })
+      .emailChanged({ email: "second@corp.com" })
+      .addressChanged({ address: "200 Second Ave" })
+      .renamed({ name: "Third Corp" })
+      .emailChanged({ email: "third@corp.com" })
+      .addressChanged({ address: "300 Third Blvd" })
       .build();
 
     const reversedEvents = [...events].reverse();

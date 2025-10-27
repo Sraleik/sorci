@@ -78,36 +78,69 @@ export class UserBuilder {
     return this;
   }
 
-  emailChanged(email?: string) {
-    const newEmail = email || faker.internet.email();
+  emailChanged(payload?: { email?: string; actorId?: string }) {
+    const newEmail = payload?.email || faker.internet.email();
+    const eventData: Record<string, any> = {
+      email: newEmail,
+      userId: this.aggregateId
+    };
+    const eventIdentifier: Record<string, any> = {
+      userId: this.aggregateId
+    };
+
+    if (payload?.actorId) {
+      eventData.actorId = payload.actorId;
+      eventIdentifier.actorId = payload.actorId;
+    }
+
     this._events.push({
       type: "user-email-changed",
-      data: {
-        email: newEmail,
-        userId: this.aggregateId
-      }
+      data: eventData,
+      identifier: eventIdentifier
     });
     return this;
   }
 
-  renamed(name?: string) {
-    const newName = name || faker.person.fullName();
+  renamed(payload?: { name?: string; actorId?: string }) {
+    const newName = payload?.name || faker.person.fullName();
+    const eventData: Record<string, any> = {
+      name: newName,
+      userId: this.aggregateId
+    };
+    const eventIdentifier: Record<string, any> = {
+      userId: this.aggregateId
+    };
+
+    if (payload?.actorId) {
+      eventData.actorId = payload.actorId;
+      eventIdentifier.actorId = payload.actorId;
+    }
+
     this._events.push({
       type: "user-renamed",
-      data: {
-        name: newName,
-        userId: this.aggregateId
-      }
+      data: eventData,
+      identifier: eventIdentifier
     });
     return this;
   }
 
-  deleted() {
+  deleted(payload?: { actorId?: string }) {
+    const eventData: Record<string, any> = {
+      userId: this.aggregateId
+    };
+    const eventIdentifier: Record<string, any> = {
+      userId: this.aggregateId
+    };
+
+    if (payload?.actorId) {
+      eventData.actorId = payload.actorId;
+      eventIdentifier.actorId = payload.actorId;
+    }
+
     this._events.push({
       type: "user-deleted",
-      data: {
-        userId: this.aggregateId
-      }
+      data: eventData,
+      identifier: eventIdentifier
     });
     return this;
   }

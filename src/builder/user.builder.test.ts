@@ -65,7 +65,7 @@ describe("Given a User Builder", async () => {
     beforeAll(async () => {
       const result = await aUser()
         .withInitialEmail("john.doe@example.com")
-        .emailChanged("john.newemail@example.com")
+        .emailChanged({ email: "john.newemail@example.com" })
         .build();
       events = result.events;
       userEmail = [...events].reverse().find((event) => event.data.email)
@@ -88,7 +88,7 @@ describe("Given a User Builder", async () => {
     beforeAll(async () => {
       const result = await aUser()
         .withInitialName("John Doe")
-        .renamed("Jane Doe")
+        .renamed({ name: "Jane Doe" })
         .build();
       events = result.events;
       userName = [...events].reverse().find((event) => event.data.name)
@@ -113,8 +113,8 @@ describe("Given a User Builder", async () => {
       const result = await aUser()
         .withInitialEmail("john.doe@example.com")
         .withInitialName("John Doe")
-        .renamed("Jane Doe")
-        .emailChanged("jane.doe@example.com")
+        .renamed({ name: "Jane Doe" })
+        .emailChanged({ email: "jane.doe@example.com" })
         .deleted()
         .build();
       events = result.events;
@@ -145,10 +145,10 @@ describe("Given a User Builder", async () => {
       const result = await aUser()
         .withInitialEmail("initial@example.com")
         .withInitialName("Initial Name")
-        .emailChanged("second@example.com")
-        .renamed("Second Name")
-        .emailChanged("third@example.com")
-        .renamed("Third Name")
+        .emailChanged({ email: "second@example.com" })
+        .renamed({ name: "Second Name" })
+        .emailChanged({ email: "third@example.com" })
+        .renamed({ name: "Third Name" })
         .build();
       events = result.events;
       const reversedEvents = [...events].reverse();

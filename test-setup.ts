@@ -5,6 +5,8 @@ import { TodoListBuilder } from "./src/builder/todo-list.builder";
 import { TodoListItemBuilder } from "./src/builder/todo-list-item.builer";
 import { UserBuilder } from "./src/builder/user.builder";
 import { CompanyBuilder } from "./src/builder/company.builder";
+import { CourseBuilder } from "./src/builder/course.builder";
+import { StudentBuilder } from "./src/builder/student.builder";
 import * as sorciPostgres from "./src/sorci.postgres";
 import "./test-matchers";
 
@@ -33,16 +35,20 @@ beforeAll(async () => {
   await sorci.setupTestStream();
 
   const aUser = () => new UserBuilder({ sorci });
-  const aCompany = () => new CompanyBuilder({ sorci });
+  const aCompany = () => new CompanyBuilder({ sorci, aUser });
   const aTodoList = () => new TodoListBuilder({ sorci, aUser });
   const aTodoListItem = () =>
     new TodoListItemBuilder({ sorci, aTodoList, aUser });
+  const aCourse = () => new CourseBuilder({ sorci, aUser });
+  const aStudent = () => new StudentBuilder({ sorci, aUser });
 
   globalThis.sorciTestClient = sorci;
   globalThis.aUser = aUser;
   globalThis.aTodoList = aTodoList;
   globalThis.aTodoListItem = aTodoListItem;
   globalThis.aCompany = aCompany;
+  globalThis.aCourse = aCourse;
+  globalThis.aStudent = aStudent;
   globalThis.buildAdvisoryLocksSpy = buildAdvisoryLocksSpy;
 }, 60_000);
 

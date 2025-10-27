@@ -2,6 +2,8 @@ import type { UserBuilder } from "./src/builder/user.builder";
 import type { TodoListBuilder } from "./src/builder/todo-list.builder";
 import type { TodoListItemBuilder } from "./src/builder/todo-list-item.builer";
 import type { CompanyBuilder } from "./src/builder/company.builder";
+import type { CourseBuilder } from "./src/builder/course.builder";
+import type { StudentBuilder } from "./src/builder/student.builder";
 import type { Sorci } from "./src/sorci.interface";
 import type { SpyInstance } from "vitest";
 
@@ -26,6 +28,10 @@ declare global {
   var aTodoListItem: () => TodoListItemBuilder;
   // eslint-disable-next-line no-var
   var aCompany: () => CompanyBuilder;
+  // eslint-disable-next-line no-var
+  var aCourse: () => CourseBuilder;
+  // eslint-disable-next-line no-var
+  var aStudent: () => StudentBuilder;
   // eslint-disable-next-line no-var
   var buildAdvisoryLocksSpy: SpyInstance;
 }

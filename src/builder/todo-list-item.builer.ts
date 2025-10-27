@@ -32,10 +32,10 @@ export class TodoListItemBuilder {
         title: "Buy milk",
         todoListId: this.todoListId,
         todoListItemId: initialAggregateId,
-        createdByUserId: this.userBuilderOrUserId.builder.aggregateId
+        actorId: this.userBuilderOrUserId.builder.aggregateId
       },
       identifier: {
-        userId: this.userBuilderOrUserId.builder.aggregateId,
+        actorId: this.userBuilderOrUserId.builder.aggregateId,
         todoListId: this.todoListId,
         todoListItemId: initialAggregateId
       },

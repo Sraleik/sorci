@@ -17,8 +17,8 @@ describe("Given a TodoListItem Builder", async () => {
     });
 
     test("Then the item has been added by a user", async () => {
-      expect(todoListItemCreatedEvent.data.createdByUserId).toBeUlid();
-      expect(todoListItemCreatedEvent.identifier.userId).toBeUlid();
+      expect(todoListItemCreatedEvent.data.actorId).toBeUlid();
+      expect(todoListItemCreatedEvent.identifier.actorId).toBeUlid();
     });
   });
   describe("When creating a todo list item from a customized todo list", async () => {

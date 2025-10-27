@@ -2,6 +2,8 @@ import { faker } from "@faker-js/faker";
 import { createId } from "../common/utils";
 import { SorciEvent } from "../sorci-event";
 import { Sorci } from "../sorci.interface";
+import { UserBuilder } from "./user.builder";
+import { BuilderOrId } from "../type";
 
 export class CompanyBuilder {
   private sorci: Sorci;
@@ -11,18 +13,27 @@ export class CompanyBuilder {
     identifier?: Record<string, any>;
     type: string;
   }[] = [];
+  private actorBuilderOrId: BuilderOrId<UserBuilder>;
 
-  constructor(payload: { sorci: Sorci }) {
-    const { sorci } = payload;
+  constructor(payload: { sorci: Sorci; aUser: () => UserBuilder }) {
+    const { sorci, aUser } = payload;
     this.sorci = sorci;
     this._aggregateId = createId();
+
+    const userBuilder = aUser();
+    this.actorBuilderOrId = { builder: userBuilder };
 
     this._events.push({
       data: {
         companyId: this.aggregateId,
         name: faker.company.name(),
         email: faker.internet.email(),
-        address: faker.location.streetAddress()
+        address: faker.location.streetAddress(),
+        actorId: userBuilder.aggregateId
+      },
+      identifier: {
+        companyId: this.aggregateId,
+        actorId: userBuilder.aggregateId
       },
       type: "company-created"
     });
@@ -49,10 +60,24 @@ export class CompanyBuilder {
       .address;
   }
 
+  from(builder: UserBuilder) {
+    this.actorBuilderOrId = { builder };
+  }
+
+  private getActorId(providedActorId?: string) {
+    if (providedActorId) return providedActorId;
+    return (
+      this.actorBuilderOrId.builder?.aggregateId || this.actorBuilderOrId.id!
+    );
+  }
+
   withId(id: string) {
     this._aggregateId = id;
     this._events.forEach((event) => {
       event.data.companyId = id;
+      if (event.identifier) {
+        event.identifier.companyId = id;
+      }
     });
     return this;
   }
@@ -72,61 +97,92 @@ export class CompanyBuilder {
     return this;
   }
 
-  renamed(name?: string) {
-    const newName = name || faker.company.name();
-    this._events.push(
-      SorciEvent.create({
-        type: "company-renamed",
-        data: {
-          name: newName,
-          companyId: this.aggregateId
-        }
-      })
-    );
+  renamed(payload?: { name?: string; actorId?: string }) {
+    const newName = payload?.name || faker.company.name();
+    const actorId = this.getActorId(payload?.actorId);
+
+    this._events.push({
+      type: "company-renamed",
+      data: {
+        name: newName,
+        companyId: this.aggregateId,
+        actorId
+      },
+      identifier: {
+        companyId: this.aggregateId,
+        actorId
+      }
+    });
     return this;
   }
 
-  emailChanged(email?: string) {
-    const newEmail = email || faker.internet.email();
-    this._events.push(
-      SorciEvent.create({
-        type: "company-email-changed",
-        data: {
-          email: newEmail,
-          companyId: this.aggregateId
-        }
-      })
-    );
+  emailChanged(payload?: { email?: string; actorId?: string }) {
+    const newEmail = payload?.email || faker.internet.email();
+    const actorId = this.getActorId(payload?.actorId);
+
+    this._events.push({
+      type: "company-email-changed",
+      data: {
+        email: newEmail,
+        companyId: this.aggregateId,
+        actorId
+      },
+      identifier: {
+        companyId: this.aggregateId,
+        actorId
+      }
+    });
     return this;
   }
 
-  addressChanged(address?: string) {
-    const newAddress = address || faker.location.streetAddress();
-    this._events.push(
-      SorciEvent.create({
-        type: "company-address-changed",
-        data: {
-          address: newAddress,
-          companyId: this.aggregateId
-        }
-      })
-    );
+  addressChanged(payload?: { address?: string; actorId?: string }) {
+    const newAddress = payload?.address || faker.location.streetAddress();
+    const actorId = this.getActorId(payload?.actorId);
+
+    this._events.push({
+      type: "company-address-changed",
+      data: {
+        address: newAddress,
+        companyId: this.aggregateId,
+        actorId
+      },
+      identifier: {
+        companyId: this.aggregateId,
+        actorId
+      }
+    });
     return this;
   }
 
-  deleted() {
-    this._events.push(
-      SorciEvent.create({
-        type: "company-deleted",
-        data: {
-          companyId: this.aggregateId
-        }
-      })
-    );
+  deleted(by?: { actorId?: string }) {
+    const actorId = this.getActorId(by?.actorId);
+
+    this._events.push({
+      type: "company-deleted",
+      data: {
+        companyId: this.aggregateId,
+        actorId
+      },
+      identifier: {
+        companyId: this.aggregateId,
+        actorId
+      }
+    });
     return this;
+  }
+
+  private async buildActorAndGetId() {
+    if (this.actorBuilderOrId.builder) {
+      const { userBuilder } = await this.actorBuilderOrId.builder.build();
+      this.actorBuilderOrId = { id: userBuilder.aggregateId };
+      return userBuilder.aggregateId;
+    }
+    return this.actorBuilderOrId.id;
   }
 
   async build() {
+    await this.buildActorAndGetId();
+
     await this.sorci.insertEvents(
       this._events.map((event) => SorciEvent.create(event))
     );
