@@ -3,7 +3,7 @@ export type EventId = string;
 
 export type QueryProperty =
   | { $eq: string; $in?: never; $skipLockOn?: string[] }
-  | { $in: Array<string>; $eq?: never; $skipLockOn?: string[] }
+  | { $in: readonly string[]; $eq?: never; $skipLockOn?: string[] }
   | string;
 export type QueryOr = Array<QueryAble>;
 export type QueryAnd = Array<QueryAble>;

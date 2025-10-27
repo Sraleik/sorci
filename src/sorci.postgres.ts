@@ -424,7 +424,7 @@ export class SorciPostgres implements Sorci {
   private getInStatement(payload: {
     sql: postgres.Sql;
     key: string;
-    values: Array<string>;
+    values: readonly string[];
   }) {
     const { sql, key, values } = payload;
     return sql`${this.sql(key)} = ANY ( ${values}::text[] )`;

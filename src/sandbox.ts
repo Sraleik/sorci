@@ -1,10 +1,40 @@
 // POC: Typed getAggregate method with discriminated unions
+// This file is for R&D - no exports. Production code is in sorci.reducing.ts
 
 // ============= Type System =============
 
-//PropertiesToEventTypes
+// Map each property to the event types that contain it
+type PropertiesToEventTypes<TEventMap extends Record<string, any>> = {
+  [Property in keyof EventMapToAggregate<TEventMap>]: {
+    [EventType in keyof TEventMap]: Property extends keyof TEventMap[EventType]
+      ? EventType
+      : never;
+  }[keyof TEventMap];
+};
 
-//EventTypeToReducedProperties
+// Extract selected property keys from property selection object
+type SelectedProperties<TPropertySelection> = {
+  [K in keyof TPropertySelection]: TPropertySelection[K] extends true
+    ? K
+    : never;
+}[keyof TPropertySelection];
+
+// Extract event types from a property selection object
+type ExtractEventTypesFromProperties<
+  TEventMap extends Record<string, any>,
+  TPropertySelection extends Partial<
+    Record<keyof EventMapToAggregate<TEventMap>, boolean>
+  >
+> =
+  SelectedProperties<TPropertySelection> extends keyof PropertiesToEventTypes<TEventMap>
+    ? PropertiesToEventTypes<TEventMap>[SelectedProperties<TPropertySelection>]
+    : never;
+
+// Constrained property selection type
+type PropertySelection<TEventMap extends Record<string, any>> = Partial<
+  Record<keyof EventMapToAggregate<TEventMap>, boolean>
+>;
+
 type TodoListItemEventMap = {
   "todo-list-item-created": {
     todoListId: string;
@@ -179,6 +209,107 @@ function getAggregateByQueryFactory<TEventMap>() {
 // Create a typed instance for TodoListEventMap
 const getTodoListByQuery = getAggregateByQueryFactory<TodoListEventMap>();
 
+// Build property-to-event-type mapping from event map schema
+function buildPropertyToEventTypeMap<TEventMap extends Record<string, any>>(
+  eventMapSchema: TEventMap
+): Record<string, string[]> {
+  const propertyMap: Record<string, string[]> = {};
+
+  for (const [eventType, sampleData] of Object.entries(eventMapSchema)) {
+    for (const property of Object.keys(sampleData)) {
+      if (!propertyMap[property]) {
+        propertyMap[property] = [];
+      }
+      propertyMap[property].push(eventType);
+    }
+  }
+
+  return propertyMap;
+}
+
+// Factory function for property-based aggregate getter
+function getAggregateByPropertyFactory<TEventMap extends Record<string, any>>(
+  eventMapSchema: TEventMap
+) {
+  const getByQuery = getAggregateByQueryFactory<TEventMap>();
+  const propertyToEventTypeMap = buildPropertyToEventTypeMap(eventMapSchema);
+
+  return async function getAggregateByProperty<
+    TPropertySelection extends PropertySelection<TEventMap>
+  >(
+    properties: TPropertySelection,
+    reducer: (
+      state: UnionToIntersection<
+        UnionData<
+          TEventMap,
+          ExtractEventTypesFromProperties<TEventMap, TPropertySelection>
+        >
+      >,
+      event: any
+    ) => UnionToIntersection<
+      UnionData<
+        TEventMap,
+        ExtractEventTypesFromProperties<TEventMap, TPropertySelection>
+      >
+    >
+  ): Promise<
+    UnionToIntersection<
+      UnionData<
+        TEventMap,
+        ExtractEventTypesFromProperties<TEventMap, TPropertySelection>
+      >
+    >
+  > {
+    const selectedProperties = Object.keys(properties).filter(
+      (key) => properties[key as keyof TPropertySelection]
+    );
+
+    const eventTypes = Array.from(
+      new Set(
+        selectedProperties.flatMap((prop) => propertyToEventTypeMap[prop] || [])
+      )
+    );
+
+    const query = {
+      $where: {
+        type: { $in: eventTypes as any }
+      }
+    } as const;
+
+    return getByQuery(query, reducer);
+  };
+}
+
+// Runtime schema that mirrors TodoListEventMap structure
+// This is used to automatically build the property-to-event-type mapping
+const todoListEventMapSchema = {
+  "todo-list-created": {
+    todoListId: "",
+    title: ""
+  },
+  "todo-list-renamed": {
+    title: "",
+    renamedCount: 0
+  },
+  "todo-list-deleted": {
+    isDeleted: false
+  },
+  "todo-list-item-created": {
+    todoListItems: []
+  },
+  "todo-list-item-renamed": {
+    todoListItems: []
+  },
+  "todo-list-item-deleted": {
+    todoListItems: []
+  }
+} satisfies Record<keyof TodoListEventMap, any>;
+
+// Create a typed instance for TodoListEventMap - no manual mapping needed!
+const getTodoListByProperty = getAggregateByPropertyFactory<TodoListEventMap>(
+  todoListEventMapSchema
+);
+
 // ============= Usage Example =============
 
 // Example: Automatic type inference
@@ -220,5 +351,60 @@ async function exampleAutoInference() {
   console.log("Full result:", res);
 }
 
-// Run the example
-exampleAutoInference();
+// Example: Property-based aggregate getter
+async function examplePropertyBased() {
+  console.log("\n=== Property-Based Getter Example ===\n");
+
+  // Call with property selection - TypeScript will enforce valid properties!
+  const result = await getTodoListByProperty(
+    { todoListId: true, title: true, isDeleted: true, coco: true },
+    (state, event) => {
+      if (event.type === "todo-list-created") {
+        return { ...state, ...event.data };
+      }
+      if (event.type === "todo-list-renamed") {
+        return { ...state, ...event.data };
+      }
+      if (event.type === "todo-list-deleted") {
+        return { ...state, ...event.data };
+      }
+      return state;
+    }
+  );
+
+  // TypeScript knows the shape based on selected properties!
+  console.log("TodoList ID:", result.todoListId);
+  console.log("Title:", result.title);
+  console.log("Is Deleted:", result.isDeleted);
+  console.log("Full result:", result);
+
+  // Try with different properties
+  const result2 = await getTodoListByProperty(
+    { title: true, renamedCount: true },
+    (state, event) => {
+      return { ...state, ...event.data };
+    }
+  );
+
+  console.log("\nWith title & renamedCount:");
+  console.log("Title:", result2.title);
+  console.log("Renamed Count:", result2.renamedCount);
+
+  // TypeScript will error on invalid properties:
+  // const invalid = await getTodoListByProperty(
+  //   { invalidProperty: true },  // ❌ Type error: invalidProperty doesn't exist
+  //   (state, event) => state
+  // );
+
+  // TypeScript will error on accessing properties not selected:
+  // console.log(result2.todoListId);  // ❌ Type error: todoListId not in result2
+  // console.log(result2.isDeleted);   // ❌ Type error: isDeleted not in result2
+}
+
+// Run the examples
+async function runExamples() {
+  await exampleAutoInference();
+  await examplePropertyBased();
+}
+
+runExamples();
