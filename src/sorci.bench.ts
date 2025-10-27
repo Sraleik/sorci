@@ -34,7 +34,8 @@ const sorci = new SorciPostgres({
 
 const aUser = () => new UserBuilder({ sorci });
 const aTodoList = () => new TodoListBuilder({ sorci, aUser });
-const aTodoListItem = () => new TodoListItemBuilder({ sorci, aTodoList });
+const aTodoListItem = () =>
+  new TodoListItemBuilder({ sorci, aTodoList, aUser });
 
 const FULL_LIST_MULTIPLICATOR = 50;
 const FULL_LIST_ON_INSERT_COUNT = 1000;
@@ -62,7 +63,7 @@ let eventIdentifierList1 = fullTodoList1[fullTodoList1.length - 1].id;
 await sorci.insertEvents(fullTodoList1);
 
 const singleEventForGetById = aTodoListItem().events[0];
-await sorci.insertEvents([singleEventForGetById]);
+await sorci.insertEvents([SorciEvent.create(singleEventForGetById)]);
 
 await prepareBigStream();
 
@@ -85,7 +86,7 @@ bench
   .add(
     "Simple insert",
     async () => {
-      await sorci.insertEvents([eventToPersist]);
+      await sorci.insertEvents([SorciEvent.create(eventToPersist)]);
     },
     {
       beforeAll: async () => {
@@ -99,7 +100,9 @@ bench
   .add(
     "Append with no conflict, no query",
     async () => {
-      await sorci.appendEvent({ sourcingEvent: eventToPersist });
+      await sorci.appendEvent({
+        sourcingEvent: SorciEvent.create(eventToPersist)
+      });
     },
     {
       beforeAll: async () => {
@@ -114,7 +117,7 @@ bench
     "Append with query: types",
     async () => {
       await sorci.appendEvent({
-        sourcingEvent: eventToPersist,
+        sourcingEvent: SorciEvent.create(eventToPersist),
         query: {
           $where: {
             type: "todo-list-created"
@@ -136,7 +139,7 @@ bench
     "Append with query: identifiers",
     async () => {
       await sorci.appendEvent({
-        sourcingEvent: eventToPersist,
+        sourcingEvent: SorciEvent.create(eventToPersist),
         query: {
           $where: {
             identifiers: { todoListId: todoList1Id }
@@ -158,7 +161,7 @@ bench
     "Append complex, with query: types & identifiers",
     async () => {
       await sorci.appendEvent({
-        sourcingEvent: eventToPersist,
+        sourcingEvent: SorciEvent.create(eventToPersist),
         query: {
           $where: {
             type: { $in: ["todo-list-created", "todo-list-item-created"] },
@@ -238,7 +241,7 @@ bench
   .add(
     "Get by EventId",
     async () => {
-      await sorci.getEventById(singleEventForGetById.id);
+      await sorci.getEventById(eventIdentifierList1);
     },
     {
       beforeAll: async () => {
@@ -260,7 +263,7 @@ bench
       await Promise.all(
         events.map((event) =>
           sorci.appendEvent({
-            sourcingEvent: event
+            sourcingEvent: SorciEvent.create(event)
           })
         )
       );

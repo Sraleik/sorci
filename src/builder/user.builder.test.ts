@@ -168,7 +168,8 @@ describe("Given a User Builder", async () => {
       expect(userEmail).toEqual("third@example.com");
     });
   });
-  describe.only("When assigning a user to a company", async () => {
+
+  describe("When assigning a user to a company", async () => {
     let userEvents: PersistedEvent[];
     let companyEvents: PersistedEvent[];
     let companyId: string | undefined;
