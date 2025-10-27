@@ -24,7 +24,7 @@ describe("Given persisted todo list events", async () => {
       )
       .with(aTodoListItem().withInitialTitle("Buy bread"))
       .with(aTodoListItem().withInitialTitle("Buy eggs"))
-      .renamed("Big grocery list")
+      .renamed({ name: "Big grocery list" })
       .with(aTodoListItem().withInitialTitle("Buy cheese"))
       .with(aTodoListItem().withInitialTitle("Buy yogurt"))
       .deleted()

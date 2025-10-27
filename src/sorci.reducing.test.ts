@@ -29,7 +29,7 @@ describe("Given a getAggregateByQueryFactory", () => {
       await aTodoList()
         .withId(todoListId)
         .withInitialTitle("My Tasks")
-        .renamed("Important Tasks")
+        .renamed({ name: "Important Tasks" })
         .deleted()
         .build();
 
