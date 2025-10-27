@@ -26,5 +26,5 @@ export default defineConfig({
       }
     }
   },
-  plugins: [dts({ rollupTypes: true })]
+  plugins: [dts({ exclude: ["src/builder/**"] })]
 });

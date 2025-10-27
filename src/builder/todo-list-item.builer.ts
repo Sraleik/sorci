@@ -1,6 +1,6 @@
 import { createId } from "../common/utils";
 import { SorciEvent } from "../sorci-event";
-import { Sorci } from "../sorci.interface";
+import { Sorci, PersistedEvent } from "../sorci.interface";
 import { TodoListBuilder } from "./todo-list.builder";
 import { BuilderOrId } from "../type";
 import { UserBuilder } from "./user.builder";
@@ -150,7 +150,10 @@ export class TodoListItemBuilder {
     return this.userBuilderOrUserId.id;
   }
 
-  async build() {
+  async build(): Promise<{
+    todoListItemBuilder: TodoListItemBuilder;
+    events: PersistedEvent[];
+  }> {
     await this.buildUserAndGetId();
     await this.buildAndGetTodoListId();
 

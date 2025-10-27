@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { createId } from "../common/utils";
 import { SorciEvent } from "../sorci-event";
-import { Sorci } from "../sorci.interface";
+import { Sorci, PersistedEvent } from "../sorci.interface";
 import { CompanyBuilder } from "./company.builder";
 import { BuilderOrId } from "../type";
 
@@ -155,7 +155,10 @@ export class UserBuilder {
     return this.companyBuilderOrCompanyId?.id;
   }
 
-  async build() {
+  async build(): Promise<{
+    userBuilder: UserBuilder;
+    events: PersistedEvent[];
+  }> {
     await this.buildCompanyAndGetId();
     await this.sorci.insertEvents(
       this._events.map((event) => SorciEvent.create(event))
