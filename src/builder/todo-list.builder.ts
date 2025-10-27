@@ -56,8 +56,10 @@ export class TodoListBuilder {
     if (providedActorId) {
       return providedActorId;
     }
-    return this.userBuilderOrUserId.builder?.aggregateId || 
-           this.userBuilderOrUserId.id!;
+    return (
+      this.userBuilderOrUserId.builder?.aggregateId ||
+      this.userBuilderOrUserId.id!
+    );
   }
 
   withId(id: string) {
@@ -79,7 +81,7 @@ export class TodoListBuilder {
   renamed(payload?: { name?: string; actorId?: string }) {
     const title = payload?.name || faker.lorem.sentence();
     const actorId = this.getActorId(payload?.actorId);
-    
+
     this._events.push({
       type: "todo-list-renamed",
       data: {
@@ -97,7 +99,7 @@ export class TodoListBuilder {
 
   propertyChangedTo(builder: UserBuilder, payload?: { actorId?: string }) {
     const actorId = this.getActorId(payload?.actorId);
-    
+
     this._events.push({
       type: "todo-list-property-changed",
       data: {
@@ -115,7 +117,7 @@ export class TodoListBuilder {
 
   deleted(payload?: { actorId?: string }) {
     const actorId = this.getActorId(payload?.actorId);
-    
+
     this._events.push({
       type: "todo-list-deleted",
       data: {
