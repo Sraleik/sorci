@@ -29,6 +29,29 @@ The feature was renamed from "view models" to "projections" to better align with
 - **Reducer functions**: plpgsql functions generated from TypeScript reducers
 - **Triggers**: AFTER INSERT on event table routes to appropriate reducers
 
+## Ordering & Concurrency Considerations
+
+### Current State (Safe ✅)
+
+- Single `appendEvent()` calls process sequentially - no concurrency issues
+- PostgreSQL triggers fire in insertion order within a transaction
+- Existing DCB (Dynamic Consistency Boundary) serializes events for same aggregate
+
+### Future Considerations
+
+- **appendEvents() (plural)**: If batch insert is added, ensure sequential insertion (single INSERT with multiple VALUES maintains order)
+- **Concurrency on same projection row**: Potential race conditions if multiple events update same entity
+  - Solution: Add row-level locking (`FOR UPDATE`) in generated reducer SQL
+  - Alternative: Advisory locks per projection for strict serialization
+- **Out-of-order events**: Not currently handled
+  - Future enhancement: Add event sequence numbers for idempotent, order-safe updates
+
+### Action Items
+
+- Step 9 (SQL generation): Include row-level locks in UPDATE/SELECT statements
+- Document that concurrent `appendEvent()` calls should target different aggregates
+- Consider advisory locks if strict projection-level serialization is needed
+
 ## Step-by-Step Implementation (TDD)
 
 ### Step 1: Create Test File and First Test ✅
@@ -267,7 +290,7 @@ async dropProjection(name: string) {
 }
 ```
 
-### Step 7: Add Reducer Test 🔄 NEXT
+### Step 7: Add Reducer Test ✅
 
 **File:** `src/sorci.projections.test.ts`
 
@@ -435,8 +458,11 @@ async refreshProjection(name: string) {
 - [x] Add in-memory projection registry to SorciPostgres class
 - [x] Implement declareProjection() method
 - [x] Implement queryProjection() method
-- [x] **Implement dropProjection() method** ✅
-- [ ] **Implement addEventReducingToProjection() method** 🔄 NEXT
-- [ ] Implement trigger management system
+- [x] Implement dropProjection() method
+- [x] Implement addEventReducingToProjection() method
+- [x] Create SQL generator for reducer functions
+- [x] **Implement trigger management system** ✅
+- [x] **End-to-end automatic projection updates working!** ✅
+- [ ] **Add support for other mutation types (create, update, delete)** 🔄 NEXT
 - [ ] Implement refreshProjection() method
 - [ ] Add JSDoc comments and update README

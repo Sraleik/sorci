@@ -226,11 +226,11 @@ export interface Sorci {
    * Add an event-specific reducer to a projection
    * @category Projections
    */
-  // addEventReducingToProjection(payload: {
-  //   name: string;
-  //   eventType: string;
-  //   reducer: EventReducer;
-  // }): Promise<void>;
+  addEventReducingToProjection(payload: {
+    name: string;
+    eventType: string;
+    reducer: EventReducer;
+  }): Promise<void>;
 
   /**
    * Manually refresh a projection by reprocessing all events
