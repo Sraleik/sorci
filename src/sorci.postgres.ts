@@ -8,7 +8,10 @@ import {
   AppendEventPayload,
   QueryProperty,
   QueryAble,
-  PersistedEvent
+  PersistedEvent,
+  ViewModelDeclaration,
+  ViewModelSchema,
+  EventReducer
 } from "./sorci.interface";
 import { shortId } from "./common/utils";
 
@@ -243,8 +246,36 @@ export class SorciPostgres implements Sorci {
   private _sql; //: postgres.Sql;
   private _streamName: string;
   private _buildAdvisoryLocks: typeof buildAdvisoryLocks;
+  private _viewModelRegistry: Map<
+    string,
+    {
+      query: Query;
+      schema: ViewModelSchema;
+      reducers: Map<string, EventReducer>;
+    }
+  > = new Map();
 
   constructor(payload: SorciConstructorPayload);
+  addEventReducingToViewModel(payload: {
+    name: string;
+    eventType: string;
+    reducer: EventReducer;
+  }): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  refreshViewModel(name: string): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  updateViewModel(payload: {
+    name: string;
+    query?: Query;
+    resetState?: boolean;
+  }): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  dropViewModel(name: string): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
   constructor(payload: {
     connectionString: string;
     streamName: string;
@@ -334,6 +365,7 @@ export class SorciPostgres implements Sorci {
 
   async createStream() {
     await this.createBasicTable(this.streamName);
+    await this.createViewModelsMetaTable();
   }
 
   async setupTestStream(streamName?: string) {
@@ -636,5 +668,120 @@ export class SorciPostgres implements Sorci {
     }
 
     return this.appendEventWithQuery(payload);
+  }
+
+  private async createViewModelsMetaTable() {
+    const metaTableName = `${this.streamName}_view_models_meta`;
+    await this.sql`
+      CREATE TABLE IF NOT EXISTS ${this.sql(metaTableName)} (
+        name text PRIMARY KEY,
+        query jsonb NOT NULL,
+        schema jsonb NOT NULL,
+        created_at timestamp DEFAULT NOW(),
+        updated_at timestamp DEFAULT NOW()
+      )
+    `;
+  }
+
+  private mapColumnTypeToPostgres(type: string): string {
+    const typeMap: Record<string, string> = {
+      text: "text",
+      integer: "integer",
+      bigint: "bigint",
+      boolean: "boolean",
+      timestamp: "timestamp with time zone",
+      jsonb: "jsonb",
+      numeric: "numeric",
+      uuid: "uuid"
+    };
+    return typeMap[type] || "text";
+  }
+
+  private async createViewModelTable(name: string, schema: ViewModelSchema) {
+    const tableName = `${this.streamName}_vm_${name.replace(/-/g, "_")}`;
+
+    const primaryKeys = Object.entries(schema)
+      .filter(([, definition]) => definition.primaryKey)
+      .map(([columnName]) => columnName);
+
+    if (primaryKeys.length === 0) {
+      throw new Error(
+        `View model "${name}" must have at least one primary key column`
+      );
+    }
+
+    const columnDefinitions = Object.entries(schema)
+      .map(([columnName, definition]) => {
+        const postgresType = this.mapColumnTypeToPostgres(definition.type);
+        const nullable = definition.nullable !== false ? "" : " NOT NULL";
+        return `"${columnName}" ${postgresType}${nullable}`;
+      })
+      .join(", ");
+
+    const primaryKeyConstraint = `PRIMARY KEY (${primaryKeys.map((k) => `"${k}"`).join(", ")})`;
+
+    await this.sql.unsafe(`
+      CREATE TABLE IF NOT EXISTS ${tableName} (
+        ${columnDefinitions},
+        ${primaryKeyConstraint}
+      )
+    `);
+
+    for (const [columnName, definition] of Object.entries(schema)) {
+      if (definition.index) {
+        const indexName = `${tableName}_${columnName}_index`;
+        const indexType = definition.index;
+        await this.sql.unsafe(`
+          CREATE INDEX IF NOT EXISTS ${indexName}
+          ON ${tableName} USING ${indexType} ("${columnName}")
+        `);
+      }
+    }
+  }
+
+  async declareViewModel(declaration: ViewModelDeclaration) {
+    const { name, query, schema } = declaration;
+
+    if (this._viewModelRegistry.has(name)) {
+      throw new Error(`View model "${name}" is already declared`);
+    }
+
+    await this.createViewModelTable(name, schema);
+
+    const metaTableName = `${this.streamName}_view_models_meta`;
+    await this.sql`
+      INSERT INTO ${this.sql(metaTableName)} (name, query, schema)
+      VALUES (${name}, ${this.sql.json(query)}, ${this.sql.json(schema)})
+      ON CONFLICT (name) DO UPDATE SET
+        query = EXCLUDED.query,
+        schema = EXCLUDED.schema,
+        updated_at = NOW()
+    `;
+
+    this._viewModelRegistry.set(name, {
+      query,
+      schema,
+      reducers: new Map()
+    });
+  }
+
+  async queryViewModel(
+    name: string,
+    options?: { where?: Record<string, any> }
+  ): Promise<any[]> {
+    const tableName = `${this.streamName}_vm_${name.replace(/-/g, "_")}`;
+
+    if (options?.where) {
+      const whereConditions = Object.entries(options.where)
+        .map(([key, value]) => {
+          return this.sql`${this.sql(key)} = ${value}`;
+        })
+        .reduce((acc, condition) => this.sql`${acc} AND ${condition}`);
+
+      return this
+        .sql`SELECT * FROM ${this.sql(tableName)} WHERE ${whereConditions}`;
+    }
+
+    return this.sql`SELECT * FROM ${this.sql(tableName)}`;
   }
 }

@@ -90,6 +90,41 @@ export type AppendEventPayload =
       _testOnlyOnLockAcquired?: () => Promise<void> | void;
     };
 
+export type ViewModelColumnType =
+  | "text"
+  | "integer"
+  | "bigint"
+  | "boolean"
+  | "timestamp"
+  | "jsonb"
+  | "numeric";
+
+export type ViewModelColumnDefinition = {
+  type: ViewModelColumnType;
+  primaryKey?: boolean;
+  index?: "btree" | "gin" | "gist";
+  nullable?: boolean;
+};
+
+export type ViewModelSchema = Record<string, ViewModelColumnDefinition>;
+
+export type ViewModelDeclaration = {
+  name: string;
+  query: Query;
+  schema: ViewModelSchema;
+};
+
+export type MutationResult = {
+  mutationType: "create" | "upsert" | "update" | "delete";
+  data?: Record<string, any>;
+  where?: Record<string, any>;
+};
+
+export type EventReducer = (
+  state: any,
+  event: PersistedEvent
+) => MutationResult;
+
 // This interface is agnostic of the domain, so the typing is generic on purpose
 /** @namespace */
 export interface Sorci {
@@ -169,4 +204,53 @@ export interface Sorci {
    * @category Stream
    */
   getEventsByQuery(query: Query): Promise<PersistedEvent[]>;
+
+  // View Models
+
+  /**
+   * Declare a view model with schema and query
+   * @category View Models
+   */
+  declareViewModel(declaration: ViewModelDeclaration): Promise<void>;
+
+  /**
+   * Query a view model
+   * @category View Models
+   */
+  queryViewModel(
+    name: string,
+    options?: { where?: Record<string, any> }
+  ): Promise<any[]>;
+
+  /**
+   * Add an event-specific reducer to a view model
+   * @category View Models
+   */
+  addEventReducingToViewModel(payload: {
+    name: string;
+    eventType: string;
+    reducer: EventReducer;
+  }): Promise<void>;
+
+  /**
+   * Manually refresh a view model by reprocessing all events
+   * @category View Models
+   */
+  refreshViewModel(name: string): Promise<void>;
+
+  /**
+   * Update a view model's configuration
+   * @category View Models
+   */
+  updateViewModel(payload: {
+    name: string;
+    query?: Query;
+    resetState?: boolean;
+  }): Promise<void>;
+
+  /**
+   * Drop a view model completely
+   * @category View Models
+   */
+  dropViewModel(name: string): Promise<void>;
 }
