@@ -256,26 +256,6 @@ export class SorciPostgres implements Sorci {
   > = new Map();
 
   constructor(payload: SorciConstructorPayload);
-  addEventReducingToViewModel(payload: {
-    name: string;
-    eventType: string;
-    reducer: EventReducer;
-  }): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  refreshViewModel(name: string): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  updateViewModel(payload: {
-    name: string;
-    query?: Query;
-    resetState?: boolean;
-  }): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  dropViewModel(name: string): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
   constructor(payload: {
     connectionString: string;
     streamName: string;

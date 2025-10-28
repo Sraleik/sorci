@@ -29,8 +29,6 @@ describe("View Models", () => {
         ORDER BY ordinal_position
       `;
 
-      console.log("🚀 ~ sorci.view-models.test.ts:30 ~ columns:", columns);
-
       expect(columns.map((col: any) => col.column_name)).toEqual([
         "userId",
         "email",
@@ -53,6 +51,11 @@ describe("View Models", () => {
         (col: any) => col.column_name === "displayName"
       );
       expect(displayNameColumn.data_type).toBe("text");
+
+      const isDeletedColumn = columns.find(
+        (col: any) => col.column_name === "isDeleted"
+      );
+      expect(isDeletedColumn.data_type).toBe("boolean");
 
       const metadataColumn = columns.find(
         (col: any) => col.column_name === "metadata"

@@ -213,44 +213,15 @@ export interface Sorci {
    */
   declareViewModel(declaration: ViewModelDeclaration): Promise<void>;
 
-  /**
-   * Query a view model
-   * @category View Models
-   */
-  queryViewModel(
-    name: string,
-    options?: { where?: Record<string, any> }
-  ): Promise<any[]>;
-
-  /**
-   * Add an event-specific reducer to a view model
-   * @category View Models
-   */
-  addEventReducingToViewModel(payload: {
-    name: string;
-    eventType: string;
-    reducer: EventReducer;
-  }): Promise<void>;
-
-  /**
-   * Manually refresh a view model by reprocessing all events
-   * @category View Models
-   */
-  refreshViewModel(name: string): Promise<void>;
-
-  /**
-   * Update a view model's configuration
-   * @category View Models
-   */
-  updateViewModel(payload: {
-    name: string;
-    query?: Query;
-    resetState?: boolean;
-  }): Promise<void>;
+  // /**
+  //  * Manually refresh a view model by reprocessing all events
+  //  * @category View Models
+  //  */
+  // refreshViewModel(name: string): Promise<void>;
 
   /**
    * Drop a view model completely
    * @category View Models
    */
-  dropViewModel(name: string): Promise<void>;
+  // dropViewModel(name: string): Promise<void>;
 }
