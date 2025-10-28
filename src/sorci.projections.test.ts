@@ -116,8 +116,6 @@ describe("Projections", () => {
       const rows = await sorciTestClient.queryProjection("user-profile");
       expect(rows).toEqual([]);
 
-      console.log("🚀 ~ sorci.projections.test.ts:117 ~ rows:", rows);
-
       await sorciTestClient.dropProjection("user-profile");
 
       const sorciPostgres = sorciTestClient as SorciPostgres;
@@ -464,6 +462,82 @@ describe("Projections", () => {
           }
         ])
       );
+    });
+
+    test.todo("multiple event on same projection are processed in order");
+    test("same event type is processed properly for multiple projections", async () => {
+      await sorciTestClient.declareProjection({
+        name: "user",
+        query: { $where: { type: { $in: ["user-created"] } } },
+        schema: {
+          userId: { type: "text", primaryKey: true },
+          email: { type: "text" },
+          displayName: { type: "text" }
+        }
+      });
+
+      await sorciTestClient.declareProjection({
+        name: "account",
+        query: { $where: { type: { $in: ["user-created"] } } },
+        schema: {
+          userId: { type: "text", primaryKey: true }
+        }
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "user",
+        eventType: "user-created",
+        reducer: (_state, event) => ({
+          mutationType: "upsert",
+          data: {
+            userId: event.data.userId,
+            email: event.data.email,
+            displayName: event.data.displayName
+          }
+        })
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "account",
+        eventType: "user-created",
+        reducer: (_state, event) => ({
+          mutationType: "upsert",
+          data: {
+            userId: event.data.userId
+          }
+        })
+      });
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "user-created",
+          data: {
+            userId: "user-1",
+            email: "alice@example.com",
+            displayName: "Alice"
+          },
+          identifier: { userId: "user-1" }
+        }
+      ]);
+
+      const userRows = await sorciTestClient.queryProjection("user");
+      expect(userRows).toHaveLength(1);
+      expect(userRows[0]).toEqual({
+        userId: "user-1",
+        email: "alice@example.com",
+        displayName: "Alice"
+      });
+
+      const accountRows = await sorciTestClient.queryProjection("account");
+      console.log(
+        "🚀 ~ sorci.projections.test.ts:533 ~ accountRows:",
+        accountRows
+      );
+      expect(accountRows).toHaveLength(1);
+      expect(accountRows[0]).toEqual({
+        userId: "user-1"
+      });
     });
   });
 });

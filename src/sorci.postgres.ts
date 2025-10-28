@@ -767,10 +767,6 @@ export class SorciPostgres implements Sorci {
   }
 
   async dropProjection(name: string) {
-    console.log(
-      "🚀 ~ sorci.postgres.ts:771 ~ SorciPostgres ~ dropProjection ~ this._projectionRegistry:",
-      this._projectionRegistry
-    );
     if (!this._projectionRegistry.has(name)) {
       throw new Error(`Projection "${name}" does not exist`);
     }
@@ -802,25 +798,20 @@ export class SorciPostgres implements Sorci {
 
     projection.reducers.set(eventType, reducer);
 
-    await this.createOrUpdateProjectionTriggers();
+    await this.createOrUpdateEventTypeTrigger(eventType);
   }
 
-  private async createOrUpdateProjectionTriggers() {
-    const allEventTypes = new Set<string>();
-    const projectionsByEventType = new Map<
-      string,
-      Array<{ name: string; reducer: EventReducer; schema: ProjectionSchema }>
-    >();
+  private async createOrUpdateEventTypeTrigger(eventType: string) {
+    const projectionsForEvent: Array<{
+      name: string;
+      reducer: EventReducer;
+      schema: ProjectionSchema;
+    }> = [];
 
     for (const [projectionName, projection] of this._projectionRegistry) {
-      for (const [eventType, reducer] of projection.reducers) {
-        allEventTypes.add(eventType);
-
-        if (!projectionsByEventType.has(eventType)) {
-          projectionsByEventType.set(eventType, []);
-        }
-
-        projectionsByEventType.get(eventType)!.push({
+      const reducer = projection.reducers.get(eventType);
+      if (reducer) {
+        projectionsForEvent.push({
           name: projectionName,
           reducer,
           schema: projection.schema
@@ -828,110 +819,99 @@ export class SorciPostgres implements Sorci {
       }
     }
 
-    if (allEventTypes.size === 0) {
+    if (projectionsForEvent.length === 0) {
+      await this.dropEventTypeTrigger(eventType);
       return;
     }
 
-    const triggerFunctionName = `${this.streamName}_projection_update_trigger`;
-    const triggerName = `${this.streamName}_projection_trigger`;
+    const functionName = `${this.streamName}_${eventType.replace(/-/g, "_")}_projection_handler`;
+    const triggerName = `${this.streamName}_${eventType.replace(/-/g, "_")}_projection_trigger`;
 
-    let triggerBody = "";
+    let functionBody = "";
 
-    for (const [eventType, projections] of projectionsByEventType) {
-      triggerBody += `  IF NEW.type = '${eventType}' THEN\n`;
+    for (const projection of projectionsForEvent) {
+      const tableName = `${this.streamName}_projection_${projection.name.replace(/-/g, "_")}`;
+      const mockEvent = {
+        id: "mock-id",
+        type: eventType,
+        data: {},
+        identifier: {},
+        timestamp: new Date()
+      };
 
-      for (const projection of projections) {
-        const tableName = `${this.streamName}_projection_${projection.name.replace(/-/g, "_")}`;
-        const mockEvent = {
-          id: "mock-id",
-          type: eventType,
-          data: {},
-          identifier: {},
-          timestamp: new Date()
-        };
+      const mutationResult = projection.reducer(null, mockEvent);
 
-        const mutationResult = projection.reducer(null, mockEvent);
-
-        if (mutationResult.mutationType === "upsert" && mutationResult.data) {
-          const columns = Object.keys(mutationResult.data);
-          const columnsList = columns.map((col) => `"${col}"`).join(", ");
-          const valuesList = columns
-            .map((col) => {
-              const value = `(NEW.data->>'${col}')`;
-              const columnDef = projection.schema[col];
-              if (columnDef) {
-                if (
-                  columnDef.type === "integer" ||
-                  columnDef.type === "bigint"
-                ) {
-                  return `${value}::${columnDef.type}`;
-                } else if (columnDef.type === "boolean") {
-                  return `${value}::boolean`;
-                } else if (columnDef.type === "jsonb") {
-                  return `(NEW.data->'${col}')::jsonb`;
-                } else if (columnDef.type === "numeric") {
-                  return `${value}::numeric`;
-                } else if (columnDef.type === "timestamp") {
-                  return `${value}::timestamp`;
-                }
+      if (mutationResult.mutationType === "upsert" && mutationResult.data) {
+        const columns = Object.keys(mutationResult.data);
+        const columnsList = columns.map((col) => `"${col}"`).join(", ");
+        const valuesList = columns
+          .map((col) => {
+            const value = `(NEW.data->>'${col}')`;
+            const columnDef = projection.schema[col];
+            if (columnDef) {
+              if (columnDef.type === "integer" || columnDef.type === "bigint") {
+                return `${value}::${columnDef.type}`;
+              } else if (columnDef.type === "boolean") {
+                return `${value}::boolean`;
+              } else if (columnDef.type === "jsonb") {
+                return `(NEW.data->'${col}')::jsonb`;
+              } else if (columnDef.type === "numeric") {
+                return `${value}::numeric`;
+              } else if (columnDef.type === "timestamp") {
+                return `${value}::timestamp`;
               }
-              return value;
-            })
-            .join(", ");
+            }
+            return value;
+          })
+          .join(", ");
 
-          const primaryKeys = Object.entries(projection.schema)
-            .filter(([, def]) => def.primaryKey)
-            .map(([col]) => col);
+        const primaryKeys = Object.entries(projection.schema)
+          .filter(([, def]) => def.primaryKey)
+          .map(([col]) => col);
 
-          const updateSet = columns
-            .filter((col) => !primaryKeys.includes(col))
-            .map((col) => {
-              const value = `(NEW.data->>'${col}')`;
-              const columnDef = projection.schema[col];
-              if (columnDef) {
-                if (
-                  columnDef.type === "integer" ||
-                  columnDef.type === "bigint"
-                ) {
-                  return `"${col}" = ${value}::${columnDef.type}`;
-                } else if (columnDef.type === "boolean") {
-                  return `"${col}" = ${value}::boolean`;
-                } else if (columnDef.type === "jsonb") {
-                  return `"${col}" = (NEW.data->'${col}')::jsonb`;
-                } else if (columnDef.type === "numeric") {
-                  return `"${col}" = ${value}::numeric`;
-                } else if (columnDef.type === "timestamp") {
-                  return `"${col}" = ${value}::timestamp`;
-                }
+        const updateSet = columns
+          .filter((col) => !primaryKeys.includes(col))
+          .map((col) => {
+            const value = `(NEW.data->>'${col}')`;
+            const columnDef = projection.schema[col];
+            if (columnDef) {
+              if (columnDef.type === "integer" || columnDef.type === "bigint") {
+                return `"${col}" = ${value}::${columnDef.type}`;
+              } else if (columnDef.type === "boolean") {
+                return `"${col}" = ${value}::boolean`;
+              } else if (columnDef.type === "jsonb") {
+                return `"${col}" = (NEW.data->'${col}')::jsonb`;
+              } else if (columnDef.type === "numeric") {
+                return `"${col}" = ${value}::numeric`;
+              } else if (columnDef.type === "timestamp") {
+                return `"${col}" = ${value}::timestamp`;
               }
-              return `"${col}" = ${value}`;
-            })
-            .join(", ");
+            }
+            return `"${col}" = ${value}`;
+          })
+          .join(", ");
 
-          const conflictClause =
-            updateSet.length > 0 ? `DO UPDATE SET ${updateSet}` : "DO NOTHING";
+        const conflictClause =
+          updateSet.length > 0 ? `DO UPDATE SET ${updateSet}` : "DO NOTHING";
 
-          triggerBody += `    INSERT INTO ${tableName} (${columnsList})\n`;
-          triggerBody += `    VALUES (${valuesList})\n`;
-          triggerBody += `    ON CONFLICT (${primaryKeys.map((pk) => `"${pk}"`).join(", ")})\n`;
-          triggerBody += `    ${conflictClause};\n`;
-        }
+        functionBody += `  INSERT INTO ${tableName} (${columnsList})\n`;
+        functionBody += `  VALUES (${valuesList})\n`;
+        functionBody += `  ON CONFLICT (${primaryKeys.map((pk) => `"${pk}"`).join(", ")})\n`;
+        functionBody += `  ${conflictClause};\n`;
       }
-
-      triggerBody += `  END IF;\n`;
     }
 
-    const triggerFunctionSQL = `
-      CREATE OR REPLACE FUNCTION ${triggerFunctionName}()
+    const functionSQL = `
+      CREATE OR REPLACE FUNCTION ${functionName}()
       RETURNS TRIGGER AS $$
       BEGIN
-${triggerBody}
+${functionBody}
         RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
     `;
 
-    await this.sql.unsafe(triggerFunctionSQL);
+    await this.sql.unsafe(functionSQL);
 
     await this.sql`
       DROP TRIGGER IF EXISTS ${this.sql(triggerName)} ON ${this.streamNameIdentifier}
@@ -941,7 +921,21 @@ ${triggerBody}
       CREATE TRIGGER ${triggerName}
       AFTER INSERT ON ${this.streamName}
       FOR EACH ROW
-      EXECUTE FUNCTION ${triggerFunctionName}();
+      WHEN (NEW.type = '${eventType}')
+      EXECUTE FUNCTION ${functionName}();
+    `);
+  }
+
+  private async dropEventTypeTrigger(eventType: string) {
+    const functionName = `${this.streamName}_${eventType.replace(/-/g, "_")}_projection_handler`;
+    const triggerName = `${this.streamName}_${eventType.replace(/-/g, "_")}_projection_trigger`;
+
+    await this.sql`
+      DROP TRIGGER IF EXISTS ${this.sql(triggerName)} ON ${this.streamNameIdentifier}
+    `;
+
+    await this.sql.unsafe(`
+      DROP FUNCTION IF EXISTS ${functionName}();
     `);
   }
 }

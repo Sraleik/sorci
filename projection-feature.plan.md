@@ -27,7 +27,11 @@ The feature was renamed from "view models" to "projections" to better align with
 - **Per-projection tables**: `{streamName}_projection_{projectionName}` with custom schemas
 - **Meta table**: `{streamName}_projections_meta` tracks configurations
 - **Reducer functions**: plpgsql functions generated from TypeScript reducers
-- **Triggers**: AFTER INSERT on event table routes to appropriate reducers
+- **Triggers**: One trigger per event type with WHEN clause for efficient filtering
+  - Format: `{streamName}_{eventType}_projection_trigger`
+  - Function: `{streamName}_{eventType}_projection_handler()`
+  - WHEN clause: `WHEN (NEW.type = 'event-type')` for PostgreSQL-level filtering
+  - Each trigger handles all projections subscribed to that event type
 
 ## Ordering & Concurrency Considerations
 
@@ -461,7 +465,8 @@ async refreshProjection(name: string) {
 - [x] Implement dropProjection() method
 - [x] Implement addEventReducingToProjection() method
 - [x] Create SQL generator for reducer functions
-- [x] **Implement trigger management system** ✅
+- [x] Implement trigger management system
+- [x] **Optimized: One trigger per event type with WHEN clause** ✅
 - [x] **End-to-end automatic projection updates working!** ✅
 - [ ] **Add support for other mutation types (create, update, delete)** 🔄 NEXT
 - [ ] Implement refreshProjection() method
