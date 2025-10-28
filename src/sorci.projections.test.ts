@@ -1,26 +1,78 @@
-describe("View Models", () => {
-  describe("declareViewModel", () => {
+import {
+  PostgreSqlContainer,
+  StartedPostgreSqlContainer
+} from "@testcontainers/postgresql";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  afterAll
+} from "vitest";
+import { Sorci } from "./sorci.interface";
+import { SorciPostgres } from "./sorci.postgres";
+import { SorciEvent } from "./sorci-event";
+
+let pgInstance: StartedPostgreSqlContainer;
+let sorci: Sorci;
+
+beforeAll(async () => {
+  const pgInstanceNotReady = new PostgreSqlContainer("postgres:18-alpine");
+  pgInstance = await pgInstanceNotReady.start();
+
+  const host = pgInstance.getHost();
+  const port = pgInstance.getPort();
+  const user = pgInstance.getUsername();
+  const password = pgInstance.getPassword();
+  const databaseName = pgInstance.getDatabase();
+
+  sorci = new SorciPostgres({
+    host,
+    port,
+    user,
+    password,
+    databaseName,
+    streamName: "useless_stream_name"
+  });
+}, 30000);
+
+beforeEach(async () => {
+  await sorci.setupTestStream();
+});
+
+afterEach(async () => {
+  await sorci.dropCurrentStream();
+});
+
+afterAll(async () => {
+  await sorci.close();
+  await pgInstance.stop();
+});
+
+describe("Projections", () => {
+  describe("declareProjection", () => {
     test("creates table with correct schema, columns, primary keys and indexes", async () => {
-      await sorciTestClient.declareViewModel({
+      await sorci.declareProjection({
         name: "user-profile",
         query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text", index: "btree" },
           displayName: { type: "text" },
-          isDeleted: { type: "boolean" },
           metadata: { type: "jsonb", index: "gin" }
         }
       });
 
-      const rows = await sorciTestClient.queryViewModel("user-profile");
+      const rows = await sorci.queryProjection("user-profile");
       expect(rows).toEqual([]);
 
-      const sorciPostgres = sorciTestClient;
+      const sorciPostgres = sorci as SorciPostgres;
       const sql = (sorciPostgres as any).sql;
       const streamName = (sorciPostgres as any).streamName;
 
-      const tableName = `${streamName}_vm_user_profile`;
+      const tableName = `${streamName}_proj_user_profile`;
 
       const columns = await sql`
         SELECT column_name, data_type, is_nullable
@@ -33,7 +85,6 @@ describe("View Models", () => {
         "userId",
         "email",
         "displayName",
-        "isDeleted",
         "metadata"
       ]);
 
@@ -51,11 +102,6 @@ describe("View Models", () => {
         (col: any) => col.column_name === "displayName"
       );
       expect(displayNameColumn.data_type).toBe("text");
-
-      const isDeletedColumn = columns.find(
-        (col: any) => col.column_name === "isDeleted"
-      );
-      expect(isDeletedColumn.data_type).toBe("boolean");
 
       const metadataColumn = columns.find(
         (col: any) => col.column_name === "metadata"

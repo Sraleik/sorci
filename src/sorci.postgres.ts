@@ -9,8 +9,8 @@ import {
   QueryProperty,
   QueryAble,
   PersistedEvent,
-  ViewModelDeclaration,
-  ViewModelSchema,
+  ProjectionDeclaration,
+  ProjectionSchema,
   EventReducer
 } from "./sorci.interface";
 import { shortId } from "./common/utils";
@@ -246,11 +246,11 @@ export class SorciPostgres implements Sorci {
   private _sql; //: postgres.Sql;
   private _streamName: string;
   private _buildAdvisoryLocks: typeof buildAdvisoryLocks;
-  private _viewModelRegistry: Map<
+  private _projectionRegistry: Map<
     string,
     {
       query: Query;
-      schema: ViewModelSchema;
+      schema: ProjectionSchema;
       reducers: Map<string, EventReducer>;
     }
   > = new Map();
@@ -345,7 +345,7 @@ export class SorciPostgres implements Sorci {
 
   async createStream() {
     await this.createBasicTable(this.streamName);
-    await this.createViewModelsMetaTable();
+    await this.createProjectionsMetaTable();
   }
 
   async setupTestStream(streamName?: string) {
@@ -650,8 +650,8 @@ export class SorciPostgres implements Sorci {
     return this.appendEventWithQuery(payload);
   }
 
-  private async createViewModelsMetaTable() {
-    const metaTableName = `${this.streamName}_view_models_meta`;
+  private async createProjectionsMetaTable() {
+    const metaTableName = `${this.streamName}_projections_meta`;
     await this.sql`
       CREATE TABLE IF NOT EXISTS ${this.sql(metaTableName)} (
         name text PRIMARY KEY,
@@ -671,14 +671,13 @@ export class SorciPostgres implements Sorci {
       boolean: "boolean",
       timestamp: "timestamp with time zone",
       jsonb: "jsonb",
-      numeric: "numeric",
-      uuid: "uuid"
+      numeric: "numeric"
     };
     return typeMap[type] || "text";
   }
 
-  private async createViewModelTable(name: string, schema: ViewModelSchema) {
-    const tableName = `${this.streamName}_vm_${name.replace(/-/g, "_")}`;
+  private async createProjectionTable(name: string, schema: ProjectionSchema) {
+    const tableName = `${this.streamName}_proj_${name.replace(/-/g, "_")}`;
 
     const primaryKeys = Object.entries(schema)
       .filter(([, definition]) => definition.primaryKey)
@@ -686,7 +685,7 @@ export class SorciPostgres implements Sorci {
 
     if (primaryKeys.length === 0) {
       throw new Error(
-        `View model "${name}" must have at least one primary key column`
+        `Projection "${name}" must have at least one primary key column`
       );
     }
 
@@ -719,16 +718,16 @@ export class SorciPostgres implements Sorci {
     }
   }
 
-  async declareViewModel(declaration: ViewModelDeclaration) {
+  async declareProjection(declaration: ProjectionDeclaration) {
     const { name, query, schema } = declaration;
 
-    if (this._viewModelRegistry.has(name)) {
-      throw new Error(`View model "${name}" is already declared`);
+    if (this._projectionRegistry.has(name)) {
+      throw new Error(`Projection "${name}" is already declared`);
     }
 
-    await this.createViewModelTable(name, schema);
+    await this.createProjectionTable(name, schema);
 
-    const metaTableName = `${this.streamName}_view_models_meta`;
+    const metaTableName = `${this.streamName}_projections_meta`;
     await this.sql`
       INSERT INTO ${this.sql(metaTableName)} (name, query, schema)
       VALUES (${name}, ${this.sql.json(query)}, ${this.sql.json(schema)})
@@ -738,18 +737,18 @@ export class SorciPostgres implements Sorci {
         updated_at = NOW()
     `;
 
-    this._viewModelRegistry.set(name, {
+    this._projectionRegistry.set(name, {
       query,
       schema,
       reducers: new Map()
     });
   }
 
-  async queryViewModel(
+  async queryProjection(
     name: string,
     options?: { where?: Record<string, any> }
   ): Promise<any[]> {
-    const tableName = `${this.streamName}_vm_${name.replace(/-/g, "_")}`;
+    const tableName = `${this.streamName}_proj_${name.replace(/-/g, "_")}`;
 
     if (options?.where) {
       const whereConditions = Object.entries(options.where)

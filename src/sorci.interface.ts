@@ -90,7 +90,7 @@ export type AppendEventPayload =
       _testOnlyOnLockAcquired?: () => Promise<void> | void;
     };
 
-export type ViewModelColumnType =
+export type ProjectionColumnType =
   | "text"
   | "integer"
   | "bigint"
@@ -99,19 +99,19 @@ export type ViewModelColumnType =
   | "jsonb"
   | "numeric";
 
-export type ViewModelColumnDefinition = {
-  type: ViewModelColumnType;
+export type ProjectionColumnDefinition = {
+  type: ProjectionColumnType;
   primaryKey?: boolean;
   index?: "btree" | "gin" | "gist";
   nullable?: boolean;
 };
 
-export type ViewModelSchema = Record<string, ViewModelColumnDefinition>;
+export type ProjectionSchema = Record<string, ProjectionColumnDefinition>;
 
-export type ViewModelDeclaration = {
+export type ProjectionDeclaration = {
   name: string;
   query: Query;
-  schema: ViewModelSchema;
+  schema: ProjectionSchema;
 };
 
 export type MutationResult = {
@@ -205,23 +205,52 @@ export interface Sorci {
    */
   getEventsByQuery(query: Query): Promise<PersistedEvent[]>;
 
-  // View Models
+  // Projections
 
   /**
-   * Declare a view model with schema and query
-   * @category View Models
+   * Declare a projection with schema and query
+   * @category Projections
    */
-  declareViewModel(declaration: ViewModelDeclaration): Promise<void>;
-
-  // /**
-  //  * Manually refresh a view model by reprocessing all events
-  //  * @category View Models
-  //  */
-  // refreshViewModel(name: string): Promise<void>;
+  declareProjection(declaration: ProjectionDeclaration): Promise<void>;
 
   /**
-   * Drop a view model completely
-   * @category View Models
+   * Query a projection
+   * @category Projections
    */
-  // dropViewModel(name: string): Promise<void>;
+  queryProjection(
+    name: string,
+    options?: { where?: Record<string, any> }
+  ): Promise<any[]>;
+
+  /**
+   * Add an event-specific reducer to a projection
+   * @category Projections
+   */
+  // addEventReducingToProjection(payload: {
+  //   name: string;
+  //   eventType: string;
+  //   reducer: EventReducer;
+  // }): Promise<void>;
+
+  /**
+   * Manually refresh a projection by reprocessing all events
+   * @category Projections
+   */
+  // refreshProjection(name: string): Promise<void>;
+
+  /**
+   * Update a projection's configuration
+   * @category Projections
+   */
+  // updateProjection(payload: {
+  //   name: string;
+  //   query?: Query;
+  //   resetState?: boolean;
+  // }): Promise<void>;
+
+  /**
+   * Drop a projection completely
+   * @category Projections
+   */
+  // dropProjection(name: string): Promise<void>;
 }
