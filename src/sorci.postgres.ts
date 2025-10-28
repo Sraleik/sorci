@@ -351,6 +351,8 @@ export class SorciPostgres implements Sorci {
   async setupTestStream(streamName?: string) {
     this._streamName = streamName || `test_${shortId()}`;
 
+    this._projectionRegistry.clear();
+
     await this.createStream();
   }
 
@@ -677,7 +679,7 @@ export class SorciPostgres implements Sorci {
   }
 
   private async createProjectionTable(name: string, schema: ProjectionSchema) {
-    const tableName = `${this.streamName}_proj_${name.replace(/-/g, "_")}`;
+    const tableName = `${this.streamName}_projection_${name.replace(/-/g, "_")}`;
 
     const primaryKeys = Object.entries(schema)
       .filter(([, definition]) => definition.primaryKey)
@@ -748,7 +750,7 @@ export class SorciPostgres implements Sorci {
     name: string,
     options?: { where?: Record<string, any> }
   ): Promise<any[]> {
-    const tableName = `${this.streamName}_proj_${name.replace(/-/g, "_")}`;
+    const tableName = `${this.streamName}_projection_${name.replace(/-/g, "_")}`;
 
     if (options?.where) {
       const whereConditions = Object.entries(options.where)
@@ -762,5 +764,23 @@ export class SorciPostgres implements Sorci {
     }
 
     return this.sql`SELECT * FROM ${this.sql(tableName)}`;
+  }
+
+  async dropProjection(name: string) {
+    if (!this._projectionRegistry.has(name)) {
+      throw new Error(`Projection "${name}" does not exist`);
+    }
+
+    const tableName = `${this.streamName}_projection_${name.replace(/-/g, "_")}`;
+
+    await this.sql`DROP TABLE IF EXISTS ${this.sql(tableName)} CASCADE`;
+
+    const metaTableName = `${this.streamName}_projections_meta`;
+    await this.sql`
+      DELETE FROM ${this.sql(metaTableName)}
+      WHERE name = ${name}
+    `;
+
+    this._projectionRegistry.delete(name);
   }
 }

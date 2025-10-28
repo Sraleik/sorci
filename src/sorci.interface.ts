@@ -252,5 +252,5 @@ export interface Sorci {
    * Drop a projection completely
    * @category Projections
    */
-  // dropProjection(name: string): Promise<void>;
+  dropProjection(name: string): Promise<void>;
 }
