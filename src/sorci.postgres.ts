@@ -485,9 +485,112 @@ export class SorciPostgres implements Sorci {
       return sql`${sql(key)} = ${value}`;
     }
 
-    //TODO user @> '{"listId": "uuid"}'
-    // beter performance with GIN index
+    if (key === "id") {
+      return sql`${sql(key)} = ${value}`;
+    }
+
+    if (key === "timestamp") {
+      return sql`${sql(key)} = ${value}`;
+    }
+
     return sql`identifier->>${key} = ${value}`;
+  }
+
+  private getGtStatement(payload: {
+    sql: postgres.Sql;
+    key: string;
+    value: string | Date;
+  }) {
+    const { sql, key, value } = payload;
+
+    if (key === "timestamp") {
+      const dateValue = value instanceof Date ? value : new Date(value);
+      return sql`${sql(key)} > ${dateValue}`;
+    }
+
+    if (key === "id") {
+      return sql`${sql(key)} > ${String(value)}`;
+    }
+
+    throw new Error(`$gt operator is not supported for key: ${key}`);
+  }
+
+  private getGteStatement(payload: {
+    sql: postgres.Sql;
+    key: string;
+    value: string | Date;
+  }) {
+    const { sql, key, value } = payload;
+
+    if (key === "timestamp") {
+      const dateValue = value instanceof Date ? value : new Date(value);
+      return sql`${sql(key)} >= ${dateValue}`;
+    }
+
+    if (key === "id") {
+      return sql`${sql(key)} >= ${String(value)}`;
+    }
+
+    throw new Error(`$gte operator is not supported for key: ${key}`);
+  }
+
+  private getLtStatement(payload: {
+    sql: postgres.Sql;
+    key: string;
+    value: string | Date;
+  }) {
+    const { sql, key, value } = payload;
+
+    if (key === "timestamp") {
+      const dateValue = value instanceof Date ? value : new Date(value);
+      return sql`${sql(key)} < ${dateValue}`;
+    }
+
+    if (key === "id") {
+      return sql`${sql(key)} < ${String(value)}`;
+    }
+
+    throw new Error(`$lt operator is not supported for key: ${key}`);
+  }
+
+  private getLteStatement(payload: {
+    sql: postgres.Sql;
+    key: string;
+    value: string | Date;
+  }) {
+    const { sql, key, value } = payload;
+
+    if (key === "timestamp") {
+      const dateValue = value instanceof Date ? value : new Date(value);
+      return sql`${sql(key)} <= ${dateValue}`;
+    }
+
+    if (key === "id") {
+      return sql`${sql(key)} <= ${String(value)}`;
+    }
+
+    throw new Error(`$lte operator is not supported for key: ${key}`);
+  }
+
+  private getBetweenStatement(payload: {
+    sql: postgres.Sql;
+    key: string;
+    values: [string | Date, string | Date];
+  }) {
+    const { sql, key, values } = payload;
+    const [start, end] = values;
+
+    if (key === "timestamp") {
+      const startDate = start instanceof Date ? start : new Date(start);
+      const endDate = end instanceof Date ? end : new Date(end);
+      return sql`${sql(key)} >= ${startDate}::timestamptz AND ${sql(key)} <= ${endDate}::timestamptz`;
+    }
+
+    if (key === "id") {
+      return sql`${sql(key)} >= ${String(start)} AND ${sql(key)} <= ${String(end)}`;
+    }
+
+    throw new Error(`$between operator is not supported for key: ${key}`);
   }
 
   private getPropertySatetment(payload: {
@@ -501,10 +604,35 @@ export class SorciPostgres implements Sorci {
       return this.getEqStatement({ sql, key, value: property });
     }
 
-    if ("$in" in property) {
-      return this.getInStatement({ sql, key, values: property.$in! });
+    if ("$in" in property && property.$in) {
+      return this.getInStatement({ sql, key, values: property.$in });
     }
-    return this.getEqStatement({ sql, key, value: property.$eq! });
+
+    if ("$eq" in property && property.$eq) {
+      return this.getEqStatement({ sql, key, value: property.$eq });
+    }
+
+    if ("$gt" in property && property.$gt !== undefined) {
+      return this.getGtStatement({ sql, key, value: property.$gt });
+    }
+
+    if ("$gte" in property && property.$gte !== undefined) {
+      return this.getGteStatement({ sql, key, value: property.$gte });
+    }
+
+    if ("$lt" in property && property.$lt !== undefined) {
+      return this.getLtStatement({ sql, key, value: property.$lt });
+    }
+
+    if ("$lte" in property && property.$lte !== undefined) {
+      return this.getLteStatement({ sql, key, value: property.$lte });
+    }
+
+    if ("$between" in property && property.$between) {
+      return this.getBetweenStatement({ sql, key, values: property.$between });
+    }
+
+    throw new Error(`Unsupported QueryProperty for key: ${key}`);
   }
 
   private getPropertiesAndStatement(payload: {
@@ -514,12 +642,32 @@ export class SorciPostgres implements Sorci {
     const { sql, data } = payload;
     const statements: any[] = [];
 
+    if (data.id) {
+      statements.push(
+        this.getPropertySatetment({
+          sql: this.sql,
+          key: "id",
+          property: data.id
+        })
+      );
+    }
+
     if (data.type) {
       statements.push(
         this.getPropertySatetment({
           sql: this.sql,
           key: "type",
           property: data.type
+        })
+      );
+    }
+
+    if (data.timestamp) {
+      statements.push(
+        this.getPropertySatetment({
+          sql: this.sql,
+          key: "timestamp",
+          property: data.timestamp
         })
       );
     }

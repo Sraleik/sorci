@@ -4,21 +4,88 @@ import type postgres from "postgres";
 export type EventId = string;
 
 export type QueryProperty =
-  | { $eq: string; $in?: never; $skipLockOn?: string[] }
-  | { $in: readonly string[]; $eq?: never; $skipLockOn?: string[] }
+  | {
+      $eq: string;
+      $in?: never;
+      $gt?: never;
+      $gte?: never;
+      $lt?: never;
+      $lte?: never;
+      $between?: never;
+      $skipLockOn?: string[];
+    }
+  | {
+      $in: readonly string[];
+      $eq?: never;
+      $gt?: never;
+      $gte?: never;
+      $lt?: never;
+      $lte?: never;
+      $between?: never;
+      $skipLockOn?: string[];
+    }
+  | {
+      $gt: string | Date;
+      $eq?: never;
+      $in?: never;
+      $gte?: never;
+      $lt?: never;
+      $lte?: never;
+      $between?: never;
+      $skipLockOn?: string[];
+    }
+  | {
+      $gte: string | Date;
+      $eq?: never;
+      $in?: never;
+      $gt?: never;
+      $lt?: never;
+      $lte?: never;
+      $between?: never;
+      $skipLockOn?: string[];
+    }
+  | {
+      $lt: string | Date;
+      $eq?: never;
+      $in?: never;
+      $gt?: never;
+      $gte?: never;
+      $lte?: never;
+      $between?: never;
+      $skipLockOn?: string[];
+    }
+  | {
+      $lte: string | Date;
+      $eq?: never;
+      $in?: never;
+      $gt?: never;
+      $gte?: never;
+      $lt?: never;
+      $between?: never;
+      $skipLockOn?: string[];
+    }
+  | {
+      $between: [string | Date, string | Date];
+      $eq?: never;
+      $in?: never;
+      $gt?: never;
+      $gte?: never;
+      $lt?: never;
+      $lte?: never;
+      $skipLockOn?: string[];
+    }
   | string;
 export type QueryOr = Array<QueryAble>;
 export type QueryAnd = Array<QueryAble>;
 
 export type QueryAble = {
-  // id?: QueryProperty; //TODO
+  id?: QueryProperty;
   type?: QueryProperty;
-  // data?: Record<string, QueryProperty>; //TODO
   identifiers?: {
     [key: string]: string | Array<string> | undefined;
     $skipLockOn?: Array<string>;
   };
-  // timestamp?: QueryProperty; //TODO
+  timestamp?: QueryProperty;
 };
 
 export type Query = {
