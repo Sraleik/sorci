@@ -798,6 +798,9 @@ export class SorciPostgres implements Sorci {
       throw new Error(`Projection "${name}" does not exist`);
     }
 
+    const projection = this._projectionRegistry.get(name);
+    const eventTypes = Array.from(projection!.reducers.keys());
+
     const tableName = `${this.streamName}_projection_${name.replace(/-/g, "_")}`;
 
     await this.sql`DROP TABLE IF EXISTS ${this.sql(tableName)} CASCADE`;
@@ -809,14 +812,19 @@ export class SorciPostgres implements Sorci {
     `;
 
     this._projectionRegistry.delete(name);
+
+    for (const eventType of eventTypes) {
+      await this.createOrUpdateEventTypeTrigger(eventType);
+    }
   }
 
   async addEventReducingToProjection(payload: {
     name: string;
     eventType: string;
     reducer: EventReducer;
+    refreshProjection?: boolean;
   }) {
-    const { name, eventType, reducer } = payload;
+    const { name, eventType, reducer, refreshProjection } = payload;
 
     const projection = this._projectionRegistry.get(name);
     if (!projection) {
@@ -826,6 +834,76 @@ export class SorciPostgres implements Sorci {
     projection.reducers.set(eventType, reducer);
 
     await this.createOrUpdateEventTypeTrigger(eventType);
+
+    if (refreshProjection) {
+      await this.refreshProjection(name);
+    }
+  }
+
+  async refreshProjection(name: string) {
+    const projection = this._projectionRegistry.get(name);
+    if (!projection) {
+      throw new Error(`Projection "${name}" does not exist`);
+    }
+
+    const eventTypes = Array.from(projection.reducers.keys());
+    if (eventTypes.length === 0) {
+      return;
+    }
+
+    const tableName = `${this.streamName}_projection_${name.replace(/-/g, "_")}`;
+
+    await this.sql.begin(async (sql) => {
+      await sql`TRUNCATE TABLE ${sql(tableName)}`;
+
+      const events = await sql`
+        SELECT * FROM ${sql(this.streamName)}
+        WHERE type = ANY(${eventTypes})
+        ORDER BY id
+      `;
+
+      for (const event of events) {
+        const reducer = projection.reducers.get(event.type);
+        if (!reducer) {
+          continue;
+        }
+
+        const mockSql = this.createMockSqlFunction();
+        const result = reducer(mockSql, tableName) as any;
+
+        if (!result || typeof result !== "object" || !result.__mockSQL) {
+          throw new Error(
+            `Reducer for event type "${event.type}" in projection "${name}" did not return a valid SQL query`
+          );
+        }
+
+        const reducerSQL = result.__mockSQL as string;
+
+        const eventTypeEscaped = event.type.replace(/'/g, "''");
+        const eventDataJson = JSON.stringify(event.data).replace(/'/g, "''");
+        const eventIdentifierJson = JSON.stringify(event.identifier).replace(
+          /'/g,
+          "''"
+        );
+        const eventIdEscaped = event.id.replace(/'/g, "''");
+
+        await sql.unsafe(`
+          DO $$
+          DECLARE
+            NEW RECORD;
+          BEGIN
+            SELECT 
+              '${eventTypeEscaped}'::text as type,
+              '${eventDataJson}'::jsonb as data,
+              '${eventIdentifierJson}'::jsonb as identifier,
+              '${eventIdEscaped}'::text as id
+            INTO NEW;
+            
+            ${reducerSQL};
+          END $$;
+        `);
+      }
+    });
   }
 
   private createMockSqlFunction(): any {

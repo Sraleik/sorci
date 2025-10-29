@@ -227,13 +227,14 @@ export interface Sorci {
     name: string;
     eventType: string;
     reducer: EventReducer;
+    refreshProjection?: boolean;
   }): Promise<void>;
 
   /**
    * Manually refresh a projection by reprocessing all events
    * @category Projections
    */
-  // refreshProjection(name: string): Promise<void>;
+  refreshProjection(name: string): Promise<void>;
 
   /**
    * Update a projection's configuration
