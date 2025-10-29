@@ -1,11 +1,13 @@
 import { SorciPostgres } from "./sorci.postgres";
 import { createId } from "./common/utils";
+import { inject } from "vitest";
 
 afterEach(async () => {
   const projections = [
     "user-profile",
     "user-profile-refresh-test",
     "user-profile-rebuild-test",
+    "user-profile-persistence",
     "task-tracking",
     "empty-projection",
     "sourcing-dashboard",
@@ -1344,6 +1346,129 @@ describe("Projections", () => {
         accountId,
         balance: 150
       });
+    });
+
+    test("can refresh projection after reloading from database (simulating restart)", async () => {
+      // Clean up any existing projection first
+      await sorciTestClient
+        .dropProjection("user-profile-persistence")
+        .catch(() => {});
+
+      // 1. Declare projection (no reducers yet)
+      await sorciTestClient.createProjection({
+        name: "user-profile-persistence",
+        schema: {
+          userId: { type: "text", primaryKey: true },
+          email: { type: "text" },
+          displayName: { type: "text" }
+        }
+      });
+
+      // 2. Insert events BEFORE adding reducer (so triggers don't auto-process)
+      const userId1 = createId();
+      const userId2 = createId();
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "user-created-persistence-test",
+          data: {
+            userId: userId1,
+            email: "alice@example.com",
+            displayName: "Alice"
+          },
+          identifier: { userId: userId1 }
+        },
+        {
+          id: createId(),
+          type: "user-created-persistence-test",
+          data: {
+            userId: userId2,
+            email: "bob@example.com",
+            displayName: "Bob"
+          },
+          identifier: { userId: userId2 }
+        },
+        {
+          id: createId(),
+          type: "user-renamed-persistence-test",
+          data: {
+            userId: userId1,
+            newName: "Alice Smith"
+          },
+          identifier: { userId: userId1 }
+        }
+      ]);
+
+      // 3. Add reducer (creates triggers, but events already exist)
+      await sorciTestClient.setEventReducingToProjection({
+        name: "user-profile-persistence",
+        eventType: "user-created-persistence-test",
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email", "displayName")
+          VALUES (NEW.data->>'userId', NEW.data->>'email', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "displayName" = EXCLUDED."displayName"
+        `
+      });
+
+      await sorciTestClient.setEventReducingToProjection({
+        name: "user-profile-persistence",
+        eventType: "user-renamed-persistence-test",
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET "displayName" = NEW.data->>'newName'
+          WHERE "userId" = NEW.data->>'userId'
+        `
+      });
+
+      // Verify projection is empty (events weren't processed by triggers)
+      const emptyRows = await sorciTestClient.queryProjection(
+        "user-profile-persistence"
+      );
+      expect(emptyRows).toHaveLength(0);
+
+      // 4. Simulate restart: create new Sorci instance
+      const sorciPostgres = sorciTestClient as SorciPostgres;
+      const host = inject("host");
+      const port = inject("port");
+      const user = inject("user");
+      const password = inject("password");
+      const databaseName = inject("databaseName");
+      const streamName = sorciPostgres.streamName;
+
+      const sorciReloaded = new SorciPostgres({
+        host,
+        port,
+        user,
+        password,
+        databaseName,
+        streamName
+      });
+
+      // 6. Refresh projection should work without re-declaring
+      await sorciReloaded.refreshProjection("user-profile-persistence");
+
+      // 7. Verify projection was rebuilt correctly from events
+      const rows = await sorciReloaded.queryProjection(
+        "user-profile-persistence"
+      );
+      expect(rows).toHaveLength(2);
+      expect(rows).toEqual(
+        expect.arrayContaining([
+          {
+            userId: userId1,
+            email: "alice@example.com",
+            displayName: "Alice Smith"
+          },
+          { userId: userId2, email: "bob@example.com", displayName: "Bob" }
+        ])
+      );
+
+      // Clean up: drop projection using reloaded instance
+      await sorciReloaded.dropProjection("user-profile-persistence");
+      await sorciReloaded.close();
     });
   });
 });

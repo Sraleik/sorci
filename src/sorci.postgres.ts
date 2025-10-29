@@ -246,6 +246,7 @@ export class SorciPostgres implements Sorci {
   private _sql; //: postgres.Sql;
   private _streamName: string;
   private _buildAdvisoryLocks: typeof buildAdvisoryLocks;
+  private _readyPromise: Promise<void>;
   private _projectionRegistry: Map<
     string,
     {
@@ -284,6 +285,8 @@ export class SorciPostgres implements Sorci {
         onnotice(notice) {
           // simple notice of already existing table, index, relation
           if (notice.code === "42P07") return;
+          // simple notice of truncate operation
+          if (notice.code === "42622") return;
           // simple notice of not existing trigger
           if (notice.code === "00000") return;
           console.log(notice);
@@ -292,6 +295,14 @@ export class SorciPostgres implements Sorci {
     } else {
       this._sql = postgres(payload.connectionString);
     }
+
+    this._readyPromise = this.loadProjectionsFromDatabase().catch((error) => {
+      console.error("Failed to load projections:", error);
+    });
+  }
+
+  async ready(): Promise<void> {
+    return this._readyPromise;
   }
 
   // Making them readonly outside of the instance
@@ -677,6 +688,7 @@ export class SorciPostgres implements Sorci {
       CREATE TABLE IF NOT EXISTS ${this.sql(metaTableName)} (
         name text PRIMARY KEY,
         schema jsonb NOT NULL,
+        reducers jsonb NOT NULL DEFAULT '{}',
         created_at timestamp DEFAULT NOW(),
         updated_at timestamp DEFAULT NOW()
       )
@@ -750,6 +762,7 @@ export class SorciPostgres implements Sorci {
   }
 
   async createProjection(declaration: ProjectionDeclaration) {
+    await this._readyPromise;
     const { name, schema } = declaration;
 
     if (this._projectionRegistry.has(name)) {
@@ -760,8 +773,8 @@ export class SorciPostgres implements Sorci {
 
     const metaTableName = `${this.streamName}_projections_meta`;
     await this.sql`
-      INSERT INTO ${this.sql(metaTableName)} (name, schema)
-      VALUES (${name}, ${this.sql.json(schema)})
+      INSERT INTO ${this.sql(metaTableName)} (name, schema, reducers)
+      VALUES (${name}, ${this.sql.json(schema)}, '{}')
       ON CONFLICT (name) DO UPDATE SET
         schema = EXCLUDED.schema,
         updated_at = NOW()
@@ -794,6 +807,7 @@ export class SorciPostgres implements Sorci {
   }
 
   async dropProjection(name: string) {
+    await this._readyPromise;
     if (!this._projectionRegistry.has(name)) {
       throw new Error(`Projection "${name}" does not exist`);
     }
@@ -824,6 +838,8 @@ export class SorciPostgres implements Sorci {
     reducer: EventReducer;
     refreshProjection?: boolean;
   }) {
+    await this._readyPromise;
+
     const { name, eventType, reducer, refreshProjection } = payload;
 
     const projection = this._projectionRegistry.get(name);
@@ -833,6 +849,21 @@ export class SorciPostgres implements Sorci {
 
     projection.reducers.set(eventType, reducer);
 
+    const tableName = `${this.streamName}_projection_${name.replace(/-/g, "_")}`;
+    const mockSql = this.createMockSqlFunction();
+    const result = reducer(mockSql, tableName) as any;
+
+    if (result && typeof result === "object" && result.__mockSQL) {
+      const sqlString = result.__mockSQL as string;
+      const metaTableName = `${this.streamName}_projections_meta`;
+
+      await this.sql`
+        UPDATE ${this.sql(metaTableName)}
+        SET reducers = jsonb_set(reducers, ${`{${eventType}}`}, ${this.sql.json(sqlString)})
+        WHERE name = ${name}
+      `;
+    }
+
     await this.createOrUpdateEventTypeTrigger(eventType);
 
     if (refreshProjection) {
@@ -841,6 +872,8 @@ export class SorciPostgres implements Sorci {
   }
 
   async refreshProjection(name: string) {
+    await this._readyPromise;
+
     const projection = this._projectionRegistry.get(name);
     if (!projection) {
       throw new Error(`Projection "${name}" does not exist`);
@@ -913,6 +946,7 @@ export class SorciPostgres implements Sorci {
       tableName: string
     ) => postgres.PendingQuery<postgres.Row[]>;
   }) {
+    await this._readyPromise;
     const { name, alterationSQL } = payload;
 
     const projection = this._projectionRegistry.get(name);
@@ -966,7 +1000,47 @@ export class SorciPostgres implements Sorci {
     });
   }
 
+  private createReducerFromSQL(sqlString: string): EventReducer {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return (_sql: postgres.Sql, _tableName: string) => {
+      return { __mockSQL: sqlString } as any as postgres.PendingQuery<
+        postgres.Row[]
+      >;
+    };
+  }
+
+  private async loadProjectionsFromDatabase(): Promise<void> {
+    const metaTableName = `${this.streamName}_projections_meta`;
+
+    try {
+      const projections = await this.sql`
+        SELECT name, schema, reducers FROM ${this.sql(metaTableName)}
+      `;
+
+      for (const proj of projections) {
+        const reducersMap = new Map<string, EventReducer>();
+
+        for (const [eventType, sqlString] of Object.entries(proj.reducers)) {
+          reducersMap.set(
+            eventType,
+            this.createReducerFromSQL(sqlString as string)
+          );
+        }
+
+        this._projectionRegistry.set(proj.name, {
+          schema: proj.schema,
+          reducers: reducersMap
+        });
+      }
+    } catch (error: any) {
+      if (error.code !== "42P01") {
+        throw error;
+      }
+    }
+  }
+
   private async createOrUpdateEventTypeTrigger(eventType: string) {
+    await this._readyPromise;
     const projectionsForEvent: Array<{
       name: string;
       reducer: EventReducer;

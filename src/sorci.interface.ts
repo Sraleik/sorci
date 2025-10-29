@@ -134,6 +134,12 @@ export interface Sorci {
   createStream(): Promise<void>;
 
   /**
+   * Wait for instance to finish loading projections from database
+   * @category Tooling
+   */
+  ready(): Promise<void>;
+
+  /**
    * Will remove every events of the stream
    * @category Tooling
    */
