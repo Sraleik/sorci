@@ -4,6 +4,8 @@ import { createId } from "./common/utils";
 afterEach(async () => {
   const projections = [
     "user-profile",
+    "user-profile-refresh-test",
+    "user-profile-rebuild-test",
     "task-tracking",
     "empty-projection",
     "sourcing-dashboard",
@@ -347,6 +349,199 @@ describe("Projections", () => {
   });
 
   describe("addEventReducingToProjection", () => {
+    test("registers a new reducer for an event type", async () => {
+      await sorciTestClient.declareProjection({
+        name: "user-profile",
+        schema: {
+          userId: { type: "text", primaryKey: true },
+          email: { type: "text" },
+          displayName: { type: "text" }
+        }
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "user-profile",
+        eventType: "user-created",
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email", "displayName")
+          VALUES (NEW.data->>'userId', NEW.data->>'email', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "displayName" = EXCLUDED."displayName"
+        `
+      });
+
+      const userId = createId();
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "user-created",
+          data: {
+            userId,
+            email: "alice@example.com",
+            displayName: "Alice"
+          },
+          identifier: { userId }
+        },
+        {
+          id: createId(),
+          type: "user-renamed",
+          data: {
+            userId,
+            displayName: "Bob"
+          },
+          identifier: { userId }
+        }
+      ]);
+
+      const rows = await sorciTestClient.queryProjection("user-profile");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toEqual({
+        userId,
+        email: "alice@example.com",
+        displayName: "Alice"
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "user-profile",
+        eventType: "user-renamed",
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET "displayName" = NEW.data->>'displayName'
+          WHERE "userId" = NEW.data->>'userId'
+        `
+      });
+
+      const rowsBis = await sorciTestClient.queryProjection("user-profile");
+      expect(rowsBis).toHaveLength(1);
+      expect(rowsBis[0]).toEqual({
+        userId,
+        email: "alice@example.com",
+        displayName: "Alice"
+      });
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "user-renamed",
+          data: {
+            userId,
+            displayName: "Charlie"
+          },
+          identifier: { userId }
+        }
+      ]);
+
+      const rowsTer = await sorciTestClient.queryProjection("user-profile");
+      expect(rowsTer).toHaveLength(1);
+      expect(rowsTer[0]).toEqual({
+        userId,
+        email: "alice@example.com",
+        displayName: "Charlie"
+      });
+    });
+
+    test("registers a new reducer for an event type with projection refresh", async () => {
+      await sorciTestClient.declareProjection({
+        name: "user-profile-refresh-test",
+        schema: {
+          userId: { type: "text", primaryKey: true },
+          email: { type: "text" },
+          displayName: { type: "text" }
+        }
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "user-profile-refresh-test",
+        eventType: "user-created-refresh",
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email", "displayName")
+          VALUES (NEW.data->>'userId', NEW.data->>'email', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "displayName" = EXCLUDED."displayName"
+        `
+      });
+
+      const userId = createId();
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "user-created-refresh",
+          data: {
+            userId,
+            email: "alice@example.com",
+            displayName: "Alice"
+          },
+          identifier: { userId }
+        },
+        {
+          id: createId(),
+          type: "user-renamed-refresh",
+          data: {
+            userId,
+            displayName: "Bob"
+          },
+          identifier: { userId }
+        }
+      ]);
+
+      const rows = await sorciTestClient.queryProjection(
+        "user-profile-refresh-test"
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toEqual({
+        userId,
+        email: "alice@example.com",
+        displayName: "Alice"
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "user-profile-refresh-test",
+        eventType: "user-renamed-refresh",
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET "displayName" = NEW.data->>'displayName'
+          WHERE "userId" = NEW.data->>'userId'
+        `,
+        refreshProjection: true
+      });
+
+      const rowsBis = await sorciTestClient.queryProjection(
+        "user-profile-refresh-test"
+      );
+      expect(rowsBis).toHaveLength(1);
+      expect(rowsBis[0]).toEqual({
+        userId,
+        email: "alice@example.com",
+        displayName: "Bob"
+      });
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "user-renamed-refresh",
+          data: {
+            userId,
+            displayName: "Charlie"
+          },
+          identifier: { userId }
+        }
+      ]);
+
+      const rowsTer = await sorciTestClient.queryProjection(
+        "user-profile-refresh-test"
+      );
+      expect(rowsTer).toHaveLength(1);
+      expect(rowsTer[0]).toEqual({
+        userId,
+        email: "alice@example.com",
+        displayName: "Charlie"
+      });
+    });
+
     test("registers a reducer for an event type", async () => {
       await sorciTestClient.declareProjection({
         name: "user-profile",
@@ -377,7 +572,7 @@ describe("Projections", () => {
       expect(projection.reducers.has("user-created")).toBe(true);
     });
 
-    test("silly reduction", async () => {
+    test("mutiple projection on same event", async () => {
       await sorciTestClient.declareProjection({
         name: "account",
         schema: {
@@ -777,6 +972,142 @@ describe("Projections", () => {
       expect(accountRows[0]).toEqual({
         userId: "user-1"
       });
+    });
+  });
+
+  describe("refreshProjection", () => {
+    test("rebuilds projection from scratch with updated reducer logic", async () => {
+      await sorciTestClient.declareProjection({
+        name: "user-profile-rebuild-test",
+        schema: {
+          userId: { type: "text", primaryKey: true },
+          email: { type: "text" },
+          displayName: { type: "text" },
+          updateCount: { type: "integer", default: 0 }
+        }
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "user-profile-rebuild-test",
+        eventType: "user-created-rebuild",
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email", "displayName")
+          VALUES (NEW.data->>'userId', NEW.data->>'email', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "displayName" = EXCLUDED."displayName"
+        `
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "user-profile-rebuild-test",
+        eventType: "user-renamed-rebuild",
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET "displayName" = NEW.data->>'displayName'
+          WHERE "userId" = NEW.data->>'userId'
+        `
+      });
+
+      const userId1 = createId();
+      const userId2 = createId();
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "user-created-rebuild",
+          data: {
+            userId: userId1,
+            email: "alice@example.com",
+            displayName: "Alice"
+          },
+          identifier: { userId: userId1 }
+        },
+        {
+          id: createId(),
+          type: "user-created-rebuild",
+          data: {
+            userId: userId2,
+            email: "bob@example.com",
+            displayName: "Bob"
+          },
+          identifier: { userId: userId2 }
+        },
+        {
+          id: createId(),
+          type: "user-renamed-rebuild",
+          data: {
+            userId: userId1,
+            displayName: "Alice Smith"
+          },
+          identifier: { userId: userId1 }
+        },
+        {
+          id: createId(),
+          type: "user-renamed-rebuild",
+          data: {
+            userId: userId2,
+            displayName: "Bob Jones"
+          },
+          identifier: { userId: userId2 }
+        }
+      ]);
+
+      const initialRows = await sorciTestClient.queryProjection(
+        "user-profile-rebuild-test"
+      );
+      expect(initialRows).toHaveLength(2);
+      expect(initialRows).toEqual(
+        expect.arrayContaining([
+          {
+            userId: userId1,
+            email: "alice@example.com",
+            displayName: "Alice Smith",
+            updateCount: 0
+          },
+          {
+            userId: userId2,
+            email: "bob@example.com",
+            displayName: "Bob Jones",
+            updateCount: 0
+          }
+        ])
+      );
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "user-profile-rebuild-test",
+        eventType: "user-renamed-rebuild",
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET 
+            "displayName" = NEW.data->>'displayName',
+            "updateCount" = "updateCount" + 1
+          WHERE "userId" = NEW.data->>'userId'
+        `
+      });
+
+      await sorciTestClient.refreshProjection("user-profile-rebuild-test");
+
+      const refreshedRows = await sorciTestClient.queryProjection(
+        "user-profile-rebuild-test"
+      );
+      expect(refreshedRows).toHaveLength(2);
+      expect(refreshedRows).toEqual(
+        expect.arrayContaining([
+          {
+            userId: userId1,
+            email: "alice@example.com",
+            displayName: "Alice Smith",
+            updateCount: 1
+          },
+          {
+            userId: userId2,
+            email: "bob@example.com",
+            displayName: "Bob Jones",
+            updateCount: 1
+          }
+        ])
+      );
     });
   });
 });
