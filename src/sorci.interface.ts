@@ -205,10 +205,10 @@ export interface Sorci {
   // Projections
 
   /**
-   * Declare a projection with schema and query
+   * Create a new projection with schema. Throws if projection already exists.
    * @category Projections
    */
-  declareProjection(declaration: ProjectionDeclaration): Promise<void>;
+  createProjection(declaration: ProjectionDeclaration): Promise<void>;
 
   /**
    * Query a projection
@@ -220,10 +220,10 @@ export interface Sorci {
   ): Promise<any[]>;
 
   /**
-   * Add an event-specific reducer to a projection
+   * Set an event-specific reducer for a projection (adds new or updates existing)
    * @category Projections
    */
-  addEventReducingToProjection(payload: {
+  setEventReducingToProjection(payload: {
     name: string;
     eventType: string;
     reducer: EventReducer;
@@ -237,14 +237,14 @@ export interface Sorci {
   refreshProjection(name: string): Promise<void>;
 
   /**
-   * Update a projection's configuration
+   * Update an existing projection's schema with custom SQL alterations.
+   * Throws if projection doesn't exist.
    * @category Projections
    */
-  // updateProjection(payload: {
-  //   name: string;
-  //   query?: Query;
-  //   resetState?: boolean;
-  // }): Promise<void>;
+  updateProjection(payload: {
+    name: string;
+    alterationSQL: postgres.PendingQuery<postgres.Row[]>;
+  }): Promise<void>;
 
   /**
    * Drop a projection completely

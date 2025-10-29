@@ -18,9 +18,9 @@ afterEach(async () => {
 });
 
 describe("Projections", () => {
-  describe("declareProjection", () => {
+  describe("createProjection", () => {
     test("creates table with correct schema, columns, primary keys and indexes", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -113,7 +113,7 @@ describe("Projections", () => {
     });
 
     test("supports ulid type and default values", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "task-tracking",
         schema: {
           taskId: { type: "ulid", primaryKey: true },
@@ -159,7 +159,7 @@ describe("Projections", () => {
     });
 
     test("Check default values are applied", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "task-tracking",
         schema: {
           taskId: { type: "ulid", primaryKey: true },
@@ -170,7 +170,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "task-tracking",
         eventType: "task-created",
         reducer: (sql, tableName) => sql`
@@ -207,7 +207,7 @@ describe("Projections", () => {
 
   describe("dropProjection", () => {
     test("removes table, meta entry, and registry", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -254,9 +254,186 @@ describe("Projections", () => {
     });
   });
 
+  describe("updateProjection", () => {
+    test("adds column to existing projection", async () => {
+      await sorciTestClient.createProjection({
+        name: "user-profile",
+        schema: {
+          userId: { type: "text", primaryKey: true },
+          email: { type: "text" }
+        }
+      });
+
+      const sorciPostgres = sorciTestClient as SorciPostgres;
+      const sql = (sorciPostgres as any).sql;
+      const streamName = (sorciPostgres as any).streamName;
+      const tableName = `${streamName}_projection_user_profile`;
+
+      await sorciTestClient.updateProjection({
+        name: "user-profile",
+        alterationSQL: sql`
+          ALTER TABLE ${sql(tableName)} 
+          ADD COLUMN display_name text
+        `
+      });
+
+      const columns = await sql`
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_name = ${tableName}
+        ORDER BY ordinal_position
+      `;
+
+      expect(columns.map((col: any) => col.column_name)).toEqual([
+        "userId",
+        "email",
+        "display_name"
+      ]);
+
+      const metaTableName = `${streamName}_projections_meta`;
+      const metaRows = await sql`
+        SELECT updated_at FROM ${sql(metaTableName)}
+        WHERE name = 'user-profile'
+      `;
+
+      expect(metaRows).toHaveLength(1);
+      expect(metaRows[0].updated_at).toBeDefined();
+    });
+
+    test("adds index to existing projection", async () => {
+      await sorciTestClient.createProjection({
+        name: "user-profile",
+        schema: {
+          userId: { type: "text", primaryKey: true },
+          email: { type: "text" }
+        }
+      });
+
+      const sorciPostgres = sorciTestClient as SorciPostgres;
+      const sql = (sorciPostgres as any).sql;
+      const streamName = (sorciPostgres as any).streamName;
+      const tableName = `${streamName}_projection_user_profile`;
+
+      await sorciTestClient.updateProjection({
+        name: "user-profile",
+        alterationSQL: sql`
+          CREATE INDEX idx_user_profile_email 
+          ON ${sql(tableName)} USING btree (email)
+        `
+      });
+
+      const indexes = await sql`
+        SELECT
+          i.relname as index_name,
+          a.attname as column_name,
+          am.amname as index_type
+        FROM pg_class t
+        JOIN pg_index ix ON t.oid = ix.indrelid
+        JOIN pg_class i ON i.oid = ix.indexrelid
+        JOIN pg_am am ON i.relam = am.oid
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
+        WHERE t.relname = ${tableName}
+        AND NOT ix.indisprimary
+      `;
+
+      const emailIndex = indexes.find(
+        (idx: any) => idx.column_name === "email"
+      );
+      expect(emailIndex).toBeDefined();
+      expect(emailIndex.index_type).toBe("btree");
+    });
+
+    test("throws error if projection doesn't exist", async () => {
+      const sorciPostgres = sorciTestClient as SorciPostgres;
+      const sql = (sorciPostgres as any).sql;
+
+      await expect(
+        sorciTestClient.updateProjection({
+          name: "non-existent",
+          alterationSQL: sql`ALTER TABLE fake_table ADD COLUMN test text`
+        })
+      ).rejects.toThrow('Projection "non-existent" does not exist');
+    });
+
+    test("works with setEventReducingToProjection and refreshProjection", async () => {
+      await sorciTestClient.createProjection({
+        name: "user-profile",
+        schema: {
+          userId: { type: "text", primaryKey: true },
+          email: { type: "text" }
+        }
+      });
+
+      await sorciTestClient.setEventReducingToProjection({
+        name: "user-profile",
+        eventType: "user-created",
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email")
+          VALUES (NEW.data->>'userId', NEW.data->>'email')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email"
+        `
+      });
+
+      const userId = createId();
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "user-created",
+          data: {
+            userId,
+            email: "alice@example.com"
+          },
+          identifier: { userId }
+        }
+      ]);
+
+      const rowsBefore = await sorciTestClient.queryProjection("user-profile");
+      expect(rowsBefore).toHaveLength(1);
+      expect(rowsBefore[0]).toEqual({
+        userId,
+        email: "alice@example.com"
+      });
+
+      const sorciPostgres = sorciTestClient as SorciPostgres;
+      const sql = (sorciPostgres as any).sql;
+      const streamName = (sorciPostgres as any).streamName;
+      const tableName = `${streamName}_projection_user_profile`;
+
+      await sorciTestClient.updateProjection({
+        name: "user-profile",
+        alterationSQL: sql`
+          ALTER TABLE ${sql(tableName)} 
+          ADD COLUMN display_name text DEFAULT 'Unknown'
+        `
+      });
+
+      await sorciTestClient.setEventReducingToProjection({
+        name: "user-profile",
+        eventType: "user-created",
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email", "display_name")
+          VALUES (NEW.data->>'userId', NEW.data->>'email', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "display_name" = EXCLUDED."display_name"
+        `,
+        refreshProjection: true
+      });
+
+      const rowsAfter = await sorciTestClient.queryProjection("user-profile");
+      expect(rowsAfter).toHaveLength(1);
+      expect(rowsAfter[0]).toEqual({
+        userId,
+        email: "alice@example.com",
+        display_name: null
+      });
+    });
+  });
+
   describe("queryProjection", () => {
     test("retrieves data from projection table", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -298,7 +475,7 @@ describe("Projections", () => {
     });
 
     test("queries projection with where clause", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -336,7 +513,7 @@ describe("Projections", () => {
     });
 
     test("returns empty array for projection with no data", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "empty-projection",
         schema: {
           id: { type: "text", primaryKey: true }
@@ -348,9 +525,9 @@ describe("Projections", () => {
     });
   });
 
-  describe("addEventReducingToProjection", () => {
+  describe("setEventReducingToProjection", () => {
     test("registers a new reducer for an event type", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -359,7 +536,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile",
         eventType: "user-created",
         reducer: (sql, tableName) => sql`
@@ -403,7 +580,7 @@ describe("Projections", () => {
         displayName: "Alice"
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile",
         eventType: "user-renamed",
         reducer: (sql, tableName) => sql`
@@ -443,7 +620,7 @@ describe("Projections", () => {
     });
 
     test("registers a new reducer for an event type with projection refresh", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile-refresh-test",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -452,7 +629,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile-refresh-test",
         eventType: "user-created-refresh",
         reducer: (sql, tableName) => sql`
@@ -498,7 +675,7 @@ describe("Projections", () => {
         displayName: "Alice"
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile-refresh-test",
         eventType: "user-renamed-refresh",
         reducer: (sql, tableName) => sql`
@@ -543,7 +720,7 @@ describe("Projections", () => {
     });
 
     test("registers a reducer for an event type", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -552,7 +729,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile",
         eventType: "user-created",
         reducer: (sql, tableName) => sql`
@@ -573,7 +750,7 @@ describe("Projections", () => {
     });
 
     test("mutiple projection on same event", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "account",
         schema: {
           accountId: { type: "ulid", primaryKey: true },
@@ -582,7 +759,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user",
         schema: {
           userId: { type: "ulid", primaryKey: true },
@@ -591,7 +768,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "account",
         eventType: "user-created",
         reducer: (sql, tableName) => sql`
@@ -601,7 +778,7 @@ describe("Projections", () => {
         `
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user",
         eventType: "user-created",
         reducer: (sql, tableName) => sql`
@@ -611,7 +788,7 @@ describe("Projections", () => {
         `
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "account",
         eventType: "user-renamed",
         reducer: (sql, tableName) => sql`
@@ -621,7 +798,7 @@ describe("Projections", () => {
         `
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "account",
         eventType: "user-deleted",
         reducer: (sql, tableName) => sql`
@@ -671,7 +848,7 @@ describe("Projections", () => {
 
     test("throws error when projection does not exist", async () => {
       await expect(
-        sorciTestClient.addEventReducingToProjection({
+        sorciTestClient.setEventReducingToProjection({
           name: "non-existent",
           eventType: "some-event",
           reducer: (sql, tableName) => sql`
@@ -682,7 +859,7 @@ describe("Projections", () => {
     });
 
     test("allows multiple reducers for different event types on same projection", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -690,7 +867,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile",
         eventType: "user-created",
         reducer: (sql, tableName) => sql`
@@ -699,7 +876,7 @@ describe("Projections", () => {
         `
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile",
         eventType: "user-updated",
         reducer: (sql, tableName) => sql`
@@ -721,7 +898,7 @@ describe("Projections", () => {
 
   describe("End-to-End: Automatic projection updates", () => {
     test("projection is automatically updated when event is inserted", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -730,7 +907,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile",
         eventType: "user-created",
         reducer: (sql, tableName) => sql`
@@ -765,7 +942,7 @@ describe("Projections", () => {
     });
 
     test("projection is updated by multiple events", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -774,7 +951,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile",
         eventType: "user-created",
         reducer: (sql, tableName) => sql`
@@ -843,7 +1020,7 @@ describe("Projections", () => {
     });
 
     test("multiple event on same projection are processed in order", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "sourcing-dashboard",
         schema: {
           sourcingId: { type: "text", primaryKey: true },
@@ -852,7 +1029,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "sourcing-dashboard",
         eventType: "sourcing-created",
         reducer: (sql, tableName) => sql`
@@ -863,7 +1040,7 @@ describe("Projections", () => {
         `
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "sourcing-dashboard",
         eventType: "sourcing-deleted",
         reducer: (sql, tableName) => sql`
@@ -908,7 +1085,7 @@ describe("Projections", () => {
     });
 
     test("same event type is processed properly for multiple projections", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -917,14 +1094,14 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "account",
         schema: {
           userId: { type: "text", primaryKey: true }
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user",
         eventType: "user-created",
         reducer: (sql, tableName) => sql`
@@ -936,7 +1113,7 @@ describe("Projections", () => {
         `
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "account",
         eventType: "user-created",
         reducer: (sql, tableName) => sql`
@@ -977,7 +1154,7 @@ describe("Projections", () => {
 
   describe("refreshProjection", () => {
     test("rebuilds projection from scratch with updated reducer logic", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "user-profile-rebuild-test",
         schema: {
           userId: { type: "text", primaryKey: true },
@@ -987,7 +1164,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile-rebuild-test",
         eventType: "user-created-rebuild",
         reducer: (sql, tableName) => sql`
@@ -999,7 +1176,7 @@ describe("Projections", () => {
         `
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile-rebuild-test",
         eventType: "user-renamed-rebuild",
         reducer: (sql, tableName) => sql`
@@ -1074,7 +1251,7 @@ describe("Projections", () => {
         ])
       );
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "user-profile-rebuild-test",
         eventType: "user-renamed-rebuild",
         reducer: (sql, tableName) => sql`
@@ -1111,7 +1288,7 @@ describe("Projections", () => {
     });
 
     test("processes events added during refresh after refresh completes", async () => {
-      await sorciTestClient.declareProjection({
+      await sorciTestClient.createProjection({
         name: "account",
         schema: {
           accountId: { type: "text", primaryKey: true },
@@ -1119,7 +1296,7 @@ describe("Projections", () => {
         }
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "account",
         eventType: "account-created",
         reducer: (sql, tableName) => sql`
@@ -1129,7 +1306,7 @@ describe("Projections", () => {
         `
       });
 
-      await sorciTestClient.addEventReducingToProjection({
+      await sorciTestClient.setEventReducingToProjection({
         name: "account",
         eventType: "account-deposited",
         reducer: (sql, tableName) => sql`
