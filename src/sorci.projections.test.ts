@@ -1109,5 +1109,71 @@ describe("Projections", () => {
         ])
       );
     });
+
+    test("processes events added during refresh after refresh completes", async () => {
+      await sorciTestClient.declareProjection({
+        name: "account",
+        schema: {
+          accountId: { type: "text", primaryKey: true },
+          balance: { type: "integer", default: 0 }
+        }
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "account",
+        eventType: "account-created",
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("accountId", "balance")
+          VALUES (NEW.data->>'accountId', (NEW.data->>'balance')::integer)
+          ON CONFLICT ("accountId") DO NOTHING
+        `
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "account",
+        eventType: "account-deposited",
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET "balance" = "balance" + (NEW.data->>'amount')::integer
+          WHERE "accountId" = NEW.data->>'accountId'
+        `
+      });
+
+      const accountId = createId();
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "account-created",
+          data: {
+            accountId,
+            balance: 100
+          },
+          identifier: { accountId }
+        }
+      ]);
+
+      const refreshPromise = sorciTestClient.refreshProjection("account");
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "account-deposited",
+          data: {
+            accountId,
+            amount: 50
+          },
+          identifier: { accountId }
+        }
+      ]);
+
+      await refreshPromise;
+
+      const rows = await sorciTestClient.queryProjection("account");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toEqual({
+        accountId,
+        balance: 150
+      });
+    });
   });
 });
