@@ -749,11 +749,11 @@ export class SorciPostgres implements Sorci {
     }
   }
 
-  async declareProjection(declaration: ProjectionDeclaration) {
+  async createProjection(declaration: ProjectionDeclaration) {
     const { name, schema } = declaration;
 
     if (this._projectionRegistry.has(name)) {
-      throw new Error(`Projection "${name}" is already declared`);
+      throw new Error(`Projection "${name}" already exists`);
     }
 
     await this.createProjectionTable(name, schema);
@@ -818,7 +818,7 @@ export class SorciPostgres implements Sorci {
     }
   }
 
-  async addEventReducingToProjection(payload: {
+  async setEventReducingToProjection(payload: {
     name: string;
     eventType: string;
     reducer: EventReducer;
@@ -906,6 +906,31 @@ export class SorciPostgres implements Sorci {
     });
   }
 
+  async updateProjection(payload: {
+    name: string;
+    alterationSQL: (
+      sql: postgres.Sql,
+      tableName: string
+    ) => postgres.PendingQuery<postgres.Row[]>;
+  }) {
+    const { name, alterationSQL } = payload;
+
+    const projection = this._projectionRegistry.get(name);
+    if (!projection) {
+      throw new Error(`Projection "${name}" does not exist`);
+    }
+
+    const tableName = `${this.streamName}_projection_${name.replace(/-/g, "_")}`;
+    await alterationSQL(this.sql, tableName);
+
+    const metaTableName = `${this.streamName}_projections_meta`;
+    await this.sql`
+      UPDATE ${this.sql(metaTableName)}
+      SET updated_at = NOW()
+      WHERE name = ${name}
+    `;
+  }
+
   private createMockSqlFunction(): any {
     const mockSql: any = (strings: TemplateStringsArray, ...values: any[]) => {
       let sql = "";
@@ -988,8 +1013,8 @@ export class SorciPostgres implements Sorci {
     const functionSQL = `
       CREATE OR REPLACE FUNCTION ${functionName}()
       RETURNS TRIGGER AS $$
-      BEGIN
-${functionBody}
+      BEGIN 
+        ${functionBody}
         RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
