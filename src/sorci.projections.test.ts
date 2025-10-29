@@ -10,7 +10,6 @@ describe("Projections", () => {
     test("creates table with correct schema, columns, primary keys and indexes", async () => {
       await sorciTestClient.declareProjection({
         name: "user-profile",
-        query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text", index: "btree" },
@@ -106,7 +105,6 @@ describe("Projections", () => {
     test("removes table, meta entry, and registry", async () => {
       await sorciTestClient.declareProjection({
         name: "user-profile",
-        query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text" }
@@ -156,7 +154,6 @@ describe("Projections", () => {
     test("retrieves data from projection table", async () => {
       await sorciTestClient.declareProjection({
         name: "user-profile",
-        query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text" },
@@ -199,7 +196,6 @@ describe("Projections", () => {
     test("queries projection with where clause", async () => {
       await sorciTestClient.declareProjection({
         name: "user-profile",
-        query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text" },
@@ -238,7 +234,6 @@ describe("Projections", () => {
     test("returns empty array for projection with no data", async () => {
       await sorciTestClient.declareProjection({
         name: "empty-projection",
-        query: { $where: { type: { $in: ["some-event"] } } },
         schema: {
           id: { type: "text", primaryKey: true }
         }
@@ -253,7 +248,6 @@ describe("Projections", () => {
     test("registers a reducer for an event type", async () => {
       await sorciTestClient.declareProjection({
         name: "user-profile",
-        query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text" },
@@ -299,9 +293,6 @@ describe("Projections", () => {
     test("allows multiple reducers for different event types on same projection", async () => {
       await sorciTestClient.declareProjection({
         name: "user-profile",
-        query: {
-          $where: { type: { $in: ["user-created", "user-updated"] } }
-        },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text" }
@@ -341,7 +332,6 @@ describe("Projections", () => {
     test("projection is automatically updated when event is inserted", async () => {
       await sorciTestClient.declareProjection({
         name: "user-profile",
-        query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text" },
@@ -387,7 +377,6 @@ describe("Projections", () => {
     test("projection is updated by multiple events", async () => {
       await sorciTestClient.declareProjection({
         name: "user-profile",
-        query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text" },
@@ -464,11 +453,77 @@ describe("Projections", () => {
       );
     });
 
-    test.todo("multiple event on same projection are processed in order");
+    test("multiple event on same projection are processed in order", async () => {
+      await sorciTestClient.declareProjection({
+        name: "sourcing-dashboard",
+        schema: {
+          sourcingId: { type: "text", primaryKey: true },
+          title: { type: "text" },
+          isDeleted: { type: "boolean" }
+        }
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "sourcing-dashboard",
+        eventType: "sourcing-created",
+        reducer: (_state, event) => ({
+          mutationType: "upsert",
+          data: {
+            sourcingId: event.data.sourcingId,
+            title: event.data.title
+          }
+        })
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "sourcing-dashboard",
+        eventType: "sourcing-deleted",
+        reducer: (_state, event) => ({
+          mutationType: "update",
+          data: {
+            sourcingId: event.data.sourcingId,
+            isDeleted: true
+          }
+        })
+      });
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "sourcing-created",
+          data: {
+            sourcingId: "01K8PDQ0XQDVS8HVYVFQ2Z5GZV",
+            title: "Dev Job"
+          },
+          identifier: { userId: "01K8PDQ0XQDVS8HVYVFQ2Z5GZV" }
+        }
+      ]);
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "sourcing-deleted",
+          data: {
+            sourcingId: "01K8PDQ0XQDVS8HVYVFQ2Z5GZV"
+          },
+          identifier: { sourcingId: "01K8PDQ0XQDVS8HVYVFQ2Z5GZV" }
+        }
+      ]);
+
+      const sourcingRows =
+        await sorciTestClient.queryProjection("sourcing-dashboard");
+
+      expect(sourcingRows).toHaveLength(1);
+      expect(sourcingRows[0]).toEqual({
+        sourcingId: "01K8PDQ0XQDVS8HVYVFQ2Z5GZV",
+        title: "Dev Job",
+        isDeleted: true
+      });
+    });
+
     test("same event type is processed properly for multiple projections", async () => {
       await sorciTestClient.declareProjection({
         name: "user",
-        query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true },
           email: { type: "text" },
@@ -478,7 +533,6 @@ describe("Projections", () => {
 
       await sorciTestClient.declareProjection({
         name: "account",
-        query: { $where: { type: { $in: ["user-created"] } } },
         schema: {
           userId: { type: "text", primaryKey: true }
         }
@@ -530,10 +584,6 @@ describe("Projections", () => {
       });
 
       const accountRows = await sorciTestClient.queryProjection("account");
-      console.log(
-        "🚀 ~ sorci.projections.test.ts:533 ~ accountRows:",
-        accountRows
-      );
       expect(accountRows).toHaveLength(1);
       expect(accountRows[0]).toEqual({
         userId: "user-1"

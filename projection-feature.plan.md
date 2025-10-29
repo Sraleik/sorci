@@ -110,7 +110,6 @@ export type ProjectionSchema = Record<string, ProjectionColumnDefinition>;
 
 export type ProjectionDeclaration = {
   name: string;
-  query: Query;
   schema: ProjectionSchema;
 };
 
@@ -468,6 +467,12 @@ async refreshProjection(name: string) {
 - [x] Implement trigger management system
 - [x] **Optimized: One trigger per event type with WHEN clause** ✅
 - [x] **End-to-end automatic projection updates working!** ✅
-- [ ] **Add support for other mutation types (create, update, delete)** 🔄 NEXT
+- [x] **Add support for UPDATE mutation type** ✅
+  - Handles both event data and hardcoded constants in reducers
+  - WHERE clause inferred from primary keys or explicit `where` property
+- [x] **Removed unnecessary `query` parameter from ProjectionDeclaration** ✅
+  - Event types are now defined solely by registered reducers
+  - Single source of truth: `addEventReducingToProjection()` defines what events matter
+- [ ] **Add support for CREATE and DELETE mutation types** 🔄 NEXT
 - [ ] Implement refreshProjection() method
 - [ ] Add JSDoc comments and update README

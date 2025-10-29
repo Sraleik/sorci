@@ -249,7 +249,6 @@ export class SorciPostgres implements Sorci {
   private _projectionRegistry: Map<
     string,
     {
-      query: Query;
       schema: ProjectionSchema;
       reducers: Map<string, EventReducer>;
     }
@@ -657,7 +656,6 @@ export class SorciPostgres implements Sorci {
     await this.sql`
       CREATE TABLE IF NOT EXISTS ${this.sql(metaTableName)} (
         name text PRIMARY KEY,
-        query jsonb NOT NULL,
         schema jsonb NOT NULL,
         created_at timestamp DEFAULT NOW(),
         updated_at timestamp DEFAULT NOW()
@@ -721,7 +719,7 @@ export class SorciPostgres implements Sorci {
   }
 
   async declareProjection(declaration: ProjectionDeclaration) {
-    const { name, query, schema } = declaration;
+    const { name, schema } = declaration;
 
     if (this._projectionRegistry.has(name)) {
       throw new Error(`Projection "${name}" is already declared`);
@@ -731,16 +729,14 @@ export class SorciPostgres implements Sorci {
 
     const metaTableName = `${this.streamName}_projections_meta`;
     await this.sql`
-      INSERT INTO ${this.sql(metaTableName)} (name, query, schema)
-      VALUES (${name}, ${this.sql.json(query)}, ${this.sql.json(schema)})
+      INSERT INTO ${this.sql(metaTableName)} (name, schema)
+      VALUES (${name}, ${this.sql.json(schema)})
       ON CONFLICT (name) DO UPDATE SET
-        query = EXCLUDED.query,
         schema = EXCLUDED.schema,
         updated_at = NOW()
     `;
 
     this._projectionRegistry.set(name, {
-      query,
       schema,
       reducers: new Map()
     });
@@ -898,6 +894,89 @@ export class SorciPostgres implements Sorci {
         functionBody += `  VALUES (${valuesList})\n`;
         functionBody += `  ON CONFLICT (${primaryKeys.map((pk) => `"${pk}"`).join(", ")})\n`;
         functionBody += `  ${conflictClause};\n`;
+      } else if (
+        mutationResult.mutationType === "update" &&
+        mutationResult.data
+      ) {
+        const columns = Object.keys(mutationResult.data);
+        const primaryKeys = Object.entries(projection.schema)
+          .filter(([, def]) => def.primaryKey)
+          .map(([col]) => col);
+
+        const dataColumns = columns.filter((col) => !primaryKeys.includes(col));
+        const pkColumns = columns.filter((col) => primaryKeys.includes(col));
+
+        if (dataColumns.length === 0) {
+          continue;
+        }
+
+        const setClause = dataColumns
+          .map((col) => {
+            const mockValue = mutationResult.data![col];
+            const columnDef = projection.schema[col];
+
+            if (mockValue !== undefined) {
+              if (columnDef?.type === "boolean") {
+                return `"${col}" = ${mockValue}`;
+              } else if (
+                columnDef?.type === "integer" ||
+                columnDef?.type === "bigint"
+              ) {
+                return `"${col}" = ${mockValue}`;
+              } else if (columnDef?.type === "numeric") {
+                return `"${col}" = ${mockValue}`;
+              } else if (typeof mockValue === "string") {
+                return `"${col}" = '${mockValue.replace(/'/g, "''")}'`;
+              } else if (typeof mockValue === "object") {
+                return `"${col}" = '${JSON.stringify(mockValue)}'::jsonb`;
+              }
+              return `"${col}" = ${mockValue}`;
+            } else {
+              const value = `(NEW.data->>'${col}')`;
+              if (columnDef) {
+                if (
+                  columnDef.type === "integer" ||
+                  columnDef.type === "bigint"
+                ) {
+                  return `"${col}" = ${value}::${columnDef.type}`;
+                } else if (columnDef.type === "boolean") {
+                  return `"${col}" = ${value}::boolean`;
+                } else if (columnDef.type === "jsonb") {
+                  return `"${col}" = (NEW.data->'${col}')::jsonb`;
+                } else if (columnDef.type === "numeric") {
+                  return `"${col}" = ${value}::numeric`;
+                } else if (columnDef.type === "timestamp") {
+                  return `"${col}" = ${value}::timestamp`;
+                }
+              }
+              return `"${col}" = ${value}`;
+            }
+          })
+          .join(", ");
+
+        let whereClause: string;
+        if (mutationResult.where) {
+          const whereColumns = Object.keys(mutationResult.where);
+          whereClause = whereColumns
+            .map((col) => {
+              const value = `(NEW.data->>'${col}')`;
+              return `"${col}" = ${value}`;
+            })
+            .join(" AND ");
+        } else if (pkColumns.length > 0) {
+          whereClause = pkColumns
+            .map((col) => {
+              const value = `(NEW.data->>'${col}')`;
+              return `"${col}" = ${value}`;
+            })
+            .join(" AND ");
+        } else {
+          continue;
+        }
+
+        functionBody += `  UPDATE ${tableName}\n`;
+        functionBody += `  SET ${setClause}\n`;
+        functionBody += `  WHERE ${whereClause};\n`;
       }
     }
 

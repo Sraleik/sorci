@@ -110,7 +110,6 @@ export type ProjectionSchema = Record<string, ProjectionColumnDefinition>;
 
 export type ProjectionDeclaration = {
   name: string;
-  query: Query;
   schema: ProjectionSchema;
 };
 
