@@ -479,6 +479,12 @@ async refreshProjection(name: string) {
   - New `ulid` column type maps to `char(26)` in PostgreSQL
   - Default values supported for all column types (string, number, boolean)
   - Proper SQL escaping for string defaults
-- [ ] **Add support for CREATE and DELETE mutation types** 🔄 NEXT
+- [x] **Migrated to SQL-based reducers** ✅
+  - Replaced mutation object approach with postgres.js SQL tag
+  - Reducers now return SQL queries directly for maximum flexibility
+  - Full PostgreSQL power: CTEs, subqueries, conditionals, etc.
+  - Type-safe SQL construction via postgres.js
+  - Direct access to trigger context (NEW.data)
+  - Removed MutationResult type (no longer needed)
 - [ ] Implement refreshProjection() method
 - [ ] Add JSDoc comments and update README

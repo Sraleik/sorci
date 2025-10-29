@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type postgres from "postgres";
+
 export type EventId = string;
 
 export type QueryProperty =
@@ -115,16 +117,10 @@ export type ProjectionDeclaration = {
   schema: ProjectionSchema;
 };
 
-export type MutationResult = {
-  mutationType: "create" | "upsert" | "update" | "delete";
-  data?: Record<string, any>;
-  where?: Record<string, any>;
-};
-
 export type EventReducer = (
-  state: any,
-  event: PersistedEvent
-) => MutationResult;
+  sql: postgres.Sql,
+  tableName: string
+) => postgres.PendingQuery<postgres.Row[]>;
 
 // This interface is agnostic of the domain, so the typing is generic on purpose
 /** @namespace */

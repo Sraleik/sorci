@@ -284,6 +284,8 @@ export class SorciPostgres implements Sorci {
         onnotice(notice) {
           // simple notice of already existing table, index, relation
           if (notice.code === "42P07") return;
+          // simple notice of not existing trigger
+          if (notice.code === "00000") return;
           console.log(notice);
         }
       });
@@ -357,9 +359,27 @@ export class SorciPostgres implements Sorci {
 
   async cleanStream(streamName: string) {
     return this.sql.begin(async (sql) => {
-      await sql`
-        DROP TABLE IF EXISTS ${sql(streamName)} 
+      const allTables = await sql`
+        SELECT table_name 
+        FROM information_schema.tables
+        WHERE table_schema = 'public' 
+        AND table_name LIKE ${streamName + "%"}
       `;
+
+      for (const { table_name } of allTables) {
+        await sql`DROP TABLE IF EXISTS ${sql(table_name)} CASCADE`;
+      }
+
+      const allFunctions = await sql`
+        SELECT routine_name 
+        FROM information_schema.routines
+        WHERE routine_schema = 'public' 
+        AND routine_name LIKE ${streamName + "%"}
+      `;
+
+      for (const { routine_name } of allFunctions) {
+        await sql.unsafe(`DROP FUNCTION IF EXISTS ${routine_name}() CASCADE`);
+      }
     });
   }
 
@@ -372,19 +392,19 @@ export class SorciPostgres implements Sorci {
     const excludeStatement = excludeCurrentStream
       ? this.sql`AND table_name NOT LIKE ${this.streamName + "%"}`
       : this.sql``;
+
     const rawTableNames = await this.sql`
       SELECT table_name FROM information_schema.tables
       WHERE table_schema = 'public' 
       AND table_name LIKE 'test_%'
+      AND table_name NOT LIKE '%_projection_%'
+      AND table_name NOT LIKE '%_projections_meta'
       ${excludeStatement}
     `;
 
-    const streamNames = rawTableNames.map(({ table_name }) => {
-      const realTableName = table_name.split("_");
-      realTableName.pop();
-      return realTableName.join("_");
-    }) as Array<string>;
-
+    const streamNames = rawTableNames.map(
+      ({ table_name }) => table_name
+    ) as Array<string>;
     const streamNamesSet = new Set(streamNames);
     const uniqStreamName = [...streamNamesSet];
 
@@ -808,6 +828,41 @@ export class SorciPostgres implements Sorci {
     await this.createOrUpdateEventTypeTrigger(eventType);
   }
 
+  private createMockSqlFunction(): any {
+    const mockSql: any = (strings: TemplateStringsArray, ...values: any[]) => {
+      let sql = "";
+      for (let i = 0; i < strings.length; i++) {
+        sql += strings[i];
+        if (i < values.length) {
+          const value = values[i];
+          if (typeof value === "string") {
+            sql += value;
+          } else if (typeof value === "number" || typeof value === "boolean") {
+            sql += value;
+          } else if (value === null) {
+            sql += "NULL";
+          } else {
+            sql += String(value);
+          }
+        }
+      }
+      return { __mockSQL: sql };
+    };
+
+    mockSql.__isIdentifier = false;
+
+    return new Proxy(mockSql, {
+      apply: (target, _thisArg, args) => {
+        if (args[0] && typeof args[0] === "object" && args[0].raw) {
+          return target(args[0], ...args.slice(1));
+        } else if (typeof args[0] === "string") {
+          return args[0];
+        }
+        return target(...args);
+      }
+    });
+  }
+
   private async createOrUpdateEventTypeTrigger(eventType: string) {
     const projectionsForEvent: Array<{
       name: string;
@@ -838,157 +893,18 @@ export class SorciPostgres implements Sorci {
 
     for (const projection of projectionsForEvent) {
       const tableName = `${this.streamName}_projection_${projection.name.replace(/-/g, "_")}`;
-      const mockEvent = {
-        id: "mock-id",
-        type: eventType,
-        data: {},
-        identifier: {},
-        timestamp: new Date()
-      };
 
-      const mutationResult = projection.reducer(null, mockEvent);
+      const mockSql = this.createMockSqlFunction();
+      const result = projection.reducer(mockSql, tableName) as any;
 
-      if (mutationResult.mutationType === "upsert" && mutationResult.data) {
-        const columns = Object.keys(mutationResult.data);
-        const columnsList = columns.map((col) => `"${col}"`).join(", ");
-        const valuesList = columns
-          .map((col) => {
-            const value = `(NEW.data->>'${col}')`;
-            const columnDef = projection.schema[col];
-            if (columnDef) {
-              if (columnDef.type === "integer" || columnDef.type === "bigint") {
-                return `${value}::${columnDef.type}`;
-              } else if (columnDef.type === "boolean") {
-                return `${value}::boolean`;
-              } else if (columnDef.type === "jsonb") {
-                return `(NEW.data->'${col}')::jsonb`;
-              } else if (columnDef.type === "numeric") {
-                return `${value}::numeric`;
-              } else if (columnDef.type === "timestamp") {
-                return `${value}::timestamp`;
-              }
-            }
-            return value;
-          })
-          .join(", ");
-
-        const primaryKeys = Object.entries(projection.schema)
-          .filter(([, def]) => def.primaryKey)
-          .map(([col]) => col);
-
-        const updateSet = columns
-          .filter((col) => !primaryKeys.includes(col))
-          .map((col) => {
-            const value = `(NEW.data->>'${col}')`;
-            const columnDef = projection.schema[col];
-            if (columnDef) {
-              if (columnDef.type === "integer" || columnDef.type === "bigint") {
-                return `"${col}" = ${value}::${columnDef.type}`;
-              } else if (columnDef.type === "boolean") {
-                return `"${col}" = ${value}::boolean`;
-              } else if (columnDef.type === "jsonb") {
-                return `"${col}" = (NEW.data->'${col}')::jsonb`;
-              } else if (columnDef.type === "numeric") {
-                return `"${col}" = ${value}::numeric`;
-              } else if (columnDef.type === "timestamp") {
-                return `"${col}" = ${value}::timestamp`;
-              }
-            }
-            return `"${col}" = ${value}`;
-          })
-          .join(", ");
-
-        const conflictClause =
-          updateSet.length > 0 ? `DO UPDATE SET ${updateSet}` : "DO NOTHING";
-
-        functionBody += `  INSERT INTO ${tableName} (${columnsList})\n`;
-        functionBody += `  VALUES (${valuesList})\n`;
-        functionBody += `  ON CONFLICT (${primaryKeys.map((pk) => `"${pk}"`).join(", ")})\n`;
-        functionBody += `  ${conflictClause};\n`;
-      } else if (
-        mutationResult.mutationType === "update" &&
-        mutationResult.data
-      ) {
-        const columns = Object.keys(mutationResult.data);
-        const primaryKeys = Object.entries(projection.schema)
-          .filter(([, def]) => def.primaryKey)
-          .map(([col]) => col);
-
-        const dataColumns = columns.filter((col) => !primaryKeys.includes(col));
-        const pkColumns = columns.filter((col) => primaryKeys.includes(col));
-
-        if (dataColumns.length === 0) {
-          continue;
-        }
-
-        const setClause = dataColumns
-          .map((col) => {
-            const mockValue = mutationResult.data![col];
-            const columnDef = projection.schema[col];
-
-            if (mockValue !== undefined) {
-              if (columnDef?.type === "boolean") {
-                return `"${col}" = ${mockValue}`;
-              } else if (
-                columnDef?.type === "integer" ||
-                columnDef?.type === "bigint"
-              ) {
-                return `"${col}" = ${mockValue}`;
-              } else if (columnDef?.type === "numeric") {
-                return `"${col}" = ${mockValue}`;
-              } else if (typeof mockValue === "string") {
-                return `"${col}" = '${mockValue.replace(/'/g, "''")}'`;
-              } else if (typeof mockValue === "object") {
-                return `"${col}" = '${JSON.stringify(mockValue)}'::jsonb`;
-              }
-              return `"${col}" = ${mockValue}`;
-            } else {
-              const value = `(NEW.data->>'${col}')`;
-              if (columnDef) {
-                if (
-                  columnDef.type === "integer" ||
-                  columnDef.type === "bigint"
-                ) {
-                  return `"${col}" = ${value}::${columnDef.type}`;
-                } else if (columnDef.type === "boolean") {
-                  return `"${col}" = ${value}::boolean`;
-                } else if (columnDef.type === "jsonb") {
-                  return `"${col}" = (NEW.data->'${col}')::jsonb`;
-                } else if (columnDef.type === "numeric") {
-                  return `"${col}" = ${value}::numeric`;
-                } else if (columnDef.type === "timestamp") {
-                  return `"${col}" = ${value}::timestamp`;
-                }
-              }
-              return `"${col}" = ${value}`;
-            }
-          })
-          .join(", ");
-
-        let whereClause: string;
-        if (mutationResult.where) {
-          const whereColumns = Object.keys(mutationResult.where);
-          whereClause = whereColumns
-            .map((col) => {
-              const value = `(NEW.data->>'${col}')`;
-              return `"${col}" = ${value}`;
-            })
-            .join(" AND ");
-        } else if (pkColumns.length > 0) {
-          whereClause = pkColumns
-            .map((col) => {
-              const value = `(NEW.data->>'${col}')`;
-              return `"${col}" = ${value}`;
-            })
-            .join(" AND ");
-        } else {
-          continue;
-        }
-
-        functionBody += `  UPDATE ${tableName}\n`;
-        functionBody += `  SET ${setClause}\n`;
-        functionBody += `  WHERE ${whereClause};\n`;
+      if (!result || typeof result !== "object" || !result.__mockSQL) {
+        throw new Error(
+          `Reducer for ${projection.name} did not return a valid SQL query`
+        );
       }
+
+      const sqlStatement = result.__mockSQL as string;
+      functionBody += `  ${sqlStatement};\n`;
     }
 
     const functionSQL = `

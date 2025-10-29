@@ -2,7 +2,17 @@ import { SorciPostgres } from "./sorci.postgres";
 import { createId } from "./common/utils";
 
 afterEach(async () => {
-  await sorciTestClient.dropProjection("user-profile").catch(() => "fine");
+  const projections = [
+    "user-profile",
+    "task-tracking",
+    "empty-projection",
+    "sourcing-dashboard",
+    "account",
+    "user"
+  ];
+  for (const projection of projections) {
+    await sorciTestClient.dropProjection(projection).catch(() => "fine");
+  }
 });
 
 describe("Projections", () => {
@@ -146,7 +156,7 @@ describe("Projections", () => {
       expect(isActiveColumn.column_default).toBe("true");
     });
 
-    test.only("Check default values are applied", async () => {
+    test("Check default values are applied", async () => {
       await sorciTestClient.declareProjection({
         name: "task-tracking",
         schema: {
@@ -161,13 +171,11 @@ describe("Projections", () => {
       await sorciTestClient.addEventReducingToProjection({
         name: "task-tracking",
         eventType: "task-created",
-        reducer: (_state, event) => ({
-          mutationType: "upsert",
-          data: {
-            taskId: event.data.taskId,
-            title: event.data.title
-          }
-        })
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("taskId", "title")
+          VALUES (NEW.data->>'taskId', NEW.data->>'title')
+          ON CONFLICT ("taskId") DO NOTHING 
+        `
       });
 
       await sorciTestClient.insertEvents([
@@ -183,7 +191,6 @@ describe("Projections", () => {
       ]);
 
       const rows = await sorciTestClient.queryProjection("task-tracking");
-      console.log("🚀 ~ sorci.projections.test.ts:186 ~ rows:", rows);
       expect(rows).toEqual([
         {
           taskId: "01K8PAWC8F322G3T1KDYBG3DRY",
@@ -353,14 +360,13 @@ describe("Projections", () => {
       await sorciTestClient.addEventReducingToProjection({
         name: "user-profile",
         eventType: "user-created",
-        reducer: (_state, event) => ({
-          mutationType: "upsert",
-          data: {
-            userId: event.data.userId,
-            email: event.data.email,
-            displayName: event.data.displayName
-          }
-        })
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email", "displayName")
+          VALUES (NEW.data->>'userId', NEW.data->>'email', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "displayName" = EXCLUDED."displayName"
+        `
       });
 
       const sorciPostgres = sorciTestClient as SorciPostgres;
@@ -371,16 +377,111 @@ describe("Projections", () => {
       expect(projection.reducers.has("user-created")).toBe(true);
     });
 
+    test("silly reduction", async () => {
+      await sorciTestClient.declareProjection({
+        name: "account",
+        schema: {
+          accountId: { type: "ulid", primaryKey: true },
+          name: { type: "text" },
+          isDeleted: { type: "boolean", default: false }
+        }
+      });
+
+      await sorciTestClient.declareProjection({
+        name: "user",
+        schema: {
+          userId: { type: "ulid", primaryKey: true },
+          name: { type: "text" },
+          isDeleted: { type: "boolean", default: false }
+        }
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "account",
+        eventType: "user-created",
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("accountId", "name")
+          VALUES (NEW.data->>'userId', NEW.data->>'displayName')
+          ON CONFLICT ("accountId") DO NOTHING 
+        `
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "user",
+        eventType: "user-created",
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "name")
+          VALUES (NEW.data->>'userId', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO NOTHING 
+        `
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "account",
+        eventType: "user-renamed",
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET "name" = NEW.data->>'newName'
+          WHERE "accountId" = NEW.data->>'userId'
+        `
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "account",
+        eventType: "user-deleted",
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET "isDeleted" = true
+          WHERE "accountId" = NEW.data->>'userId'
+        `
+      });
+
+      const userId = "01K8QEVWAG5K312PSXBFBGB0NS";
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "user-created",
+          data: {
+            userId,
+            displayName: "Alice"
+          },
+          identifier: { userId }
+        },
+        {
+          id: createId(),
+          type: "user-renamed",
+          data: {
+            userId,
+            newName: "Superman"
+          },
+          identifier: { userId }
+        }
+      ]);
+
+      const rows = await sorciTestClient.queryProjection("account");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toEqual({
+        accountId: "01K8QEVWAG5K312PSXBFBGB0NS",
+        name: "Superman",
+        isDeleted: false
+      });
+      const userRows = await sorciTestClient.queryProjection("user");
+      expect(userRows).toHaveLength(1);
+      expect(userRows[0]).toEqual({
+        userId: "01K8QEVWAG5K312PSXBFBGB0NS",
+        name: "Alice",
+        isDeleted: false
+      });
+    });
+
     test("throws error when projection does not exist", async () => {
       await expect(
         sorciTestClient.addEventReducingToProjection({
           name: "non-existent",
           eventType: "some-event",
-          reducer: () =>
-            ({
-              mutationType: "upsert",
-              data: {}
-            }) as any
+          reducer: (sql, tableName) => sql`
+            INSERT INTO ${sql(tableName)} (id) VALUES ('test')
+          `
         })
       ).rejects.toThrow('Projection "non-existent" does not exist');
     });
@@ -397,20 +498,20 @@ describe("Projections", () => {
       await sorciTestClient.addEventReducingToProjection({
         name: "user-profile",
         eventType: "user-created",
-        reducer: (_state, event) => ({
-          mutationType: "create",
-          data: { userId: event.data.userId, email: event.data.email }
-        })
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email")
+          VALUES (NEW.data->>'userId', NEW.data->>'email')
+        `
       });
 
       await sorciTestClient.addEventReducingToProjection({
         name: "user-profile",
         eventType: "user-updated",
-        reducer: (_state, event) => ({
-          mutationType: "update",
-          where: { userId: event.data.userId },
-          data: { email: event.data.email }
-        })
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET "email" = NEW.data->>'email'
+          WHERE "userId" = NEW.data->>'userId'
+        `
       });
 
       const sorciPostgres = sorciTestClient as SorciPostgres;
@@ -437,14 +538,13 @@ describe("Projections", () => {
       await sorciTestClient.addEventReducingToProjection({
         name: "user-profile",
         eventType: "user-created",
-        reducer: (_state, event) => ({
-          mutationType: "upsert",
-          data: {
-            userId: event.data.userId,
-            email: event.data.email,
-            displayName: event.data.displayName
-          }
-        })
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email", "displayName")
+          VALUES (NEW.data->>'userId', NEW.data->>'email', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "displayName" = EXCLUDED."displayName"
+        `
       });
 
       await sorciTestClient.insertEvents([
@@ -482,14 +582,13 @@ describe("Projections", () => {
       await sorciTestClient.addEventReducingToProjection({
         name: "user-profile",
         eventType: "user-created",
-        reducer: (_state, event) => ({
-          mutationType: "upsert",
-          data: {
-            userId: event.data.userId,
-            email: event.data.email,
-            displayName: event.data.displayName
-          }
-        })
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email", "displayName")
+          VALUES (NEW.data->>'userId', NEW.data->>'email', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "displayName" = EXCLUDED."displayName"
+        `
       });
 
       await sorciTestClient.insertEvents([
@@ -561,25 +660,22 @@ describe("Projections", () => {
       await sorciTestClient.addEventReducingToProjection({
         name: "sourcing-dashboard",
         eventType: "sourcing-created",
-        reducer: (_state, event) => ({
-          mutationType: "upsert",
-          data: {
-            sourcingId: event.data.sourcingId,
-            title: event.data.title
-          }
-        })
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("sourcingId", "title")
+          VALUES (NEW.data->>'sourcingId', NEW.data->>'title')
+          ON CONFLICT ("sourcingId") DO UPDATE SET
+            "title" = EXCLUDED."title"
+        `
       });
 
       await sorciTestClient.addEventReducingToProjection({
         name: "sourcing-dashboard",
         eventType: "sourcing-deleted",
-        reducer: (_state, event) => ({
-          mutationType: "update",
-          data: {
-            sourcingId: event.data.sourcingId,
-            isDeleted: true
-          }
-        })
+        reducer: (sql, tableName) => sql`
+          UPDATE ${sql(tableName)}
+          SET "isDeleted" = true
+          WHERE "sourcingId" = NEW.data->>'sourcingId'
+        `
       });
 
       await sorciTestClient.insertEvents([
@@ -636,25 +732,23 @@ describe("Projections", () => {
       await sorciTestClient.addEventReducingToProjection({
         name: "user",
         eventType: "user-created",
-        reducer: (_state, event) => ({
-          mutationType: "upsert",
-          data: {
-            userId: event.data.userId,
-            email: event.data.email,
-            displayName: event.data.displayName
-          }
-        })
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId", "email", "displayName")
+          VALUES (NEW.data->>'userId', NEW.data->>'email', NEW.data->>'displayName')
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "displayName" = EXCLUDED."displayName"
+        `
       });
 
       await sorciTestClient.addEventReducingToProjection({
         name: "account",
         eventType: "user-created",
-        reducer: (_state, event) => ({
-          mutationType: "upsert",
-          data: {
-            userId: event.data.userId
-          }
-        })
+        reducer: (sql, tableName) => sql`
+          INSERT INTO ${sql(tableName)} ("userId")
+          VALUES (NEW.data->>'userId')
+          ON CONFLICT ("userId") DO NOTHING
+        `
       });
 
       await sorciTestClient.insertEvents([
