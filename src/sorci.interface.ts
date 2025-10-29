@@ -97,13 +97,15 @@ export type ProjectionColumnType =
   | "boolean"
   | "timestamp"
   | "jsonb"
-  | "numeric";
+  | "numeric"
+  | "ulid";
 
 export type ProjectionColumnDefinition = {
   type: ProjectionColumnType;
   primaryKey?: boolean;
   index?: "btree" | "gin" | "gist";
   nullable?: boolean;
+  default?: string | number | boolean;
 };
 
 export type ProjectionSchema = Record<string, ProjectionColumnDefinition>;

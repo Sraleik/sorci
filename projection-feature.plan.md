@@ -97,13 +97,15 @@ export type ProjectionColumnType =
   | "boolean"
   | "timestamp"
   | "jsonb"
-  | "numeric";
+  | "numeric"
+  | "ulid"; // Maps to char(26)
 
 export type ProjectionColumnDefinition = {
   type: ProjectionColumnType;
   primaryKey?: boolean;
   index?: "btree" | "gin" | "gist";
   nullable?: boolean;
+  default?: string | number | boolean; // Support for default values
 };
 
 export type ProjectionSchema = Record<string, ProjectionColumnDefinition>;
@@ -473,6 +475,10 @@ async refreshProjection(name: string) {
 - [x] **Removed unnecessary `query` parameter from ProjectionDeclaration** ✅
   - Event types are now defined solely by registered reducers
   - Single source of truth: `addEventReducingToProjection()` defines what events matter
+- [x] **Added ULID type and default values support** ✅
+  - New `ulid` column type maps to `char(26)` in PostgreSQL
+  - Default values supported for all column types (string, number, boolean)
+  - Proper SQL escaping for string defaults
 - [ ] **Add support for CREATE and DELETE mutation types** 🔄 NEXT
 - [ ] Implement refreshProjection() method
 - [ ] Add JSDoc comments and update README

@@ -99,6 +99,101 @@ describe("Projections", () => {
       expect(metadataIndex).toBeDefined();
       expect(metadataIndex.index_type).toBe("gin");
     });
+
+    test("supports ulid type and default values", async () => {
+      await sorciTestClient.declareProjection({
+        name: "task-tracking",
+        schema: {
+          taskId: { type: "ulid", primaryKey: true },
+          title: { type: "text" },
+          status: { type: "text", default: "pending" },
+          priority: { type: "integer", default: 0 },
+          isActive: { type: "boolean", default: true }
+        }
+      });
+
+      const sorciPostgres = sorciTestClient as SorciPostgres;
+      const sql = (sorciPostgres as any).sql;
+      const streamName = (sorciPostgres as any).streamName;
+      const tableName = `${streamName}_projection_task_tracking`;
+
+      const columns = await sql`
+        SELECT column_name, data_type, character_maximum_length, column_default
+        FROM information_schema.columns
+        WHERE table_name = ${tableName}
+        ORDER BY ordinal_position
+      `;
+
+      const taskIdColumn = columns.find(
+        (col: any) => col.column_name === "taskId"
+      );
+      expect(taskIdColumn.data_type).toBe("character");
+      expect(taskIdColumn.character_maximum_length).toBe(26);
+
+      const statusColumn = columns.find(
+        (col: any) => col.column_name === "status"
+      );
+      expect(statusColumn.column_default).toBe("'pending'::text");
+
+      const priorityColumn = columns.find(
+        (col: any) => col.column_name === "priority"
+      );
+      expect(priorityColumn.column_default).toBe("0");
+
+      const isActiveColumn = columns.find(
+        (col: any) => col.column_name === "isActive"
+      );
+      expect(isActiveColumn.column_default).toBe("true");
+    });
+
+    test.only("Check default values are applied", async () => {
+      await sorciTestClient.declareProjection({
+        name: "task-tracking",
+        schema: {
+          taskId: { type: "ulid", primaryKey: true },
+          title: { type: "text" },
+          status: { type: "text", default: "pending" },
+          priority: { type: "integer", default: 0 },
+          isActive: { type: "boolean", default: true }
+        }
+      });
+
+      await sorciTestClient.addEventReducingToProjection({
+        name: "task-tracking",
+        eventType: "task-created",
+        reducer: (_state, event) => ({
+          mutationType: "upsert",
+          data: {
+            taskId: event.data.taskId,
+            title: event.data.title
+          }
+        })
+      });
+
+      await sorciTestClient.insertEvents([
+        {
+          id: createId(),
+          type: "task-created",
+          data: {
+            taskId: "01K8PAWC8F322G3T1KDYBG3DRY",
+            title: "Test Task"
+          },
+          identifier: { taskId: "01K8PAWC8F322G3T1KDYBG3DRY" }
+        }
+      ]);
+
+      const rows = await sorciTestClient.queryProjection("task-tracking");
+      console.log("🚀 ~ sorci.projections.test.ts:186 ~ rows:", rows);
+      expect(rows).toEqual([
+        {
+          taskId: "01K8PAWC8F322G3T1KDYBG3DRY",
+          title: "Test Task",
+          status: "pending",
+          priority: 0,
+          isActive: true
+        }
+      ]);
+    });
   });
 
   describe("dropProjection", () => {

@@ -671,7 +671,8 @@ export class SorciPostgres implements Sorci {
       boolean: "boolean",
       timestamp: "timestamp with time zone",
       jsonb: "jsonb",
-      numeric: "numeric"
+      numeric: "numeric",
+      ulid: "char(26)"
     };
     return typeMap[type] || "text";
   }
@@ -693,7 +694,17 @@ export class SorciPostgres implements Sorci {
       .map(([columnName, definition]) => {
         const postgresType = this.mapColumnTypeToPostgres(definition.type);
         const nullable = definition.nullable !== false ? "" : " NOT NULL";
-        return `"${columnName}" ${postgresType}${nullable}`;
+        let defaultClause = "";
+        if (definition.default !== undefined) {
+          if (typeof definition.default === "string") {
+            defaultClause = ` DEFAULT '${definition.default.replace(/'/g, "''")}'`;
+          } else if (typeof definition.default === "boolean") {
+            defaultClause = ` DEFAULT ${definition.default}`;
+          } else if (typeof definition.default === "number") {
+            defaultClause = ` DEFAULT ${definition.default}`;
+          }
+        }
+        return `"${columnName}" ${postgresType}${nullable}${defaultClause}`;
       })
       .join(", ");
 
