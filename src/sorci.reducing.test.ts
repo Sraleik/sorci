@@ -2,6 +2,11 @@ import { describe, test, expect, beforeAll } from "vitest";
 import { getAggregateByQueryFactory } from "./sorci.reducing";
 import { createId } from "./common/utils";
 
+const Status = {
+  ACTIVE: "active",
+  DEACTIVATED: "deactivated"
+} as const;
+
 type TodoListEventMap = {
   "todo-list-created": {
     todoListId: string;
@@ -9,6 +14,7 @@ type TodoListEventMap = {
     createdBy: {
       userId: string;
     };
+    status: typeof Status.ACTIVE;
   };
   "todo-list-renamed": {
     todoListId: string;
@@ -16,13 +22,11 @@ type TodoListEventMap = {
   };
   "todo-list-deleted": {
     isDeleted: boolean;
+    status: typeof Status.DEACTIVATED;
   };
 };
 
 describe("Given a getAggregateByQueryFactory", () => {
-  let getAggregate: ReturnType<
-    typeof getAggregateByQueryFactory<TodoListEventMap>
-  >;
   const todoListId = createId();
   describe("When building an aggregate from todo list events", () => {
     beforeAll(async () => {
@@ -32,10 +36,6 @@ describe("Given a getAggregateByQueryFactory", () => {
         .renamed({ name: "Important Tasks" })
         .deleted()
         .build();
-
-      getAggregate = getAggregateByQueryFactory<TodoListEventMap>((query) =>
-        sorciTestClient.getEventsByQuery(query)
-      );
     });
 
     test("Then the result contains a state property", async () => {
@@ -48,20 +48,33 @@ describe("Given a getAggregateByQueryFactory", () => {
         }
       } as const;
 
+      const getAggregate = getAggregateByQueryFactory<TodoListEventMap>(
+        (query) => sorciTestClient.getEventsByQuery(query)
+      );
+
       const { state } = await getAggregate(query, (state, event) => {
         switch (event.type) {
           case "todo-list-created":
-            return { ...state, ...event.data };
+            return { ...state, ...event.data, status: Status.ACTIVE };
           case "todo-list-renamed":
             return { ...state, title: event.data.title };
           case "todo-list-deleted":
-            return { ...state, isDeleted: true };
+            return {
+              ...state,
+              isDeleted: true,
+              status: Status.DEACTIVATED
+            };
           default:
             return state;
         }
       });
 
       expect(state).toBeDefined();
+      // Type system should infer status as "active" | "deactivated"
+      expect(state.status).toBeDefined();
+      expect(["active", "deactivated"]).toContain(state.status);
+      expect(state.todoListId).toBeDefined();
+      expect(state.title).toBeDefined();
     });
   });
 });

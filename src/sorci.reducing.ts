@@ -25,9 +25,12 @@ type BaseUnionToIntersection<U> = (
 type ExtractPropertyValues<U, K extends PropertyKey> =
   U extends Record<K, infer V> ? V : never;
 
+// Get all keys from a union (not intersection)
+type UnionKeys<U> = U extends any ? keyof U : never;
+
 // Merge properties intelligently - arrays get their element types intersected
 type MergeProperties<U> = {
-  [K in keyof BaseUnionToIntersection<U>]: BaseUnionToIntersection<U>[K] extends Array<any>
+  [K in UnionKeys<U>]: ExtractPropertyValues<U, K> extends Array<any>
     ? Array<
         DeepPrettify<
           BaseUnionToIntersection<
@@ -35,7 +38,7 @@ type MergeProperties<U> = {
           >
         >
       >
-    : BaseUnionToIntersection<U>[K];
+    : ExtractPropertyValues<U, K>;
 };
 
 // Convert union to intersection with proper array handling
