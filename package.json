@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc --project tsconfig.build.json && vite build",
-    "build:docs": "typedoc && cp -r ./image ./docs/image",
+    "build:docs": "typedoc --skipErrorChecking && cp -r ./image ./docs/image",
     "lint": "eslint . --ext .ts,.tsx --ignore-pattern 'src/sandbox.ts'",
     "lint:fix": "eslint . --ext .ts,.tsx --fix --ignore-pattern 'src/sandbox.ts'",
     "test": "vitest --config ./vitest.config.ts --run",

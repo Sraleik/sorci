@@ -3,25 +3,5 @@
   "entryPoints": ["./src/index.ts"],
   "gitRevision": "main",
   "name": "Sorci.js",
-  "plugin": ["@knodes/typedoc-plugin-pages"],
-  "pluginPages": {
-    "pages": [
-      {
-        "name": "Sorci.js",
-        "moduleRoot": true,
-        "children": [
-          {
-            "name": "Tutorial",
-            "childrenDir": "tutorial",
-            "children": [
-              {
-                "name": "Create a Command",
-                "source": "create-a-command.md"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
+  "exclude": ["src/**/*.test.ts", "src/**/*.bench.ts", "src/sandbox.ts"]
 }
