@@ -39,6 +39,8 @@ So for now there is only one implementation of Sorci => SorciPostgres.
 Maybe other implementation will be done later.
 This library has never been used in production yet. Use at your own risk :)
 
+### Initialization
+
 ```typescript
 import { Sorci, SorciPostgres } from "sorci";
 
@@ -53,11 +55,14 @@ const sorci: Sorci = new SorciPostgres({
 
 // This will create everything needed to persist the events properly
 await sorci.createStream();
+```
 
+### Appending Events
+
+```typescript
 // Small exemple of adding an Event with no impact (No concurrency issue)
 await sorci.appendEvent({
   sourcingEvent: {
-    id: "48efa9d568d3",
     type: "todo-item-created",
     data: {
       todoItemId: "0a19448ba362",
@@ -72,7 +77,6 @@ await sorci.appendEvent({
 // Small exemple of adding an Event with query
 await sorci.appendEvent({
   sourcingEvent: {
-    id: "ec5cb643e454",
     type: "todo-item-name-updated",
     data: {
       todoItemId: "0a19448ba362",
@@ -84,30 +88,93 @@ await sorci.appendEvent({
     },
   },
   query: {
-    types: ["todo-item-created"],
-    identifiers: [
-      {
-        todoItemId: "0a19448ba362",
-      },
-    ],
+    $where: {
+        type: "todo-item-created",
+        identifiers: {
+            todoItemId: "0a19448ba362",
+        },
+    }
   },
-  eventIdentifier: "48efa9d568d3",
+  lastKnownEventId: "48efa9d568d3",
+});
+```
+
+### Projections
+
+You can create projections to have a read model of your events.
+
+```typescript
+// Create a projection
+await sorci.createProjection({
+  name: "todo-list",
+  schema: {
+    id: { type: "text", primaryKey: true },
+    count: { type: "integer", default: 0 },
+  },
+});
+
+// Define how events update the projection
+await sorci.setEventReducingToProjection({
+  name: "todo-list",
+  eventType: "todo-item-created",
+  reducer: (sql, tableName) => {
+    return sql`
+      INSERT INTO ${sql(tableName)} (id, count)
+      VALUES (
+        event.identifier->>'todoItemId',
+        1
+      )
+      ON CONFLICT (id) DO UPDATE
+      SET count = ${sql(tableName)}.count + 1
+    `;
+  },
+});
+
+// Query the projection
+const results = await sorci.queryProjection("todo-list");
+```
+
+### Reducing
+
+You can also compute state on the fly using reducers.
+
+```typescript
+import { getAggregateByQueryFactory } from "sorci";
+
+const getAggregate = getAggregateByQueryFactory(
+  (query) => sorci.getEventsByQuery(query)
+);
+
+const query = {
+  $where: {
+    type: { $in: ["todo-item-created", "todo-item-name-updated"] }
+  }
+};
+
+const { state } = await getAggregate(query, (currentState, event) => {
+    // Your reduction logic here
+    return { ...currentState, ...event.data };
 });
 ```
 
 ## Technical Explanation
 
-The library create 2 tables:
+The library creates a single table to store events.
 
-- 1 writable
-- 1 read-only
+### Concurrency Control
 
-The writable table act as an append log. The read-only is a synchronized copy of the writable table.
+The library uses **Postgres Advisory Locks** (`pg_advisory_xact_lock`) to handle concurrency.
+Instead of locking the whole table or a specific row, it locks a "concept" defined by your query.
 
-### Why two tables ?
+When you append an event with a query (to check for consistency), the library:
+1.  Analyzes your query to extract **identifiers** and **event types**.
+2.  Generates a unique hash based on these criteria.
+3.  Acquires a transaction-level advisory lock on this hash.
 
-It's a technical constraint. To make sure an event can be persisted the library completely lock the writable table.
-Wich mean it's also unreadable during write. The read-only table allow read while event are beeing persisted.
+This effectively creates a **Dynamic Consistency Boundary**.
+-   If two processes try to append an event affecting the same "aggregate" (e.g., same `todoItemId`), one will wait for the other.
+-   If they affect different parts of the system, they run in parallel.
+-   This avoids the need for a strict "Aggregate" pattern while maintaining consistency where it matters.
 
 ## API
 
@@ -227,6 +294,8 @@ I'm really curious to get feedback on this one. Feel free to start/join a discus
 - [ ] Add a mergeStreams
 - [ ] Add a splitStream
 - [x] Add a way to be able to inject a createId function to SorciEvent
+- [x] Add Projections support
+- [x] Add Reducing support
 
 ### Documentation
 
