@@ -8,7 +8,7 @@
 This is an implementation attempt to Dynamic Consistency Boundary (DCB) with typescript & postgres.
 Described by Sara Pellegrini & Milan Savic : https://www.youtube.com/watch?v=0iP65Durhbs
 
-## Table of Contents
+# Table of Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -18,28 +18,28 @@ Described by Sara Pellegrini & Milan Savic : https://www.youtube.com/watch?v=0iP
 - [Testing](#testing)
 - [Benchmark](#benchmark)
 
-## Installation
+# Installation
 
-### Npm
+## Npm
 
 ```bash
 npm install sorci --save
 ```
 
-### Yarn
+## Yarn
 
 ```bash
 yarn add sorci
 ```
 
-## Usage
+# Usage
 
 The idea was to be able to do DCB without the need of an event store.
 So for now there is only one implementation of Sorci => SorciPostgres.
 Maybe other implementation will be done later.
 This library has never been used in production yet. Use at your own risk :)
 
-### Initialization
+## Initialization
 
 ```typescript
 import { Sorci, SorciPostgres } from "sorci";
@@ -57,7 +57,7 @@ const sorci: Sorci = new SorciPostgres({
 await sorci.createStream();
 ```
 
-### Appending Events
+## Appending Events
 
 ```typescript
 // Small exemple of adding an Event with no impact (No concurrency issue)
@@ -99,9 +99,11 @@ await sorci.appendEvent({
 });
 ```
 
-### Projections
+## Projections
 
 You can create projections to have a read model of your events.
+
+> **Note:** The functions `createProjection` and `setEventReducingToProjection` are designed to be executed as part of a migration system. They modify the database schema and define triggers/functions, so they should only be run once (or when changes are needed), not at application startup.
 
 ```typescript
 // Create a projection
@@ -109,7 +111,7 @@ await sorci.createProjection({
   name: "todo-list",
   schema: {
     id: { type: "text", primaryKey: true },
-    count: { type: "integer", default: 0 },
+    title: { type: "text" },
   },
 });
 
@@ -119,22 +121,55 @@ await sorci.setEventReducingToProjection({
   eventType: "todo-item-created",
   reducer: (sql, tableName) => {
     return sql`
-      INSERT INTO ${sql(tableName)} (id, count)
+      INSERT INTO ${sql(tableName)} (id, title)
       VALUES (
         event.identifier->>'todoItemId',
-        1
+        event.data->>'text'
       )
-      ON CONFLICT (id) DO UPDATE
-      SET count = ${sql(tableName)}.count + 1
     `;
   },
 });
 
-// Query the projection
-const results = await sorci.queryProjection("todo-list");
+
+
+await sorci.setEventReducingToProjection({
+  name: "todo-list",
+  eventType: "todo-item-name-updated",
+  refreshProjection: true, // <--- This will truncate the projection table and replay all events
+  reducer: (sql, tableName) => {
+    return sql`
+      UPDATE ${sql(tableName)}
+      SET title = event.data->>'newText'
+      WHERE id = event.identifier->>'todoItemId'
+    `;
+  },
+});
+
 ```
 
-### Reducing
+### Replaying Events
+
+When you create a new projection or update an existing one, you might want to process past events to populate the projection.
+You can do this by setting the `refreshProjection` property to `true` in `setEventReducingToProjection`.
+This will truncate the projection table and replay all events of the specified type to rebuild the state.
+
+> **Optimization Tips:**
+> *   **Batch Updates:** If you are defining multiple reducers for the same projection within a single migration script, it is efficient to set `refreshProjection: true` only on the last `setEventReducingToProjection` call. This avoids unnecessary multiple rebuilds of the same projection.
+> *   **New Events:** If you are introducing a new event type that hasn't been emitted yet, there is no need to refresh the projection, as there are no past events to replay.
+
+## Querying Projections
+
+```typescript
+// Query the projection
+const results = await sorci.queryProjection("todo-list");
+
+// Query with a where clause
+const specificItem = await sorci.queryProjection("todo-list", {
+  where: { id: "0a19448ba362" }
+});
+```
+
+## Reducing
 
 You can also compute state on the fly using reducers.
 
@@ -157,11 +192,11 @@ const { state } = await getAggregate(query, (currentState, event) => {
 });
 ```
 
-## Technical Explanation
+# Technical Explanation
 
 The library creates a single table to store events.
 
-### Concurrency Control
+## Concurrency Control
 
 The library uses **Postgres Advisory Locks** (`pg_advisory_xact_lock`) to handle concurrency.
 Instead of locking the whole table or a specific row, it locks a "concept" defined by your query.
@@ -176,15 +211,15 @@ This effectively creates a **Dynamic Consistency Boundary**.
 -   If they affect different parts of the system, they run in parallel.
 -   This avoids the need for a strict "Aggregate" pattern while maintaining consistency where it matters.
 
-## API
+# API
 
 Full References - [here](https://sraleik.github.io/sorci/)
 
-## Tutorial
+# Tutorial
 
 [Create a Command](https://sraleik.github.io/sorci/pages/tutorial/create-a-command.html)
 
-## Testing
+# Testing
 
 Unit test are testing proper appending, specialy focus on concurrency issues.
 
@@ -192,7 +227,7 @@ Unit test are testing proper appending, specialy focus on concurrency issues.
 yarn run test:unit
 ```
 
-## Benchmark
+# Benchmark (Depreciated)
 
 Since the table where the event are persisted is locked during write.
 My main concern was performance. So I did some benchmark to see how it perform.
@@ -207,20 +242,20 @@ Those benchmark are done on a dell xps pro, they also run in the CI.
 
 ![plot](./image/benchmark-on-500k-events.png)
 
-### **Simple Insert**
+## **Simple Insert**
 
 <small>~300 ops/s</small>
 
 This is for reference. To know the baseline of Insert.
 
-### **Simple Append**
+## **Simple Append**
 
 <small>~300 ops/s</small>
 
 This is when we want to persist an event that we know don't impact decision.
 The library will be very close to baseline. It's almost a simple insert.
 
-### **Append with query - types**
+## **Append with query - types**
 
 Here we have a big variation, in the first exemple there is only 2 event of the selected type `course-created`, so getting the lastVersion is fast
 
@@ -228,7 +263,7 @@ In the second exemple we have 55 000 event of types `course-created` it take a b
 
 This should not be a big issue because filtering only by types should not happen very often. The option remain available if necessary
 
-### **Append with query - identifiers**
+## **Append with query - identifiers**
 
 <small>~230 ops/s</small>
 
@@ -236,29 +271,29 @@ Here volume should not impact the persistence. Identifier has a gin index. Wich 
 
 This is great because it will be one of the most use way of persisting event.
 
-### **Append with query - types & identifiers**
+## **Append with query - types & identifiers**
 
 Here volume is impacting the results. But performance are for most cases acceptable. On a benchmark with 1M events the library still score a 50 ops/s
 
-### **Get by Query - type**
+## **Get by Query - type**
 
 Here volume is important, in the second exemple we are retrieving 55 000 events whereas in the first we retrieve 2.
 
-### **Get by Query - identifier**
+## **Get by Query - identifier**
 
 Here volume is important,
 In those exemple we retrieve the same amount of event but going through the btree index is a bit slower since there is more data.
 
 Perfomance should be good for most cases
 
-### **Get by Query - types & identifier**
+## **Get by Query - types & identifier**
 
 Here volume is important,
 In those exemple we retrieve the same amount of event but going through the btree & gin index is a bit slower since there is more data.
 
 Perfomance should be good for most cases
 
-### **Get by EventId**
+## **Get by EventId**
 
 <small>~20 000 ops/s</small>
 
@@ -266,7 +301,7 @@ This is for reference. To know the baseline Query.
 
 </br>
 
-### **To run the bench mark**
+## **To run the bench mark**
 
 Requirement: Docker installed
 
@@ -276,19 +311,19 @@ yarn run bench
 
 It will take around 30s ~ to load the half a million event into the table.
 
-## Acknowledgment
+# Acknowledgment
 
 I've be figthing aggregate for a while now. Sometimes it really feel like trying to fit a square into a circle.
 The approache of Sara Pellegrini & Milan Savic (DCB) solve the concurrency issue I had with an event only approach.
 There conference talk is really great and explain the concept so well that this implementation was possible I highly recommend it : https://www.youtube.com/watch?v=0iP65Durhbs
 
-## Contributions
+# Contributions
 
 I'm really curious to get feedback on this one. Feel free to start/join a discussion, issues or Pull requests.
 
-## TODO
+# TODO
 
-### Feature
+## Feature
 
 - [ ] Add a appendEvents
 - [ ] Add a mergeStreams
@@ -297,17 +332,18 @@ I'm really curious to get feedback on this one. Feel free to start/join a discus
 - [x] Add Projections support
 - [x] Add Reducing support
 
-### Documentation
+## Documentation
 
 - [ ] Do Explanation/postgres-stream.md
 
-### Technical
+## Technical
 
 - [x] Make the constructor parameter a single explicit payload
 - [ ] Add option to serialize data into binary
 - [x] Rename clean/clear en dropStream
+- [ ] Redo the benchmark properly 
 
-### Repository
+## Repository
 
 - [x] Use npm version to publish new version
 - [x] Fix eslint
@@ -320,7 +356,3 @@ I'm really curious to get feedback on this one. Feel free to start/join a discus
 - [x] Make the github CI run the benchmark
 - [x] Auto generate the API reference
 - [x] Display the API with github page
-
-## Tweet
-
-Thrilled to share a new #typescript library I've been working on. Implementing #DynamicConsistencyBoundary from @_sara_p_ & @MilanSavic14 #killAggregate #DCB.🌐 I would love your feedback on it: https://github.com/Sraleik/sorci
