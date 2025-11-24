@@ -999,13 +999,17 @@ export class SorciPostgres implements Sorci {
     }
 
     if (statements.length === 0) {
-       // If it's an object but no known operators, maybe it's just a JSON object comparison?
-       // But for now, let's assume it's an error or just return TRUE if empty (though unlikely if property is not empty)
-       // If property is {} it returns TRUE which is fine (no constraints)
-       if (Object.keys(property).length > 0) {
-          throw new Error(`Unsupported operator(s) for key: ${key} in ${JSON.stringify(property)}`);
-       }
-       return sql`TRUE`;
+      // If it's an object but no known operators, maybe it's just a JSON object comparison?
+      // But for now, let's assume it's an error or just return TRUE if empty (though unlikely if property is not empty)
+      // If property is {} it returns TRUE which is fine (no constraints)
+      if (Object.keys(property).length > 0) {
+        throw new Error(
+          `Unsupported operator(s) for key: ${key} in ${JSON.stringify(
+            property
+          )}`
+        );
+      }
+      return sql`TRUE`;
     }
 
     return statements.reduce((acc, statement, index) => {
@@ -1048,7 +1052,10 @@ export class SorciPostgres implements Sorci {
         options.where,
         this.sql
       );
-      return this.sql`SELECT * FROM ${this.sql(tableName)} WHERE ${whereStatement}`;
+      return this.sql`
+        SELECT * FROM ${this.sql(tableName)}
+        WHERE ${whereStatement}
+      `;
     }
 
     return this.sql`SELECT * FROM ${this.sql(tableName)}`;
