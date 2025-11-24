@@ -1470,5 +1470,67 @@ describe("Projections", () => {
       await sorciReloaded.dropProjection("user-profile-persistence");
       await sorciReloaded.close();
     });
+    test("supports combined operators ($gt and $lt)", async () => {
+      await sorciTestClient.createProjection({
+        name: "product",
+        schema: {
+          id: { type: "text", primaryKey: true },
+          name: { type: "text" },
+          price: { type: "integer" }
+        }
+      });
+
+      const sorciPostgres = sorciTestClient as SorciPostgres;
+      const sql = (sorciPostgres as any).sql;
+      const streamName = (sorciPostgres as any).streamName;
+      const tableName = `${streamName}_projection_product`;
+
+      await sql`
+        INSERT INTO ${sql(tableName)} ("id", "name", "price")
+        VALUES 
+          ('p1', 'Product 1', 100),
+          ('p2', 'Product 2', 200),
+          ('p3', 'Product 3', 300),
+          ('p4', 'Product 4', 400)
+      `;
+
+      const rows = await sorciTestClient.queryProjection("product", {
+        where: { price: { $gt: 150, $lt: 350 } }
+      });
+
+      expect(rows).toHaveLength(2); // 200, 300
+      const prices = rows.map((r: any) => r.price).sort();
+      expect(prices).toEqual([200, 300]);
+    });
+
+    test("supports $nin operator", async () => {
+      await sorciTestClient.createProjection({
+        name: "product_bis",
+        schema: {
+          id: { type: "text", primaryKey: true },
+          name: { type: "text" },
+          price: { type: "integer" }
+        }
+      });
+
+      const sorciPostgres = sorciTestClient as SorciPostgres;
+      const sql = (sorciPostgres as any).sql;
+      const streamName = (sorciPostgres as any).streamName;
+      const tableName = `${streamName}_projection_product_bis`;
+
+      await sql`
+        INSERT INTO ${sql(tableName)} ("id", "name", "price")
+        VALUES 
+          ('p1', 'Product 1', 100),
+          ('p2', 'Product 2', 200),
+          ('p3', 'Product 3', 300)
+      `;
+
+      const rows = await sorciTestClient.queryProjection("product_bis", {
+        where: { id: { $nin: ["p1", "p3"] } }
+      });
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("p2");
+    });
   });
 });

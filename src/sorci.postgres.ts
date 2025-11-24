@@ -934,6 +934,109 @@ export class SorciPostgres implements Sorci {
     });
   }
 
+  // --- Projection Where to sql statements START
+  private getProjectionPropertyStatement(payload: {
+    sql: postgres.Sql;
+    key: string;
+    property: any;
+  }) {
+    const { sql, key, property } = payload;
+
+    if (property === null) {
+      return sql`${sql(key)} IS NULL`;
+    }
+
+    if (typeof property !== "object" || property instanceof Date) {
+      return sql`${sql(key)} = ${property}`;
+    }
+
+    const statements: any[] = [];
+
+    if ("$eq" in property) {
+      if (property.$eq === null) {
+        statements.push(sql`${sql(key)} IS NULL`);
+      } else {
+        statements.push(sql`${sql(key)} = ${property.$eq}`);
+      }
+    }
+
+    if ("$ne" in property) {
+      if (property.$ne === null) {
+        statements.push(sql`${sql(key)} IS NOT NULL`);
+      } else {
+        statements.push(sql`${sql(key)} != ${property.$ne}`);
+      }
+    }
+
+    if ("$gt" in property) {
+      statements.push(sql`${sql(key)} > ${property.$gt}`);
+    }
+
+    if ("$gte" in property) {
+      statements.push(sql`${sql(key)} >= ${property.$gte}`);
+    }
+
+    if ("$lt" in property) {
+      statements.push(sql`${sql(key)} < ${property.$lt}`);
+    }
+
+    if ("$lte" in property) {
+      statements.push(sql`${sql(key)} <= ${property.$lte}`);
+    }
+
+    if ("$in" in property) {
+      if (!Array.isArray(property.$in)) {
+        throw new Error(`$in operator expects an array for key: ${key}`);
+      }
+      statements.push(sql`${sql(key)} = ANY(${property.$in})`);
+    }
+
+    if ("$nin" in property) {
+      if (!Array.isArray(property.$nin)) {
+        throw new Error(`$nin operator expects an array for key: ${key}`);
+      }
+      statements.push(sql`${sql(key)} != ALL(${property.$nin})`);
+    }
+
+    if (statements.length === 0) {
+       // If it's an object but no known operators, maybe it's just a JSON object comparison?
+       // But for now, let's assume it's an error or just return TRUE if empty (though unlikely if property is not empty)
+       // If property is {} it returns TRUE which is fine (no constraints)
+       if (Object.keys(property).length > 0) {
+          throw new Error(`Unsupported operator(s) for key: ${key} in ${JSON.stringify(property)}`);
+       }
+       return sql`TRUE`;
+    }
+
+    return statements.reduce((acc, statement, index) => {
+      if (index === 0) {
+        return statement;
+      }
+      return sql`${acc} AND ${statement}`;
+    });
+  }
+
+  private getProjectionWhereStatement(
+    where: Record<string, any>,
+    sql: postgres.Sql
+  ) {
+    const statements = Object.entries(where).map(([key, value]) => {
+      return this.getProjectionPropertyStatement({ sql, key, property: value });
+    });
+
+    if (statements.length === 0) {
+      return sql`TRUE`;
+    }
+
+    return statements.reduce((acc, statement, index) => {
+      if (index === 0) {
+        return statement;
+      }
+      return sql`${acc} AND ${statement}`;
+    });
+  }
+  // --- Projection Where to sql statements END
+
   async queryProjection(
     name: string,
     options?: { where?: Record<string, any> }
@@ -941,14 +1044,11 @@ export class SorciPostgres implements Sorci {
     const tableName = `${this.streamName}_projection_${name.replace(/-/g, "_")}`;
 
     if (options?.where) {
-      const whereConditions = Object.entries(options.where)
-        .map(([key, value]) => {
-          return this.sql`${this.sql(key)} = ${value}`;
-        })
-        .reduce((acc, condition) => this.sql`${acc} AND ${condition}`);
-
-      return this
-        .sql`SELECT * FROM ${this.sql(tableName)} WHERE ${whereConditions}`;
+      const whereStatement = this.getProjectionWhereStatement(
+        options.where,
+        this.sql
+      );
+      return this.sql`SELECT * FROM ${this.sql(tableName)} WHERE ${whereStatement}`;
     }
 
     return this.sql`SELECT * FROM ${this.sql(tableName)}`;
