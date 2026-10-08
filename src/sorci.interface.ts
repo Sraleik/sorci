@@ -159,6 +159,20 @@ export type AppendEventPayload =
       _testOnlyOnLockAcquired?: () => Promise<void> | void;
     };
 
+/**
+ * This is the structure of the payload to give to the {@link Sorci.appendEvents} function
+ */
+export type AppendEventsPayload =
+  | {
+      sourcingEvents: ToPersistEvent[];
+    }
+  | {
+      sourcingEvents: ToPersistEvent[];
+      query: Query;
+      lastKnownEventId: EventId;
+      _testOnlyOnLockAcquired?: () => Promise<void> | void;
+    };
+
 export type ProjectionColumnType =
   | "text"
   | "integer"
@@ -260,6 +274,15 @@ export interface Sorci {
    * @returns The event id
    */
   appendEvent(payload: AppendEventPayload): Promise<EventId>;
+
+  /**
+   * Will append several events atomically, in a single transaction, with the
+   * same optimistic concurrency control as {@link Sorci.appendEvent} — one
+   * check against the query, not one per event.
+   * @category Stream
+   * @returns The event ids, in insertion order
+   */
+  appendEvents(payload: AppendEventsPayload): Promise<EventId[]>;
 
   // Query
 

@@ -6,6 +6,7 @@ import {
   ToPersistEvent,
   QueryOr,
   AppendEventPayload,
+  AppendEventsPayload,
   QueryProperty,
   QueryAble,
   PersistedEvent,
@@ -13,6 +14,7 @@ import {
   ProjectionSchema,
   EventReducer
 } from "./sorci.interface";
+import { ConcurrencyError } from "./sorci.error";
 import { shortId } from "./common/utils";
 
 type SorciConstructorPayload = {
@@ -738,63 +740,57 @@ export class SorciPostgres implements Sorci {
     return rows as PersistedEvent[];
   }
 
+  private toRow(sourcingEvent: ToPersistEvent) {
+    return {
+      id: sourcingEvent.id,
+      type: sourcingEvent.type,
+      data: sourcingEvent.data,
+      identifier: sourcingEvent.identifier
+    };
+  }
+
   // TODO: add the advisory lock
-  private async appendEventWithoutQuery(sourcingEvent: ToPersistEvent) {
-    const id = await this.sql.begin(async (sql) => {
+  private async appendEventsWithoutQuery(sourcingEvents: ToPersistEvent[]) {
+    const rows = sourcingEvents.map((sourcingEvent) =>
+      this.toRow(sourcingEvent)
+    );
+
+    const ids = await this.sql.begin(async (sql) => {
       await sql`
           LOCK TABLE ${this.streamNameIdentifier} IN SHARE ROW EXCLUSIVE MODE;
         `;
 
       const res = await sql`
-          INSERT INTO ${this.streamNameIdentifier} (id, type, data, identifier)
-          VALUES (${sourcingEvent.id}, ${sourcingEvent.type}, ${sourcingEvent.data}, ${sourcingEvent.identifier})
-          RETURNING *
+          INSERT INTO ${this.streamNameIdentifier} ${sql(rows)}
+          RETURNING id
         `;
 
-      return res[0].id;
+      return res.map((row) => row.id);
     });
-    return id as string;
+    return ids as string[];
   }
 
-  private async appendEventWithQuery(payload: {
-    sourcingEvent: ToPersistEvent;
+  private async appendEventsWithQuery(payload: {
+    sourcingEvents: ToPersistEvent[];
     query: Query;
     lastKnownEventId: EventId;
     _testOnlyOnLockAcquired?: () => Promise<void> | void;
   }) {
-    const { query, sourcingEvent, lastKnownEventId, _testOnlyOnLockAcquired } =
+    const { query, sourcingEvents, lastKnownEventId, _testOnlyOnLockAcquired } =
       payload;
 
     const locks = this._buildAdvisoryLocks({ query });
 
     return await this.sql.begin(async (sql) => {
       for (const lock of locks) {
-        // if (_testOnlyOnLockAcquired) {
-        //   console.log(
-        //     `[${new Date().toISOString()}][${
-        //       sourcingEvent.type
-        //     }] Acquiring lock ${lock.key}`
-        //   );
-        // }
-
         await sql`
           SELECT pg_advisory_xact_lock(${lock.hash})
         `;
       }
 
       if (_testOnlyOnLockAcquired) {
-        // console.log(
-        //   `[${new Date().toISOString()}][${
-        //     sourcingEvent.type
-        //   }] Lock acquired`
-        // );
         await _testOnlyOnLockAcquired();
         await new Promise((resolve) => setTimeout(resolve, 100));
-        // console.log(
-        //   `[${new Date().toISOString()}][${
-        //     sourcingEvent.type
-        //   }] Starting transaction`
-        // );
       }
 
       const whereStatement = this.getWhereStatement(query.$where, sql);
@@ -807,27 +803,41 @@ export class SorciPostgres implements Sorci {
       `;
 
       if (lastEvent?.id !== lastKnownEventId) {
-        throw new Error(
-          `Concurrency conflict detected: lastKnownEventId "${lastKnownEventId}" differs from the last event "${lastEvent.id}"`
-        );
+        throw new ConcurrencyError(lastKnownEventId, lastEvent?.id);
       }
 
+      const rows = sourcingEvents.map((sourcingEvent) =>
+        this.toRow(sourcingEvent)
+      );
+
       const result = await sql`
-        INSERT INTO ${this.streamNameIdentifier} (id, type, data, identifier)
-        VALUES (${sourcingEvent.id}, ${sourcingEvent.type}, ${sourcingEvent.data}, ${sourcingEvent.identifier})
+        INSERT INTO ${this.streamNameIdentifier} ${sql(rows)}
         RETURNING id
       `;
 
-      return result[0].id as string;
+      return result.map((row) => row.id) as string[];
     });
   }
 
   async appendEvent(payload: AppendEventPayload) {
     if (!("query" in payload)) {
-      return this.appendEventWithoutQuery(payload.sourcingEvent);
+      const [id] = await this.appendEventsWithoutQuery([payload.sourcingEvent]);
+      return id;
     }
 
-    return this.appendEventWithQuery(payload);
+    const [id] = await this.appendEventsWithQuery({
+      ...payload,
+      sourcingEvents: [payload.sourcingEvent]
+    });
+    return id;
+  }
+
+  async appendEvents(payload: AppendEventsPayload) {
+    if (!("query" in payload)) {
+      return this.appendEventsWithoutQuery(payload.sourcingEvents);
+    }
+
+    return this.appendEventsWithQuery(payload);
   }
 
   private async createProjectionsMetaTable() {
